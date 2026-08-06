@@ -94,7 +94,7 @@ export default function ProductDetailPage() {
             <Card glass className="p-4 border-amber-300 dark:border-amber-700/60 bg-amber-50/50 dark:bg-amber-950/30 flex items-start gap-3">
               <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="text-xs space-y-1 text-amber-900 dark:text-amber-200">
-                <p className="font-bold">Doctor's Prescription Required</p>
+                <p className="font-bold">Doctor&apos;s Prescription Required</p>
                 <p>This medication requires verification by our pharmacist before fulfillment.</p>
               </div>
             </Card>

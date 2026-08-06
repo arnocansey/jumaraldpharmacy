@@ -137,7 +137,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-500">
-            Don't have a patient account?{" "}
+            Don&apos;t have a patient account?{" "}
             <Link href="/register" className="font-extrabold text-emerald-600 dark:text-emerald-400 hover:underline">
               Create New Account
             </Link>
