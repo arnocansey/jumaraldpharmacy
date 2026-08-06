@@ -163,6 +163,47 @@ export async function createCategory(req: any, res: Response) {
   }
 }
 
+export async function updateCategory(req: any, res: Response) {
+  try {
+    const { id } = req.params;
+    const { name, description } = req.body;
+
+    const existing = await prisma.category.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ message: "Category not found" });
+
+    const updateData: any = {};
+    if (name) {
+      updateData.name = name;
+      updateData.slug = name.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
+      const duplicate = await prisma.category.findFirst({
+        where: { slug: updateData.slug, id: { not: id } },
+      });
+      if (duplicate) return res.status(400).json({ message: "Category name already exists" });
+    }
+    if (description !== undefined) updateData.description = description;
+
+    const category = await prisma.category.update({ where: { id }, data: updateData });
+    return res.json(category);
+  } catch {
+    return res.status(500).json({ message: "Failed to update category" });
+  }
+}
+
+export async function deleteCategory(req: any, res: Response) {
+  try {
+    const { id } = req.params;
+    const existing = await prisma.category.findUnique({ where: { id }, include: { _count: { select: { products: true } } } });
+    if (!existing) return res.status(404).json({ message: "Category not found" });
+    if (existing._count.products > 0) {
+      return res.status(400).json({ message: `Cannot delete category with ${existing._count.products} products. Move or delete products first.` });
+    }
+    await prisma.category.delete({ where: { id } });
+    return res.json({ message: "Category deleted" });
+  } catch {
+    return res.status(500).json({ message: "Failed to delete category" });
+  }
+}
+
 export async function getBrands(req: any, res: Response) {
   try {
     const brands = await prisma.brand.findMany({ include: { _count: { select: { products: true } } } });

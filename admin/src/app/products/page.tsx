@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Upload } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -14,7 +14,7 @@ interface Product {
   createdAt: string;
 }
 
-interface Category { id: string; name: string; slug: string; }
+interface Category { id: string; name: string; slug: string; description?: string; _count?: { products: number } }
 
 const EMPTY_FORM = {
   name: "", sku: "", description: "", price: "", compareAtPrice: "", stockQuantity: "0",
@@ -30,6 +30,7 @@ function StockBadge({ quantity, minAlert }: { quantity: number; minAlert: number
 }
 
 export default function ProductsPage() {
+  const [tab, setTab] = useState<"products" | "categories">("products");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +43,22 @@ export default function ProductsPage() {
   const [saving, setSaving] = useState(false);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
 
+  // Category management state
+  const [showCatForm, setShowCatForm] = useState(false);
+  const [editCatId, setEditCatId] = useState<string | null>(null);
+  const [catName, setCatName] = useState("");
+  const [catDesc, setCatDesc] = useState("");
+  const [catSaving, setCatSaving] = useState(false);
+
   useEffect(() => { loadProducts(); }, [page, search]);
-  useEffect(() => { apiFetch<{ categories: Category[] }>("/products/categories").then((d) => setCategories(Array.isArray(d) ? d : d.categories || [])).catch(() => {}); }, []);
+  useEffect(() => { loadCategories(); }, []);
+
+  async function loadCategories() {
+    try {
+      const data = await apiFetch<any>("/products/categories");
+      setCategories(Array.isArray(data) ? data : data.categories || []);
+    } catch { toast.error("Failed to load categories"); }
+  }
 
   async function loadProducts() {
     try {
@@ -117,23 +132,74 @@ export default function ProductsPage() {
     catch { toast.error("Failed to delete product"); }
   }
 
+  // Category CRUD
+  function resetCatForm() { setCatName(""); setCatDesc(""); setEditCatId(null); setShowCatForm(false); }
+
+  function startEditCat(c: Category) {
+    setCatName(c.name); setCatDesc(c.description || ""); setEditCatId(c.id); setShowCatForm(true);
+  }
+
+  async function handleCatSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!catName.trim()) { toast.error("Category name is required"); return; }
+    setCatSaving(true);
+    try {
+      if (editCatId) {
+        await apiFetch(`/products/categories/${editCatId}`, {
+          method: "PUT", body: JSON.stringify({ name: catName.trim(), description: catDesc.trim() || undefined }),
+        });
+        toast.success("Category updated");
+      } else {
+        await apiFetch("/products/categories", {
+          method: "POST", body: JSON.stringify({ name: catName.trim(), description: catDesc.trim() || undefined }),
+        });
+        toast.success("Category created");
+      }
+      resetCatForm();
+      loadCategories();
+    } catch (err: any) { toast.error(err.message || "Failed to save category"); }
+    finally { setCatSaving(false); }
+  }
+
+  async function deleteCategory(id: string, name: string, productCount: number) {
+    if (productCount > 0) { toast.error(`Cannot delete "${name}" — it has ${productCount} product(s). Reassign them first.`); return; }
+    if (!confirm(`Delete category "${name}"?`)) return;
+    try { await apiFetch(`/products/categories/${id}`, { method: "DELETE" }); toast.success("Category deleted"); loadCategories(); }
+    catch { toast.error("Failed to delete category"); }
+  }
+
   const inputClass = "w-full border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none";
   const labelClass = "text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 block";
 
   return (
     <div className="w-full">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Product & Inventory</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">{products.length} products</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
+            {tab === "products" ? `${products.length} products` : `${categories.length} categories`}
+          </p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true); }}
+        <button onClick={() => tab === "products" ? (resetForm(), setShowForm(true)) : (resetCatForm(), setShowCatForm(true))}
           className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-emerald-700 flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Add Product
+          <Plus className="h-4 w-4" /> {tab === "products" ? "Add Product" : "Add Category"}
         </button>
       </div>
 
-      {/* Product Form Modal */}
+      {/* Tabs */}
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-6 w-fit">
+        <button onClick={() => setTab("products")}
+          className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${tab === "products" ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"}`}>
+          <Package className="h-4 w-4" /> Products
+        </button>
+        <button onClick={() => setTab("categories")}
+          className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${tab === "categories" ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"}`}>
+          <Tag className="h-4 w-4" /> Categories
+        </button>
+      </div>
+
+      {/* ========== PRODUCT FORM MODAL ========== */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 pb-8 overflow-y-auto">
           <div className="fixed inset-0 bg-black/50" onClick={resetForm} />
@@ -143,7 +209,6 @@ export default function ProductsPage() {
               <button onClick={resetForm} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700"><X className="h-5 w-5 text-slate-400" /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              {/* Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label className={labelClass}>Product Name *</label>
@@ -158,14 +223,10 @@ export default function ProductsPage() {
                   <input placeholder="e.g. GSK Pharmaceuticals" value={form.manufacturer} onChange={(e) => setForm({ ...form, manufacturer: e.target.value })} className={inputClass} />
                 </div>
               </div>
-
-              {/* Description */}
               <div>
                 <label className={labelClass}>Description *</label>
                 <textarea rows={3} placeholder="Full product description..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={`${inputClass} resize-none`} required />
               </div>
-
-              {/* Pricing & Stock */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className={labelClass}>Price (GHS) *</label>
@@ -184,8 +245,6 @@ export default function ProductsPage() {
                   <input type="number" min="0" value={form.minStockAlert} onChange={(e) => setForm({ ...form, minStockAlert: e.target.value })} className={inputClass} />
                 </div>
               </div>
-
-              {/* Category */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Category</label>
@@ -199,28 +258,12 @@ export default function ProductsPage() {
                   <input placeholder="New category name" value={form.newCategoryName} onChange={(e) => setForm({ ...form, newCategoryName: e.target.value, categoryId: "" })} className={inputClass} disabled={!!form.categoryId} />
                 </div>
               </div>
-
-              {/* Medical Details */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className={labelClass}>Dosage Form</label>
                   <select value={form.dosageForm} onChange={(e) => setForm({ ...form, dosageForm: e.target.value })} className={inputClass}>
                     <option value="">Select form</option>
-                    <option value="Tablet">Tablet</option>
-                    <option value="Capsule">Capsule</option>
-                    <option value="Syrup">Syrup</option>
-                    <option value="Suspension">Suspension</option>
-                    <option value="Injection">Injection</option>
-                    <option value="Cream">Cream</option>
-                    <option value="Ointment">Ointment</option>
-                    <option value="Drops">Drops</option>
-                    <option value="Inhaler">Inhaler</option>
-                    <option value="Suppository">Suppository</option>
-                    <option value="Patch">Patch</option>
-                    <option value="Gel">Gel</option>
-                    <option value="Solution">Solution</option>
-                    <option value="Powder">Powder</option>
-                    <option value="Other">Other</option>
+                    {["Tablet","Capsule","Syrup","Suspension","Injection","Cream","Ointment","Drops","Inhaler","Suppository","Patch","Gel","Solution","Powder","Other"].map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
                 </div>
                 <div>
@@ -232,8 +275,6 @@ export default function ProductsPage() {
                   <input placeholder="e.g. Amoxicillin trihydrate" value={form.activeIngredients} onChange={(e) => setForm({ ...form, activeIngredients: e.target.value })} className={inputClass} />
                 </div>
               </div>
-
-              {/* Additional Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Usage Instructions</label>
@@ -244,19 +285,14 @@ export default function ProductsPage() {
                   <textarea rows={2} placeholder="Known side effects..." value={form.sideEffects} onChange={(e) => setForm({ ...form, sideEffects: e.target.value })} className={`${inputClass} resize-none`} />
                 </div>
               </div>
-
               <div>
                 <label className={labelClass}>Warnings & Contraindications</label>
                 <textarea rows={2} placeholder="Important warnings..." value={form.warnings} onChange={(e) => setForm({ ...form, warnings: e.target.value })} className={`${inputClass} resize-none`} />
               </div>
-
-              {/* Images */}
               <div>
                 <label className={labelClass}>Image URLs (comma separated)</label>
                 <input placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg" value={form.images} onChange={(e) => setForm({ ...form, images: e.target.value })} className={inputClass} />
               </div>
-
-              {/* Toggles */}
               <div className="flex items-center gap-6">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.requiresPrescription} onChange={(e) => setForm({ ...form, requiresPrescription: e.target.checked })} className="h-4 w-4 rounded accent-emerald-600" />
@@ -267,23 +303,19 @@ export default function ProductsPage() {
                   <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Featured Product</span>
                 </label>
               </div>
-
-              {/* Actions */}
               <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
                 <button type="submit" disabled={saving}
                   className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2">
                   {saving ? "Saving..." : editingId ? "Update Product" : "Create Product"}
                 </button>
-                <button type="button" onClick={resetForm} className="px-6 py-2.5 rounded-xl font-semibold bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300">
-                  Cancel
-                </button>
+                <button type="button" onClick={resetForm} className="px-6 py-2.5 rounded-xl font-semibold bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300">Cancel</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* View Product Modal */}
+      {/* ========== VIEW PRODUCT MODAL ========== */}
       {viewProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="fixed inset-0 bg-black/50" onClick={() => setViewProduct(null)} />
@@ -314,84 +346,164 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Products Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-          <div className="flex items-center gap-3">
-            <Search className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-            <input type="text" placeholder="Search products..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="flex-1 outline-none text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent" />
+      {/* ========== CATEGORY FORM MODAL ========== */}
+      {showCatForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" onClick={resetCatForm} />
+          <div className="relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">{editCatId ? "Edit Category" : "Add New Category"}</h2>
+              <button onClick={resetCatForm} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700"><X className="h-5 w-5 text-slate-400" /></button>
+            </div>
+            <form onSubmit={handleCatSubmit} className="space-y-4">
+              <div>
+                <label className={labelClass}>Category Name *</label>
+                <input placeholder="e.g. Antibiotics" value={catName} onChange={(e) => setCatName(e.target.value)} className={inputClass} required autoFocus />
+              </div>
+              <div>
+                <label className={labelClass}>Description</label>
+                <textarea rows={3} placeholder="Optional description..." value={catDesc} onChange={(e) => setCatDesc(e.target.value)} className={`${inputClass} resize-none`} />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" disabled={catSaving}
+                  className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-emerald-700 disabled:opacity-50">
+                  {catSaving ? "Saving..." : editCatId ? "Update Category" : "Create Category"}
+                </button>
+                <button type="button" onClick={resetCatForm} className="px-6 py-2.5 rounded-xl font-semibold bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300">Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
+      )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-700/50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Product</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">SKU</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Category</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Price</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Stock</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Status</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {loading ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400 dark:text-slate-500">Loading...</td></tr>
-              ) : products.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400 dark:text-slate-500">No products found</td></tr>
-              ) : (
-                products.map((product) => (
-                  <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden shrink-0">
-                          {product.images[0] ? <img src={product.images[0]} alt="" className="w-full h-full object-cover" /> : <Package className="h-5 w-5 text-slate-300 dark:text-slate-600 m-auto mt-2.5" />}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">{product.name}</p>
-                          {product.brand && <p className="text-xs text-slate-400 dark:text-slate-500">{product.brand.name}</p>}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 font-mono">{product.sku}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{product.category?.name}</td>
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">GHS {product.price.toFixed(2)}</p>
-                      {product.compareAtPrice && <p className="text-xs text-slate-400 dark:text-slate-500 line-through">GHS {product.compareAtPrice.toFixed(2)}</p>}
-                    </td>
-                    <td className="px-4 py-3"><StockBadge quantity={product.stockQuantity} minAlert={product.minStockAlert} /></td>
-                    <td className="px-4 py-3">
-                      {product.requiresPrescription ? <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-semibold">Rx</span> : <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full">OTC</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => setViewProduct(product)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"><Eye className="h-4 w-4" /></button>
-                        <button onClick={() => startEdit(product)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"><Edit className="h-4 w-4" /></button>
-                        <button onClick={() => deleteProduct(product.id)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400"><Trash2 className="h-4 w-4" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {totalPages > 1 && (
-          <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
-            <span className="text-sm text-slate-500 dark:text-slate-400">Page {page} of {totalPages}</span>
-            <div className="flex gap-2">
-              <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 text-slate-700 dark:text-slate-300">Previous</button>
-              <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 text-slate-700 dark:text-slate-300">Next</button>
+      {/* ========== PRODUCTS TAB ========== */}
+      {tab === "products" && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+            <div className="flex items-center gap-3">
+              <Search className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+              <input type="text" placeholder="Search products..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="flex-1 outline-none text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent" />
             </div>
           </div>
-        )}
-      </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-700/50">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Product</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">SKU</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Category</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Price</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Stock</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Status</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                {loading ? (
+                  <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400 dark:text-slate-500">Loading...</td></tr>
+                ) : products.length === 0 ? (
+                  <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400 dark:text-slate-500">No products found</td></tr>
+                ) : (
+                  products.map((product) => (
+                    <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden shrink-0">
+                            {product.images[0] ? <img src={product.images[0]} alt="" className="w-full h-full object-cover" /> : <Package className="h-5 w-5 text-slate-300 dark:text-slate-600 m-auto mt-2.5" />}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">{product.name}</p>
+                            {product.brand && <p className="text-xs text-slate-400 dark:text-slate-500">{product.brand.name}</p>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 font-mono">{product.sku}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{product.category?.name}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">GHS {product.price.toFixed(2)}</p>
+                        {product.compareAtPrice && <p className="text-xs text-slate-400 dark:text-slate-500 line-through">GHS {product.compareAtPrice.toFixed(2)}</p>}
+                      </td>
+                      <td className="px-4 py-3"><StockBadge quantity={product.stockQuantity} minAlert={product.minStockAlert} /></td>
+                      <td className="px-4 py-3">
+                        {product.requiresPrescription ? <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-semibold">Rx</span> : <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full">OTC</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => setViewProduct(product)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"><Eye className="h-4 w-4" /></button>
+                          <button onClick={() => startEdit(product)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"><Edit className="h-4 w-4" /></button>
+                          <button onClick={() => deleteProduct(product.id)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400"><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          {totalPages > 1 && (
+            <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <span className="text-sm text-slate-500 dark:text-slate-400">Page {page} of {totalPages}</span>
+              <div className="flex gap-2">
+                <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 text-slate-700 dark:text-slate-300">Previous</button>
+                <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 text-slate-700 dark:text-slate-300">Next</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========== CATEGORIES TAB ========== */}
+      {tab === "categories" && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-700/50">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Category</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Slug</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Description</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Products</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                {categories.length === 0 ? (
+                  <tr><td colSpan={5} className="px-4 py-12 text-center text-slate-400 dark:text-slate-500">No categories found</td></tr>
+                ) : (
+                  categories.map((cat) => (
+                    <tr key={cat.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center shrink-0">
+                            <Tag className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">{cat.name}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 font-mono">{cat.slug}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 max-w-[200px] truncate">{cat.description || "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${(cat._count?.products || 0) > 0 ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"}`}>
+                          {cat._count?.products || 0}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => startEditCat(cat)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400" title="Edit"><Edit className="h-4 w-4" /></button>
+                          <button onClick={() => deleteCategory(cat.id, cat.name, cat._count?.products || 0)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
