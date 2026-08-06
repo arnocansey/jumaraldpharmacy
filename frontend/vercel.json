@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "npm install -g pnpm@9 && pnpm install --frozen-lockfile",
-  "buildCommand": "cd frontend && npx next build",
+  "buildCommand": "pnpm build:frontend",
   "outputDirectory": "frontend/.next"
 }
