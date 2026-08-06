@@ -3,7 +3,7 @@ import { authenticateToken, requireRole } from "../middleware/auth";
 import { RoleName } from "@prisma/client";
 import {
   getProducts, getCategories, createCategory, updateCategory, deleteCategory, getBrands,
-  getProductBySlug, createProduct, updateProduct, deleteProduct,
+  getProductBySlug, createProduct, updateProduct, deleteProduct, importProducts,
 } from "../controllers/product.controller";
 
 const router = Router();
@@ -18,5 +18,6 @@ router.get("/:slug", getProductBySlug);
 router.post("/", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), createProduct);
 router.patch("/:id", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), updateProduct);
 router.delete("/:id", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), deleteProduct);
+router.post("/import", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN]), importProducts);
 
 export default router;

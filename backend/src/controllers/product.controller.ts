@@ -337,3 +337,74 @@ export async function deleteProduct(req: any, res: Response) {
     return res.status(400).json({ message: "Delete failed" });
   }
 }
+
+export async function importProducts(req: any, res: Response) {
+  try {
+    const { products } = req.body;
+    if (!Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ message: "Products array is required" });
+    }
+
+    const results = { created: 0, updated: 0, errors: [] as string[] };
+
+    for (const item of products) {
+      try {
+        const slug = (item.name || "").toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
+        const existing = await prisma.product.findFirst({ where: { OR: [{ sku: item.sku }, { slug }] } });
+
+        if (existing) {
+          await prisma.product.update({
+            where: { id: existing.id },
+            data: {
+              name: item.name || existing.name,
+              description: item.description || existing.description,
+              price: item.price ? parseFloat(item.price) : existing.price,
+              stockQuantity: item.stockQuantity !== undefined ? parseInt(item.stockQuantity) : existing.stockQuantity,
+              minStockAlert: item.minStockAlert !== undefined ? parseInt(item.minStockAlert) : existing.minStockAlert,
+              requiresPrescription: item.requiresPrescription === "true" || item.requiresPrescription === true,
+            },
+          });
+          results.updated++;
+        } else {
+          let categoryId = item.categoryId;
+          if (item.categoryName && !categoryId) {
+            const catSlug = item.categoryName.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
+            const cat = await prisma.category.findFirst({ where: { slug: catSlug } });
+            if (cat) categoryId = cat.id;
+          }
+
+          await prisma.product.create({
+            data: {
+              name: item.name,
+              slug,
+              sku: item.sku || `SKU-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+              description: item.description || "",
+              price: parseFloat(item.price) || 0,
+              compareAtPrice: item.compareAtPrice ? parseFloat(item.compareAtPrice) : null,
+              stockQuantity: parseInt(item.stockQuantity) || 0,
+              minStockAlert: parseInt(item.minStockAlert) || 10,
+              requiresPrescription: item.requiresPrescription === "true" || item.requiresPrescription === true,
+              isFeatured: item.isFeatured === "true" || item.isFeatured === true,
+              dosageForm: item.dosageForm || null,
+              strength: item.strength || null,
+              activeIngredients: item.activeIngredients || null,
+              usageInstructions: item.usageInstructions || null,
+              sideEffects: item.sideEffects || null,
+              warnings: item.warnings || null,
+              manufacturer: item.manufacturer || null,
+              images: item.images ? (typeof item.images === "string" ? item.images.split(",").map((s: string) => s.trim()) : item.images) : [],
+              categoryId: categoryId || (await prisma.category.findFirst())?.id || "",
+            },
+          });
+          results.created++;
+        }
+      } catch (err: any) {
+        results.errors.push(`${item.name || "Unknown"}: ${err.message}`);
+      }
+    }
+
+    return res.json(results);
+  } catch (err: any) {
+    return res.status(500).json({ message: "Import failed", error: err.message });
+  }
+}

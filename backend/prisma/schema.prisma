@@ -106,6 +106,8 @@ model User {
   role          RoleName        @default(CUSTOMER)
   emailVerified DateTime?
   isActive      Boolean         @default(true)
+  twoFactorSecret String?
+  twoFactorEnabled Boolean @default(false)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 

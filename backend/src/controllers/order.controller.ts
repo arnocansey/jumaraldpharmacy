@@ -4,6 +4,9 @@ import { Response } from "express";
 import { z } from "zod";
 import { OrderStatus } from "@prisma/client";
 import { sendEmail, buildOrderConfirmationEmail, buildLowStockAlertEmail } from "../lib/notifications";
+import { emitToAdmins, emitToUser } from "../lib/socket";
+import { sendOrderConfirmationSms } from "../lib/sms";
+import { createAuditLog } from "../lib/audit";
 
 const createOrderSchema = z.object({
   items: z.array(z.object({
@@ -94,6 +97,14 @@ export async function createOrder(req: AuthenticatedRequest, res: Response) {
       }
     }
 
+    emitToAdmins("order:created", { orderId: result.id, orderNumber: result.orderNumber, totalAmount: result.totalAmount });
+    createAuditLog(req.user!.id, "ORDER_CREATED", "order", result.id, { orderNumber, totalAmount: data.totalAmount });
+
+    const userWithPhone = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { phone: true } });
+    if (userWithPhone?.phone) {
+      sendOrderConfirmationSms(userWithPhone.phone, orderNumber, data.totalAmount);
+    }
+
     return res.status(201).json(result);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -135,6 +146,11 @@ export async function updateOrderStatus(req: any, res: Response) {
       where: { id: req.params.id },
       data: { status: data.status },
     });
+
+    emitToUser(order.userId, "order:status", { orderId: order.id, orderNumber: order.orderNumber, status: data.status });
+    emitToAdmins("order:status-update", { orderId: order.id, orderNumber: order.orderNumber, status: data.status });
+    createAuditLog(req.user!.id, "ORDER_STATUS_UPDATED", "order", order.id, { status: data.status });
+
     return res.json(order);
   } catch (error: any) {
     if (error instanceof z.ZodError) {

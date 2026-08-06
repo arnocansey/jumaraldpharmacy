@@ -3,6 +3,8 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { Response } from "express";
 import { env } from "../config/env";
 import crypto from "crypto";
+import { emitToUser, emitToOrder, emitToAdmins } from "../lib/socket";
+import { createAuditLog } from "../lib/audit";
 
 interface PaystackResponse {
   status: boolean;
@@ -139,6 +141,9 @@ export async function verifyPayment(req: AuthenticatedRequest, res: Response) {
           where: { id: payment.orderId },
           data: { status: "PROCESSING" },
         });
+        emitToOrder(payment.orderId, "payment:completed", { orderId: payment.orderId, reference, amount: payment.amount });
+        emitToAdmins("order:payment", { orderId: payment.orderId, reference, amount: payment.amount });
+        createAuditLog(req.user!.id, "PAYMENT_COMPLETED", "payment", payment.id, { reference, amount: payment.amount });
       }
     }
 
@@ -166,6 +171,8 @@ export async function handlePaystackWebhook(req: any, res: Response) {
       if (payment && payment.status === "PENDING") {
         await prisma.payment.update({ where: { id: payment.id }, data: { status: "COMPLETED" } });
         await prisma.order.update({ where: { id: payment.orderId }, data: { status: "PROCESSING" } });
+        emitToOrder(payment.orderId, "payment:completed", { orderId: payment.orderId, reference, amount: payment.amount });
+        emitToAdmins("order:payment", { orderId: payment.orderId, reference, amount: payment.amount });
       }
     }
 

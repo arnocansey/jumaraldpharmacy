@@ -1,10 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Product } from "../lib/mockData";
+
+export interface CartProduct {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  compareAtPrice?: number;
+  stockQuantity: number;
+  requiresPrescription: boolean;
+  images: string[];
+  category: string | { id: string; name: string; slug: string };
+  brand?: string | { id: string; name: string; slug: string };
+}
 
 export interface CartItem {
-  product: Product;
+  product: CartProduct;
   quantity: number;
 }
 
@@ -32,7 +44,7 @@ export function useCartStore() {
     }
   }, [items, isInitialized]);
 
-  const addToCart = (product: Product, quantity = 1) => {
+  const addToCart = (product: CartProduct, quantity = 1) => {
     setItems((prev) => {
       const existing = prev.find((i) => i.product.id === product.id);
       if (existing) {

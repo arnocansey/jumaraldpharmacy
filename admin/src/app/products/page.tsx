@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
+import ProductImportModal from "@/components/ProductImportModal";
 
 interface Product {
   id: string; name: string; slug: string; sku: string; price: number; compareAtPrice?: number;
@@ -42,6 +43,7 @@ export default function ProductsPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const [showImport, setShowImport] = useState(false);
 
   // Category management state
   const [showCatForm, setShowCatForm] = useState(false);
@@ -181,10 +183,20 @@ export default function ProductsPage() {
             {tab === "products" ? `${products.length} products` : `${categories.length} categories`}
           </p>
         </div>
-        <button onClick={() => tab === "products" ? (resetForm(), setShowForm(true)) : (resetCatForm(), setShowCatForm(true))}
-          className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-emerald-700 flex items-center gap-2">
-          <Plus className="h-4 w-4" /> {tab === "products" ? "Add Product" : "Add Category"}
-        </button>
+        <div className="flex items-center gap-3">
+          {tab === "products" && (
+            <button
+              onClick={() => setShowImport(true)}
+              className="px-4 py-2 rounded-xl font-semibold border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" /> Import CSV
+            </button>
+          )}
+          <button onClick={() => tab === "products" ? (resetForm(), setShowForm(true)) : (resetCatForm(), setShowCatForm(true))}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-emerald-700 flex items-center gap-2">
+            <Plus className="h-4 w-4" /> {tab === "products" ? "Add Product" : "Add Category"}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -504,6 +516,12 @@ export default function ProductsPage() {
           </div>
         </div>
       )}
+      {/* ========== IMPORT MODAL ========== */}
+      <ProductImportModal
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        onImported={() => { loadProducts(); loadCategories(); }}
+      />
     </div>
   );
 }

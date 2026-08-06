@@ -1,8 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { CreditCard, CheckCircle2, ShieldCheck, Truck } from "lucide-react";
+import {
+  CreditCard,
+  CheckCircle2,
+  ShieldCheck,
+  Truck,
+  Tag,
+  Store,
+  Loader2,
+  AlertCircle,
+  Percent,
+  Gift,
+  X,
+  MapPin,
+  Package,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
@@ -11,6 +25,19 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { API_URL } from "@/lib/api";
 
+const FREE_DELIVERY_THRESHOLD = 200;
+const DELIVERY_FEE = 25;
+const POINTS_TO_GHS_RATIO = 0.01;
+
+interface CouponData {
+  code: string;
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  maxDiscount?: number;
+  minOrderTotal?: number;
+  description?: string;
+}
+
 export default function CheckoutPage() {
   const { items, subtotalAmount, clearCart } = useCartStore();
   const [step, setStep] = useState<"address" | "payment" | "confirmed">("address");
@@ -18,7 +45,10 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<"momo" | "card">("momo");
   const [momoNetwork, setMomoNetwork] = useState<"mtn" | "telecel" | "at">("mtn");
   const [momoNumber, setMomoNumber] = useState("+233 24 123 4567");
+  const [deliveryOption, setDeliveryOption] = useState<"delivery" | "pickup">("delivery");
+  const [confirmedOrderNumber, setConfirmedOrderNumber] = useState<string>("");
 
+  // Address state
   const [address, setAddress] = useState({
     fullName: "Kofi Owusu",
     phone: "+233 24 123 4567",
@@ -27,9 +57,143 @@ export default function CheckoutPage() {
     region: "Greater Accra Region",
   });
 
-  const shippingFee = 25;
-  const grandTotal = subtotalAmount + shippingFee;
-  const [confirmedOrderNumber, setConfirmedOrderNumber] = useState<string>("");
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [couponData, setCouponData] = useState<CouponData | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
+
+  // Loyalty points state
+  const [availablePoints, setAvailablePoints] = useState<number | null>(null);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const [pointsLoading, setPointsLoading] = useState(false);
+  const [pointsApplied, setPointsApplied] = useState(false);
+
+  // Fetch loyalty points when entering payment step
+  const fetchLoyaltyPoints = async () => {
+    const token = localStorage.getItem("jumarald_token");
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/loyalty/balance`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAvailablePoints(data.points ?? data.balance ?? 0);
+      }
+    } catch {
+      // Silently fail — loyalty is optional
+    }
+  };
+
+  const validateCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError("");
+    try {
+      const res = await fetch(`${API_URL}/coupons/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponCode.trim().toUpperCase(), orderTotal: subtotalAmount }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCouponError(data.message || "Invalid coupon code");
+        setCouponData(null);
+        return;
+      }
+      setCouponData(data);
+      toast.success("Coupon applied successfully!");
+    } catch {
+      setCouponError("Failed to validate coupon. Please try again.");
+      setCouponData(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setCouponCode("");
+    setCouponData(null);
+    setCouponError("");
+  };
+
+  const redeemPoints = async () => {
+    if (pointsToRedeem <= 0) return;
+    setPointsLoading(true);
+    try {
+      const token = localStorage.getItem("jumarald_token");
+      const res = await fetch(`${API_URL}/loyalty/redeem`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ points: pointsToRedeem, rewardType: "ORDER_DISCOUNT" }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.message || "Failed to redeem points");
+        return;
+      }
+      setPointsApplied(true);
+      toast.success(`${pointsToRedeem} points redeemed for ${formatCurrency(pointsToRedeem * POINTS_TO_GHS_RATIO)} discount!`);
+    } catch {
+      toast.error("Failed to redeem points. Please try again.");
+    } finally {
+      setPointsLoading(false);
+    }
+  };
+
+  // Derived calculations
+  const couponDiscount = useMemo(() => {
+    if (!couponData) return 0;
+    if (couponData.discountType === "percentage") {
+      const discount = (subtotalAmount * couponData.discountValue) / 100;
+      return couponData.maxDiscount ? Math.min(discount, couponData.maxDiscount) : discount;
+    }
+    return Math.min(couponData.discountValue, subtotalAmount);
+  }, [couponData, subtotalAmount]);
+
+  const pointsDiscount = useMemo(() => {
+    if (!pointsApplied || pointsToRedeem <= 0) return 0;
+    return pointsToRedeem * POINTS_TO_GHS_RATIO;
+  }, [pointsApplied, pointsToRedeem]);
+
+  const deliveryFee = deliveryOption === "pickup" ? 0 : subtotalAmount >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
+  const grandTotal = Math.max(subtotalAmount - couponDiscount - pointsDiscount + deliveryFee, 0);
+
+  const validateAddress = (): boolean => {
+    if (!address.fullName.trim()) {
+      toast.error("Please enter your full name");
+      return false;
+    }
+    if (!address.phone.trim()) {
+      toast.error("Please enter your phone number");
+      return false;
+    }
+    if (deliveryOption === "delivery") {
+      if (!address.street.trim()) {
+        toast.error("Please enter your delivery address");
+        return false;
+      }
+      if (!address.city.trim()) {
+        toast.error("Please enter your city");
+        return false;
+      }
+      if (!address.region.trim()) {
+        toast.error("Please select a region");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleContinueToPayment = () => {
+    if (!validateAddress()) return;
+    setStep("payment");
+    fetchLoyaltyPoints();
+  };
 
   const handleCompleteOrder = async () => {
     setIsProcessing(true);
@@ -45,38 +209,46 @@ export default function CheckoutPage() {
           quantity: item.quantity,
           price: item.product.price,
         })),
-        address: {
-          fullAddress: address.street,
-          city: address.city,
-          state: address.region,
-          postalCode: "00233",
-          country: "Ghana",
-        },
+        address: deliveryOption === "pickup"
+          ? { fullAddress: "Store Pickup — Jumarald Pharmacy", city: "Accra", state: "Greater Accra", postalCode: "00233", country: "Ghana" }
+          : { fullAddress: address.street, city: address.city, state: address.region, postalCode: "00233", country: "Ghana" },
         totalAmount: grandTotal,
-        shippingFee,
+        shippingFee: deliveryFee,
+        deliveryOption,
+        couponCode: couponData?.code || undefined,
+        pointsRedeemed: pointsApplied ? pointsToRedeem : 0,
       };
 
       let orderNumber = `JUM-GH-${Date.now().toString().slice(-6)}`;
       let orderId = "";
 
-      if (token) {
-        const res = await fetch(`${API_URL}/orders`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify(payload),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          orderNumber = data.orderNumber || orderNumber;
-          orderId = data.id;
-        }
+      const res = await fetch(`${API_URL}/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        orderNumber = data.orderNumber || orderNumber;
+        orderId = data.id;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to create order");
       }
 
-      if (token && orderId && paymentMethod === "card") {
+      // Paystack card payment
+      if (orderId && paymentMethod === "card") {
         try {
           const payRes = await fetch(`${API_URL}/payments/initialize`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
             body: JSON.stringify({
               orderId,
               email: user.email || address.phone + "@jumaraldpharmacy.com",
@@ -91,22 +263,22 @@ export default function CheckoutPage() {
               return;
             }
           }
-        } catch {
-          // Payment init failed, continue with order confirmation
+          const payErr = await payRes.json().catch(() => ({}));
+          throw new Error(payErr.message || "Payment initialization failed");
+        } catch (payErr) {
+          toast.error(payErr instanceof Error ? payErr.message : "Payment failed");
+          setIsProcessing(false);
+          return;
         }
       }
 
       setConfirmedOrderNumber(orderNumber);
-      setIsProcessing(false);
       setStep("confirmed");
       clearCart();
       toast.success("Order placed successfully!");
     } catch (err) {
-      setConfirmedOrderNumber(`JUM-GH-${Date.now().toString().slice(-6)}`);
+      toast.error(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setIsProcessing(false);
-      setStep("confirmed");
-      clearCart();
-      toast.success("Order placed successfully!");
     }
   };
 
@@ -119,7 +291,9 @@ export default function CheckoutPage() {
         <div className="space-y-2">
           <Badge variant="emerald">Payment Approved via Paystack Ghana</Badge>
           <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Order Confirmed!</h1>
-          <p className="text-sm text-slate-500">Order ID: <strong className="text-slate-900 dark:text-white">#{confirmedOrderNumber || "JUM-GH-000000"}</strong></p>
+          <p className="text-sm text-slate-500">
+            Order ID: <strong className="text-slate-900 dark:text-white">#{confirmedOrderNumber}</strong>
+          </p>
         </div>
 
         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 text-left text-xs space-y-2 border border-slate-200 dark:border-slate-700">
@@ -135,12 +309,18 @@ export default function CheckoutPage() {
             <span className="text-slate-500">Cold-Chain Status:</span>
             <span className="font-semibold text-emerald-600">Active (4.2°C Temperature Verified)</span>
           </div>
+          {deliveryOption === "pickup" && (
+            <div className="flex justify-between">
+              <span className="text-slate-500">Fulfillment:</span>
+              <span className="font-semibold text-blue-600">Pickup in Store</span>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 justify-center">
-          <Link href="/orders/JUM-GH-984210">
+          <Link href={`/orders/${confirmedOrderNumber}`}>
             <Button variant="primary" size="md">
-              <Truck className="h-4 w-4" /> Track Cold-Chain Delivery
+              <Truck className="h-4 w-4" /> Track Delivery
             </Button>
           </Link>
           <Link href="/dashboard">
@@ -160,197 +340,417 @@ export default function CheckoutPage() {
         </div>
       </div>
 
+      {/* Step indicator */}
+      <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+        <span className={step === "address" ? "text-emerald-600 font-bold" : "text-emerald-600"}>
+          <CheckCircle2 className="h-4 w-4 inline mr-1" /> Address
+        </span>
+        <span className="text-slate-300">—</span>
+        <span className={step === "payment" ? "text-emerald-600 font-bold" : ""}>
+          <CreditCard className="h-4 w-4 inline mr-1" /> Payment
+        </span>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left Column — Forms */}
         <div className="lg:col-span-7 space-y-6">
           {step === "address" ? (
-            <Card className="p-6 space-y-4">
-              <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
-                <Truck className="h-5 w-5 text-emerald-600" /> Delivery Address in Ghana
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1 block">Full Name</label>
-                  <input
-                    type="text"
-                    value={address.fullName}
-                    onChange={(e) => setAddress({ ...address, fullName: e.target.value })}
-                    className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1 block">Phone Number (Ghana)</label>
-                  <input
-                    type="text"
-                    value={address.phone}
-                    onChange={(e) => setAddress({ ...address, phone: e.target.value })}
-                    className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1 block">Delivery Street / Landmark</label>
-                  <input
-                    type="text"
-                    value={address.street}
-                    onChange={(e) => setAddress({ ...address, street: e.target.value })}
-                    className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-slate-500 mb-1 block">City / Town</label>
-                    <input
-                      type="text"
-                      value={address.city}
-                      onChange={(e) => setAddress({ ...address, city: e.target.value })}
-                      className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-slate-500 mb-1 block">Region</label>
-                    <input
-                      type="text"
-                      value={address.region}
-                      onChange={(e) => setAddress({ ...address, region: e.target.value })}
-                      className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
-                    />
-                  </div>
-                </div>
-              </div>
-              <Button variant="primary" size="lg" className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => setStep("payment")}>
-                Continue to Paystack Payment
-              </Button>
-            </Card>
-          ) : (
-            <Card className="p-6 space-y-6">
-              <div className="flex items-center justify-between">
+            <>
+              {/* Delivery Option */}
+              <Card className="p-6 space-y-4">
                 <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-emerald-600" /> Paystack Ghana Payment Gateway
+                  <Package className="h-5 w-5 text-emerald-600" /> Fulfillment Method
                 </h3>
-                <Badge variant="emerald">Ghana (GHS)</Badge>
-              </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryOption("delivery")}
+                    className={`p-4 rounded-xl border text-center space-y-1 transition-all ${
+                      deliveryOption === "delivery"
+                        ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-600"
+                        : "border-slate-200 dark:border-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Truck className="h-6 w-6 mx-auto text-emerald-600" />
+                    <p className="font-bold text-slate-900 dark:text-white text-sm">Delivery</p>
+                    <p className="text-[11px] text-slate-500">
+                      {subtotalAmount >= FREE_DELIVERY_THRESHOLD
+                        ? "Free delivery!"
+                        : `${formatCurrency(DELIVERY_FEE)} fee`}
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryOption("pickup")}
+                    className={`p-4 rounded-xl border text-center space-y-1 transition-all ${
+                      deliveryOption === "pickup"
+                        ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-600"
+                        : "border-slate-200 dark:border-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Store className="h-6 w-6 mx-auto text-emerald-600" />
+                    <p className="font-bold text-slate-900 dark:text-white text-sm">Pickup In Store</p>
+                    <p className="text-[11px] text-emerald-600 font-semibold">Free</p>
+                  </button>
+                </div>
+              </Card>
 
-              {/* Payment Method Tabs */}
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod("momo")}
-                  className={`p-4 rounded-xl border text-center space-y-1 transition-all ${
-                    paymentMethod === "momo"
-                      ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-600"
-                      : "border-slate-200 dark:border-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  <p className="font-bold text-slate-900 dark:text-white text-sm">📱 Mobile Money</p>
-                  <p className="text-[11px] text-slate-500">MTN, Telecel, AT Money</p>
-                </button>
+              {/* Address */}
+              <Card className="p-6 space-y-4">
+                <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
+                  {deliveryOption === "pickup" ? (
+                    <>
+                      <MapPin className="h-5 w-5 text-emerald-600" /> Pickup Location Details
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="h-5 w-5 text-emerald-600" /> Delivery Address in Ghana
+                    </>
+                  )}
+                </h3>
 
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod("card")}
-                  className={`p-4 rounded-xl border text-center space-y-1 transition-all ${
-                    paymentMethod === "card"
-                      ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-600"
-                      : "border-slate-200 dark:border-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  <p className="font-bold text-slate-900 dark:text-white text-sm">💳 Bank Card</p>
-                  <p className="text-[11px] text-slate-500">Visa / Mastercard</p>
-                </button>
-              </div>
-
-              {paymentMethod === "momo" ? (
-                <div className="space-y-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Select Mobile Money Network</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setMomoNetwork("mtn")}
-                      className={`p-3 rounded-xl border font-bold text-xs ${
-                        momoNetwork === "mtn" ? "bg-amber-400 text-slate-900 border-amber-500 shadow-md" : "bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200"
-                      }`}
-                    >
-                      MTN MoMo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMomoNetwork("telecel")}
-                      className={`p-3 rounded-xl border font-bold text-xs ${
-                        momoNetwork === "telecel" ? "bg-red-600 text-white border-red-700 shadow-md" : "bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200"
-                      }`}
-                    >
-                      Telecel Cash
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMomoNetwork("at")}
-                      className={`p-3 rounded-xl border font-bold text-xs ${
-                        momoNetwork === "at" ? "bg-blue-600 text-white border-blue-700 shadow-md" : "bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200"
-                      }`}
-                    >
-                      AT Money
-                    </button>
+                {deliveryOption === "pickup" ? (
+                  <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-sm space-y-2">
+                    <p className="font-bold text-blue-900 dark:text-blue-200">Jumarald Pharmacy — East Legon</p>
+                    <p className="text-blue-700 dark:text-blue-300">24 Boundary Road, East Legon, Accra</p>
+                    <p className="text-blue-600 dark:text-blue-400 text-xs">Open Mon–Sat: 8:00 AM – 8:00 PM</p>
+                    <p className="text-blue-600 dark:text-blue-400 text-xs">Orders ready for pickup within 2 hours</p>
                   </div>
+                ) : null}
 
+                <div className="space-y-3 text-sm">
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 mb-1 block">MoMo Wallet Number</label>
+                    <label className="text-xs font-semibold text-slate-500 mb-1 block">Full Name</label>
                     <input
                       type="text"
-                      value={momoNumber}
-                      onChange={(e) => setMomoNumber(e.target.value)}
-                      placeholder="+233 XX XXX XXXX"
-                      className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium"
+                      value={address.fullName}
+                      onChange={(e) => setAddress({ ...address, fullName: e.target.value })}
+                      className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
                     />
                   </div>
-                </div>
-              ) : (
-                <div className="space-y-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm">
-                  <input type="text" placeholder="Cardholder Name" className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700" />
-                  <input type="text" placeholder="Card Number (4111 ....)" className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <input type="text" placeholder="MM / YY" className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700" />
-                    <input type="text" placeholder="CVV" className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700" />
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 mb-1 block">Phone Number (Ghana)</label>
+                    <input
+                      type="text"
+                      value={address.phone}
+                      onChange={(e) => setAddress({ ...address, phone: e.target.value })}
+                      className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
+                    />
                   </div>
+                  {deliveryOption === "delivery" && (
+                    <>
+                      <div>
+                        <label className="text-xs font-semibold text-slate-500 mb-1 block">Delivery Street / Landmark</label>
+                        <input
+                          type="text"
+                          value={address.street}
+                          onChange={(e) => setAddress({ ...address, street: e.target.value })}
+                          className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold text-slate-500 mb-1 block">City / Town</label>
+                          <input
+                            type="text"
+                            value={address.city}
+                            onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                            className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Region</label>
+                          <input
+                            type="text"
+                            value={address.region}
+                            onChange={(e) => setAddress({ ...address, region: e.target.value })}
+                            className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
-              )}
+                <Button variant="primary" size="lg" className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={handleContinueToPayment}>
+                  Continue to Payment
+                </Button>
+              </Card>
+            </>
+          ) : (
+            <>
+              {/* Payment Method */}
+              <Card className="p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-emerald-600" /> Paystack Ghana Payment Gateway
+                  </h3>
+                  <Badge variant="emerald">Ghana (GHS)</Badge>
+                </div>
 
-              <Button
-                variant="primary"
-                size="lg"
-                className="w-full bg-emerald-600 hover:bg-emerald-700 font-extrabold text-white h-12"
-                onClick={handleCompleteOrder}
-                disabled={isProcessing}
-              >
-                {isProcessing ? "Authorizing Paystack..." : `Pay ${formatCurrency(grandTotal)} with Paystack`}
-              </Button>
-            </Card>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("momo")}
+                    className={`p-4 rounded-xl border text-center space-y-1 transition-all ${
+                      paymentMethod === "momo"
+                        ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-600"
+                        : "border-slate-200 dark:border-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <p className="font-bold text-slate-900 dark:text-white text-sm">📱 Mobile Money</p>
+                    <p className="text-[11px] text-slate-500">MTN, Telecel, AT Money</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("card")}
+                    className={`p-4 rounded-xl border text-center space-y-1 transition-all ${
+                      paymentMethod === "card"
+                        ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-600"
+                        : "border-slate-200 dark:border-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <p className="font-bold text-slate-900 dark:text-white text-sm">💳 Bank Card</p>
+                    <p className="text-[11px] text-slate-500">Visa / Mastercard</p>
+                  </button>
+                </div>
+
+                {paymentMethod === "momo" ? (
+                  <div className="space-y-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Select Mobile Money Network</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {([
+                        ["mtn", "MTN MoMo", "bg-amber-400 text-slate-900 border-amber-500"],
+                        ["telecel", "Telecel Cash", "bg-red-600 text-white border-red-700"],
+                        ["at", "AT Money", "bg-blue-600 text-white border-blue-700"],
+                      ] as const).map(([key, label, activeStyle]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setMomoNetwork(key)}
+                          className={`p-3 rounded-xl border font-bold text-xs transition-all ${
+                            momoNetwork === key ? `${activeStyle} shadow-md` : "bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500 mb-1 block">MoMo Wallet Number</label>
+                      <input
+                        type="text"
+                        value={momoNumber}
+                        onChange={(e) => setMomoNumber(e.target.value)}
+                        placeholder="+233 XX XXX XXXX"
+                        className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm">
+                    <input type="text" placeholder="Cardholder Name" className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700" />
+                    <input type="text" placeholder="Card Number (4111 ....)" className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700" />
+                    <div className="grid grid-cols-2 gap-3">
+                      <input type="text" placeholder="MM / YY" className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700" />
+                      <input type="text" placeholder="CVV" className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button variant="outline" size="md" onClick={() => setStep("address")}>
+                    ← Back
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 font-extrabold text-white h-12"
+                    onClick={handleCompleteOrder}
+                    disabled={isProcessing}
+                    isLoading={isProcessing}
+                  >
+                    {isProcessing ? "Processing..." : `Pay ${formatCurrency(grandTotal)} with Paystack`}
+                  </Button>
+                </div>
+              </Card>
+            </>
           )}
         </div>
 
+        {/* Right Column — Order Summary */}
         <div className="lg:col-span-5 space-y-4">
           <Card className="p-6 space-y-4 text-sm">
-            <h3 className="font-bold text-slate-900 dark:text-white text-base">Order Summary</h3>
-            <div className="space-y-2.5">
+            <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
+              <Package className="h-4 w-4 text-emerald-600" /> Order Summary ({items.length} item{items.length !== 1 ? "s" : ""})
+            </h3>
+
+            {/* Line items */}
+            <div className="space-y-2.5 max-h-60 overflow-y-auto">
               {items.map(({ product, quantity }) => (
-                <div key={product.id} className="flex justify-between items-center text-xs">
-                  <span className="text-slate-700 dark:text-slate-300 font-medium">{product.name} (x{quantity})</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(product.price * quantity)}</span>
+                <div key={product.id} className="flex justify-between items-start gap-3 text-xs">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-700 dark:text-slate-300 font-medium truncate">{product.name}</p>
+                    <p className="text-slate-400 text-[11px]">{formatCurrency(product.price)} × {quantity}</p>
+                  </div>
+                  <span className="font-bold text-slate-900 dark:text-white whitespace-nowrap">{formatCurrency(product.price * quantity)}</span>
                 </div>
               ))}
             </div>
 
+            {/* Coupon Code */}
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-700 space-y-2">
+              <label className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                <Tag className="h-3 w-3" /> Coupon Code
+              </label>
+              {couponData ? (
+                <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                    {couponData.code} — {couponData.description || `${couponData.discountValue}${couponData.discountType === "percentage" ? "%" : ""} off`}
+                  </span>
+                  <button onClick={removeCoupon} className="text-red-400 hover:text-red-600 transition-colors">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && validateCoupon()}
+                    placeholder="Enter coupon code"
+                    className="flex-1 p-2.5 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={validateCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    isLoading={couponLoading}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              )}
+              {couponError && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> {couponError}
+                </p>
+              )}
+            </div>
+
+            {/* Loyalty Points */}
+            {availablePoints !== null && availablePoints > 0 && (
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-700 space-y-2">
+                <label className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                  <Gift className="h-3 w-3" /> Loyalty Points
+                </label>
+                <p className="text-[11px] text-slate-400">
+                  Available: <span className="font-bold text-amber-600">{availablePoints.toLocaleString()} pts</span>
+                  {" "}= {formatCurrency(availablePoints * POINTS_TO_GHS_RATIO)} value
+                </p>
+                {pointsApplied ? (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800">
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                      {pointsToRedeem.toLocaleString()} pts applied (−{formatCurrency(pointsDiscount)})
+                    </span>
+                    <button
+                      onClick={() => {
+                        setPointsApplied(false);
+                        setPointsToRedeem(0);
+                      }}
+                      className="text-red-400 hover:text-red-600 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min={0}
+                        max={Math.min(availablePoints, Math.floor(subtotalAmount / POINTS_TO_GHS_RATIO))}
+                        value={pointsToRedeem}
+                        onChange={(e) => setPointsToRedeem(parseInt(e.target.value))}
+                        className="flex-1 accent-amber-500"
+                      />
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 w-16 text-right">
+                        {pointsToRedeem.toLocaleString()} pts
+                      </span>
+                    </div>
+                    {pointsToRedeem > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={redeemPoints}
+                        disabled={pointsLoading}
+                        isLoading={pointsLoading}
+                        className="w-full text-amber-700 border-amber-300 hover:bg-amber-50"
+                      >
+                        Apply {pointsToRedeem.toLocaleString()} pts (−{formatCurrency(pointsToRedeem * POINTS_TO_GHS_RATIO)})
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Totals */}
             <div className="pt-3 border-t border-slate-200 dark:border-slate-700 space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-500">
                 <span>Subtotal</span>
                 <span>{formatCurrency(subtotalAmount)}</span>
               </div>
+              {couponDiscount > 0 && (
+                <div className="flex justify-between text-emerald-600">
+                  <span className="flex items-center gap-1">
+                    <Percent className="h-3 w-3" /> Coupon Discount
+                  </span>
+                  <span>−{formatCurrency(couponDiscount)}</span>
+                </div>
+              )}
+              {pointsDiscount > 0 && (
+                <div className="flex justify-between text-amber-600">
+                  <span className="flex items-center gap-1">
+                    <Gift className="h-3 w-3" /> Loyalty Points
+                  </span>
+                  <span>−{formatCurrency(pointsDiscount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-slate-500">
-                <span>Cold-Chain Express Shipping</span>
-                <span>{formatCurrency(shippingFee)}</span>
+                <span className="flex items-center gap-1">
+                  {deliveryOption === "pickup" ? (
+                    <>
+                      <Store className="h-3 w-3" /> Store Pickup
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="h-3 w-3" /> Cold-Chain Shipping
+                    </>
+                  )}
+                </span>
+                <span>
+                  {deliveryOption === "pickup" ? (
+                    <span className="text-emerald-600 font-semibold">Free</span>
+                  ) : deliveryFee === 0 ? (
+                    <span className="text-emerald-600 font-semibold">Free (orders over {formatCurrency(FREE_DELIVERY_THRESHOLD)})</span>
+                  ) : (
+                    formatCurrency(deliveryFee)
+                  )}
+                </span>
               </div>
               <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between text-base font-extrabold text-slate-900 dark:text-white">
                 <span>Total Due</span>
                 <span className="text-emerald-600">{formatCurrency(grandTotal)}</span>
               </div>
+              {(couponDiscount > 0 || pointsDiscount > 0) && (
+                <p className="text-[11px] text-emerald-600 font-semibold text-right">
+                  You save {formatCurrency(couponDiscount + pointsDiscount)}
+                </p>
+              )}
             </div>
           </Card>
         </div>

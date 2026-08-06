@@ -1,11 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { WhatsAppWidget } from "@/components/ui/WhatsAppWidget";
+import { useSocket } from "@/hooks/useSocket";
+
+const SocketContext = createContext<ReturnType<typeof useSocket> | null>(null);
+
+export function useSocketContext() {
+  const ctx = useContext(SocketContext);
+  if (!ctx) throw new Error("useSocketContext must be used within SocketProvider");
+  return ctx;
+}
 
 function ServiceWorkerRegistration() {
   useEffect(() => {
@@ -14,6 +23,11 @@ function ServiceWorkerRegistration() {
     }
   }, []);
   return null;
+}
+
+function SocketProvider({ children }: { children: React.ReactNode }) {
+  const socket = useSocket();
+  return <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>;
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -32,12 +46,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <ServiceWorkerRegistration />
-          {children}
-          <Toaster position="top-right" richColors />
-          <WhatsAppWidget />
-        </ThemeProvider>
+        <SocketProvider>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+            <ServiceWorkerRegistration />
+            {children}
+            <Toaster position="top-right" richColors />
+            <WhatsAppWidget />
+          </ThemeProvider>
+        </SocketProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

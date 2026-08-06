@@ -3,6 +3,8 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { Response } from "express";
 import { z } from "zod";
 import crypto from "crypto";
+import { emitToOrder, emitToDelivery, emitToAdmins, emitToUser } from "../lib/socket";
+import { sendDeliveryUpdateSms } from "../lib/sms";
 
 const createDeliverySchema = z.object({
   orderId: z.string(),
@@ -99,6 +101,17 @@ export async function updateDeliveryStatus(req: AuthenticatedRequest, res: Respo
       data: { userId: req.user!.id, action: "DELIVERY_STATUS_UPDATED", entity: "DeliveryTracking", entityId: id, details: `Status: ${data.status}` },
     });
 
+    emitToOrder(delivery.orderId, "delivery:status", { trackingNumber: delivery.trackingNumber, status: data.status, notes: data.notes });
+    emitToDelivery(delivery.trackingNumber, "delivery:status", { status: data.status, notes: data.notes });
+    emitToAdmins("delivery:update", { deliveryId: id, trackingNumber: delivery.trackingNumber, status: data.status });
+
+    if (["OUT_FOR_DELIVERY", "DELIVERED", "ASSIGNED"].includes(data.status)) {
+      const order = await prisma.order.findUnique({ where: { id: delivery.orderId }, include: { user: { select: { phone: true } } } });
+      if (order?.user?.phone) {
+        sendDeliveryUpdateSms(order.user.phone, delivery.trackingNumber, data.status);
+      }
+    }
+
     return res.json(updated);
   } catch (error: any) {
     if (error instanceof z.ZodError) return res.status(400).json({ message: "Invalid input", errors: error.errors });
@@ -128,6 +141,10 @@ export async function assignDriver(req: AuthenticatedRequest, res: Response) {
 
       return d;
     });
+
+    emitToOrder(updated.orderId, "delivery:assigned", { driverName: driver.name, trackingNumber: updated.trackingNumber });
+    emitToUser(data.driverId, "delivery:assigned-to-you", { deliveryId: id, trackingNumber: updated.trackingNumber });
+    emitToAdmins("delivery:driver-assigned", { deliveryId: id, driverName: driver.name });
 
     return res.json(updated);
   } catch (error: any) {

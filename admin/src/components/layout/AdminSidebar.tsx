@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Pill, FileText, ShoppingCart, Settings, ShieldCheck, Building2, Package, Truck, BarChart3, Bell, Trophy, Megaphone, Stethoscope, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Pill, FileText, ShoppingCart, Settings, ShieldCheck, Building2, Package, Truck, BarChart3, Bell, Trophy, Megaphone, Stethoscope, ChevronDown, FileBarChart } from "lucide-react";
 
 interface NavItem {
   name: string;
@@ -39,6 +39,7 @@ const sections: NavSection[] = [
     label: "Growth",
     items: [
       { name: "Analytics", href: "/analytics", icon: BarChart3 },
+      { name: "Reports", href: "/reports", icon: FileBarChart },
       { name: "Marketing", href: "/marketing", icon: Megaphone },
       { name: "Loyalty", href: "/loyalty", icon: Trophy },
     ],

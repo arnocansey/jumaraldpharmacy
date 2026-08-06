@@ -53,7 +53,7 @@ export default function CartPage() {
                 <img src={product.images[0]} alt={product.name} className="h-20 w-20 rounded-xl object-cover" />
                 <div>
                   <h3 className="font-bold text-slate-900 dark:text-white text-base">{product.name}</h3>
-                  <p className="text-xs text-slate-500">{product.brand}</p>
+                  <p className="text-xs text-slate-500">{typeof product.brand === "string" ? product.brand : product.brand?.name}</p>
                   {product.requiresPrescription && <Badge variant="amber" className="mt-1">Rx Required</Badge>}
                   <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{formatCurrency(product.price)}</p>
                 </div>
