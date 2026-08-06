@@ -14,6 +14,12 @@ import uploadRoutes from "./routes/upload.routes";
 import paymentRoutes from "./routes/payment.routes";
 import passwordResetRoutes from "./routes/passwordReset.routes";
 import blogRoutes from "./routes/blog.routes";
+import branchRoutes from "./routes/branch.routes";
+import inventoryRoutes from "./routes/inventory.routes";
+import loyaltyRoutes from "./routes/loyalty.routes";
+import deliveryRoutes from "./routes/delivery.routes";
+import interactionRoutes from "./routes/interaction.routes";
+import searchRoutes from "./routes/search.routes";
 
 const app = express();
 
@@ -48,12 +54,18 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Health check endpoint
-app.get("/api/health", (req, res) => {
-  res.json({ status: "healthy", service: "Jumarald Pharmacy API", timestamp: new Date().toISOString() });
+const searchLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 60,
+  message: { message: "Too many search requests." },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-// API V1 Routes
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "healthy", service: "Jumarald Pharmacy API", version: "2.0.0", timestamp: new Date().toISOString() });
+});
+
 app.use("/api/v1/auth", authLimiter, authRoutes);
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/prescriptions", prescriptionRoutes);
@@ -64,15 +76,21 @@ app.use("/api/v1/upload", uploadRoutes);
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1", passwordResetRoutes);
 app.use("/api/v1/blog", blogRoutes);
+app.use("/api/v1/branches", branchRoutes);
+app.use("/api/v1/inventory", inventoryRoutes);
+app.use("/api/v1/loyalty", loyaltyRoutes);
+app.use("/api/v1/deliveries", deliveryRoutes);
+app.use("/api/v1/interactions", interactionRoutes);
+app.use("/api/v1/search", searchLimiter, searchRoutes);
 
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
 const PORT = env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Jumarald Pharmacy Backend Server running on port ${PORT}`);
+  console.log(`🚀 Jumarald Pharmacy API v2.0 running on port ${PORT}`);
 });
 
 export default app;

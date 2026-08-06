@@ -3,18 +3,25 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Pill, FileText, ShoppingCart, Stethoscope, Settings, LogOut, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Pill, FileText, ShoppingCart, Stethoscope, Settings, LogOut, ShieldCheck, Building2, Package, Truck, BarChart3, Bell, Trophy, Megaphone } from "lucide-react";
 
 export function AdminSidebar() {
   const pathname = usePathname();
 
   const links = [
-    { name: "Executive Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Product & Inventory", href: "/products", icon: Pill },
-    { name: "Prescription Queue", href: "/prescriptions", icon: FileText },
-    { name: "Order Fulfillment", href: "/orders", icon: ShoppingCart },
-    { name: "Telehealth Doctors", href: "/telehealth", icon: Stethoscope },
-    { name: "System Settings & RBAC", href: "/settings", icon: Settings },
+    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Products", href: "/products", icon: Pill },
+    { name: "Inventory", href: "/inventory", icon: Package },
+    { name: "Orders", href: "/orders", icon: ShoppingCart },
+    { name: "Prescriptions", href: "/prescriptions", icon: FileText },
+    { name: "Branches", href: "/branches", icon: Building2 },
+    { name: "Deliveries", href: "/deliveries", icon: Truck },
+    { name: "Analytics", href: "/analytics", icon: BarChart3 },
+    { name: "Marketing", href: "/marketing", icon: Megaphone },
+    { name: "Loyalty", href: "/loyalty", icon: Trophy },
+    { name: "Notifications", href: "/notifications", icon: Bell },
+    { name: "Telehealth", href: "/telehealth", icon: Stethoscope },
+    { name: "Settings", href: "/settings", icon: Settings },
   ];
 
   return (
@@ -29,7 +36,7 @@ export function AdminSidebar() {
           </p>
         </Link>
 
-        <nav className="space-y-1 text-sm font-medium">
+        <nav className="space-y-0.5 text-sm font-medium">
           {links.map((link) => {
             const Icon = link.icon;
             const isActive = pathname === link.href;
@@ -37,12 +44,12 @@ export function AdminSidebar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${
                   isActive ? "bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30" : "text-emerald-200/80 hover:text-white hover:bg-emerald-900/60"
                 }`}
               >
-                <Icon className="h-5 w-5" />
-                <span>{link.name}</span>
+                <Icon className="h-4 w-4" />
+                <span className="text-xs">{link.name}</span>
               </Link>
             );
           })}
@@ -53,7 +60,7 @@ export function AdminSidebar() {
         <div className="flex items-center gap-2 text-emerald-300 font-semibold">
           <ShieldCheck className="h-4 w-4 text-emerald-400" /> Chief Pharmacist Mode
         </div>
-        <p>© 2026 Jumarald Pharmacy Control Panel</p>
+        <p>© 2026 Jumarald Pharmacy</p>
       </div>
     </aside>
   );

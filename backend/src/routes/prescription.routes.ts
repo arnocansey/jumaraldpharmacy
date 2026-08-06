@@ -10,6 +10,7 @@ const router = Router();
 router.post("/", authenticateToken, submitPrescription);
 router.get("/my", authenticateToken, getMyPrescriptions);
 router.get("/queue", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), getPrescriptionQueue);
+router.put("/:id/status", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), updatePrescriptionStatus);
 router.patch("/:id/verify", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), updatePrescriptionStatus);
 
 export default router;

@@ -10,7 +10,8 @@
     "prisma:db-push": "prisma db push",
     "prisma:seed": "ts-node prisma/seed.ts",
     "prisma:seed-categories": "ts-node prisma/seed-categories.ts",
-    "prisma:seed-blog": "ts-node prisma/seed-blog.ts"
+    "prisma:seed-blog": "ts-node prisma/seed-blog.ts",
+    "prisma:seed-enterprise": "ts-node prisma/seed-enterprise.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

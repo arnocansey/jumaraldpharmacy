@@ -8,6 +8,8 @@ const router = Router();
 router.post("/", authenticateToken, createOrder);
 router.get("/my", authenticateToken, getMyOrders);
 router.get("/all", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), getAllOrders);
+router.get("/", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), getAllOrders);
+router.put("/:id/status", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN]), updateOrderStatus);
 router.patch("/:id/status", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN]), updateOrderStatus);
 
 export default router;

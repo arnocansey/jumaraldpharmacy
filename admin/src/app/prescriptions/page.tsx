@@ -1,219 +1,165 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { CheckCircle, XCircle, Eye, RefreshCw, Loader2, FileText, Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, FileText, CheckCircle, XCircle, AlertCircle, MessageSquare, Clock, Eye } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
-import { API_URL } from "@/lib/api";
-function getToken() {
-  try { return localStorage.getItem("jumarald_admin_token") || localStorage.getItem("jumarald_token") || ""; }
-  catch { return ""; }
-}
 
-const STATUS_COLORS: Record<string, string> = {
-  SUBMITTED: "bg-amber-50 text-amber-700 border border-amber-200",
-  UNDER_REVIEW: "bg-blue-50 text-blue-700 border border-blue-200",
-  APPROVED: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  REJECTED: "bg-red-50 text-red-700 border border-red-200",
-  CLARIFICATION_NEEDED: "bg-purple-50 text-purple-700 border border-purple-200",
-};
-
-interface Rx {
+interface Prescription {
   id: string;
-  status: string;
   documentUrl: string;
   patientNotes?: string;
   pharmacistNote?: string;
+  status: string;
+  priority: number;
+  doctorName?: string;
   createdAt: string;
-  user?: { name: string; email: string; phone?: string };
+  user: { name: string; email: string; phone?: string };
+  items: any[];
 }
 
-export default function PharmacistPrescriptionsPage() {
-  const [queue, setQueue] = useState<Rx[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [actioningId, setActioningId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [noteModal, setNoteModal] = useState<{ id: string; note: string } | null>(null);
+const STATUS_CONFIG: Record<string, { color: string; icon: any }> = {
+  SUBMITTED: { color: "bg-blue-100 text-blue-700", icon: Clock },
+  UNDER_REVIEW: { color: "bg-amber-100 text-amber-700", icon: Eye },
+  APPROVED: { color: "bg-green-100 text-green-700", icon: CheckCircle },
+  REJECTED: { color: "bg-red-100 text-red-700", icon: XCircle },
+  CLARIFICATION_NEEDED: { color: "bg-purple-100 text-purple-700", icon: MessageSquare },
+};
 
-  const fetchQueue = useCallback(async () => {
-    setLoading(true);
+export default function PrescriptionsPage() {
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [selected, setSelected] = useState<Prescription | null>(null);
+  const [note, setNote] = useState("");
+
+  useEffect(() => { loadPrescriptions(); }, [statusFilter]);
+
+  async function loadPrescriptions() {
     try {
-      const res = await fetch(`${API_URL}/prescriptions/queue`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      if (!res.ok) throw new Error("Unauthorized");
-      const data = await res.json();
-      setQueue(Array.isArray(data) ? data : []);
-    } catch (e: any) {
-      toast.error("Failed to load prescription queue");
-      setQueue([]);
+      const data = await apiFetch<Prescription[]>("/prescriptions/queue");
+      setPrescriptions(data);
+    } catch {
+      toast.error("Failed to load prescriptions");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }
 
-  useEffect(() => { fetchQueue(); }, [fetchQueue]);
-
-  const handleAction = async (id: string, status: "APPROVED" | "REJECTED" | "CLARIFICATION_NEEDED", pharmacistNote?: string) => {
-    setActioningId(id);
+  async function updateStatus(id: string, status: string) {
     try {
-      const res = await fetch(`${API_URL}/prescriptions/${id}/verify`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ status, pharmacistNote: pharmacistNote || "" }),
-      });
-      if (!res.ok) throw new Error("Failed to update prescription");
-      setQueue((prev) => prev.map((rx) => (rx.id === id ? { ...rx, status, pharmacistNote } : rx)));
-      toast.success(`Prescription ${status.toLowerCase()} successfully`);
-      setNoteModal(null);
-    } catch (e: any) {
-      toast.error(e.message || "Action failed");
-    } finally {
-      setActioningId(null);
+      await apiFetch(`/prescriptions/${id}/status`, { method: "PUT", body: JSON.stringify({ status, pharmacistNote: note }) });
+      toast.success(`Prescription ${status.toLowerCase().replace(/_/g, " ")}`);
+      setNote("");
+      setSelected(null);
+      loadPrescriptions();
+    } catch {
+      toast.error("Failed to update prescription");
     }
+  }
+
+  const filtered = prescriptions.filter((p) => !statusFilter || p.status === statusFilter);
+  const stats = {
+    submitted: prescriptions.filter((p) => p.status === "SUBMITTED").length,
+    underReview: prescriptions.filter((p) => p.status === "UNDER_REVIEW").length,
+    approved: prescriptions.filter((p) => p.status === "APPROVED").length,
+    rejected: prescriptions.filter((p) => p.status === "REJECTED").length,
   };
 
-  const filtered = queue.filter((rx) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return rx.user?.name.toLowerCase().includes(q) || rx.user?.email.toLowerCase().includes(q) || rx.id.toLowerCase().includes(q);
-  });
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">Pharmacist Verification Queue</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Review and approve or reject patient prescriptions before order dispatch.</p>
-        </div>
-        <button onClick={fetchQueue} className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors" title="Refresh">
-          <RefreshCw className="h-4 w-4" />
-        </button>
+    <div className="p-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-800">Prescription Queue</h1>
+        <p className="text-slate-500 text-sm">Review and manage customer prescriptions</p>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Search patient name or Rx ID..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: "Submitted", count: stats.submitted, color: "text-blue-600 bg-blue-50" },
+          { label: "Under Review", count: stats.underReview, color: "text-amber-600 bg-amber-50" },
+          { label: "Approved", count: stats.approved, color: "text-green-600 bg-green-50" },
+          { label: "Rejected", count: stats.rejected, color: "text-red-600 bg-red-50" },
+        ].map((s) => (
+          <div key={s.label} className={`rounded-xl p-4 ${s.color}`}>
+            <p className="text-2xl font-bold">{s.count}</p>
+            <p className="text-sm opacity-75">{s.label}</p>
+          </div>
+        ))}
       </div>
 
-      <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+      <div className="flex gap-2 mb-4">
+        {["", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "CLARIFICATION_NEEDED"].map((s) => (
+          <button key={s} onClick={() => setStatusFilter(s)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${statusFilter === s ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+            {s ? s.replace(/_/g, " ") : "All"}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
-          <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
-            <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
-            <span className="text-sm font-medium">Loading prescription queue...</span>
-          </div>
+          [1, 2, 3].map((i) => <div key={i} className="bg-white rounded-2xl p-6 animate-pulse"><div className="h-4 bg-slate-200 rounded w-3/4 mb-3" /><div className="h-4 bg-slate-200 rounded w-1/2" /></div>)
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-3 text-slate-400">
-            <FileText className="h-10 w-10 text-slate-300" />
-            <p className="text-sm font-medium">{search ? "No prescriptions match your search." : "No prescriptions in the queue."}</p>
-          </div>
+          <div className="col-span-full text-center py-12 text-slate-400">No prescriptions found</div>
         ) : (
-          <table className="w-full text-left text-sm text-slate-700">
-            <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b border-slate-200">
-              <tr>
-                <th className="p-4">Rx ID / Patient</th>
-                <th className="p-4">Submitted</th>
-                <th className="p-4">Patient Notes</th>
-                <th className="p-4">Pharmacist Note</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((rx) => (
-                <tr key={rx.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="p-4">
-                    <div className="font-extrabold text-slate-900 text-xs font-mono">{rx.id.slice(0, 8).toUpperCase()}</div>
-                    <div className="text-xs font-semibold text-slate-700 mt-0.5">{rx.user?.name || "Unknown"}</div>
-                    <div className="text-[11px] text-slate-400">{rx.user?.email}</div>
-                    {rx.user?.phone && <div className="text-[11px] text-slate-400">{rx.user.phone}</div>}
-                  </td>
-                  <td className="p-4 text-xs text-slate-500">
-                    {new Date(rx.createdAt).toLocaleDateString("en-GH", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                  </td>
-                  <td className="p-4 text-xs text-slate-600 max-w-[180px]">
-                    <span className="line-clamp-2">{rx.patientNotes || "—"}</span>
-                  </td>
-                  <td className="p-4 text-xs text-slate-600 max-w-[160px]">
-                    <span className="line-clamp-2 italic">{rx.pharmacistNote || "—"}</span>
-                  </td>
-                  <td className="p-4">
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${STATUS_COLORS[rx.status] || "bg-slate-100 text-slate-500"}`}>
-                      {rx.status.replace("_", " ")}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right">
-                    <div className="flex items-center gap-1.5 justify-end">
-                      {rx.documentUrl && (
-                        <a
-                          href={rx.documentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
-                          title="View Document"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </a>
-                      )}
-                      {actioningId === rx.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => setNoteModal({ id: rx.id, note: "" })}
-                            disabled={rx.status === "APPROVED" || rx.status === "REJECTED"}
-                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold inline-flex items-center gap-1 border border-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <CheckCircle className="h-3.5 w-3.5" /> Approve
-                          </button>
-                          <button
-                            onClick={() => handleAction(rx.id, "REJECTED")}
-                            disabled={rx.status === "APPROVED" || rx.status === "REJECTED"}
-                            className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold inline-flex items-center gap-1 border border-red-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <XCircle className="h-3.5 w-3.5" /> Reject
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          filtered.map((p) => {
+            const config = STATUS_CONFIG[p.status] || STATUS_CONFIG.SUBMITTED;
+            const Icon = config.icon;
+            return (
+              <div key={p.id} onClick={() => { setSelected(p); setNote(""); }}
+                className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-lg transition-all cursor-pointer">
+                <div className="flex items-start justify-between mb-3">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${config.color}`}>
+                    <Icon className="h-3 w-3" /> {p.status.replace(/_/g, " ")}
+                  </span>
+                  <span className="text-xs text-slate-400">{new Date(p.createdAt).toLocaleDateString()}</span>
+                </div>
+                <h3 className="font-bold text-slate-800 mb-1">{p.user.name}</h3>
+                <p className="text-sm text-slate-500 mb-2">{p.user.email}</p>
+                {p.patientNotes && <p className="text-xs text-slate-400 line-clamp-2 mb-2">&ldquo;{p.patientNotes}&rdquo;</p>}
+                {p.doctorName && <p className="text-xs text-slate-500">Doctor: {p.doctorName}</p>}
+                {p.pharmacistNote && <p className="text-xs text-emerald-600 mt-2 bg-emerald-50 p-2 rounded-lg">{p.pharmacistNote}</p>}
+              </div>
+            );
+          })
         )}
       </div>
 
-      {/* Approve with Note Modal */}
-      {noteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 border border-slate-200">
-            <h3 className="text-lg font-extrabold text-slate-900">Add Pharmacist Note</h3>
-            <p className="text-xs text-slate-500">Optionally include a verification note before approving.</p>
-            <textarea
-              rows={4}
-              value={noteModal.note}
-              onChange={(e) => setNoteModal({ ...noteModal, note: e.target.value })}
-              placeholder="e.g. Verified for Amoxicillin 625mg — Dr. Mensah's signature confirmed."
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-            />
+      {selected && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Prescription Review</h2>
+              <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="bg-slate-50 rounded-xl p-4">
+                <img src={selected.documentUrl} alt="Prescription" className="w-full rounded-lg" />
+              </div>
+              <div><p className="text-xs text-slate-500">Patient</p><p className="font-semibold">{selected.user.name}</p><p className="text-sm text-slate-500">{selected.user.email}</p></div>
+              {selected.patientNotes && <div><p className="text-xs text-slate-500">Patient Notes</p><p className="text-sm">{selected.patientNotes}</p></div>}
+              {selected.doctorName && <div><p className="text-xs text-slate-500">Prescribing Doctor</p><p className="text-sm">{selected.doctorName}</p></div>}
+
+              <div>
+                <label className="text-xs text-slate-500 block mb-1">Pharmacist Notes</label>
+                <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add notes..."
+                  className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500" rows={3} />
+              </div>
+            </div>
+
             <div className="flex gap-3">
-              <button
-                onClick={() => setNoteModal(null)}
-                className="flex-1 h-10 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50"
-              >
-                Cancel
+              <button onClick={() => updateStatus(selected.id, "APPROVED")}
+                className="flex-1 bg-green-600 text-white py-2.5 rounded-xl font-semibold hover:bg-green-700 flex items-center justify-center gap-2">
+                <CheckCircle className="h-4 w-4" /> Approve
               </button>
-              <button
-                onClick={() => handleAction(noteModal.id, "APPROVED", noteModal.note)}
-                className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm flex items-center justify-center gap-2"
-              >
-                <CheckCircle className="h-4 w-4" /> Confirm Approval
+              <button onClick={() => updateStatus(selected.id, "REJECTED")}
+                className="flex-1 bg-red-600 text-white py-2.5 rounded-xl font-semibold hover:bg-red-700 flex items-center justify-center gap-2">
+                <XCircle className="h-4 w-4" /> Reject
+              </button>
+              <button onClick={() => updateStatus(selected.id, "CLARIFICATION_NEEDED")}
+                className="flex-1 bg-amber-600 text-white py-2.5 rounded-xl font-semibold hover:bg-amber-700 flex items-center justify-center gap-2">
+                <MessageSquare className="h-4 w-4" /> Clarify
               </button>
             </div>
           </div>

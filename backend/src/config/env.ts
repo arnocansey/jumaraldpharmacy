@@ -26,8 +26,12 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),
 
-  // Frontend URL (for password reset links)
+  // URLs
   FRONTEND_URL: z.string().default("http://localhost:3000"),
+  ADMIN_URL: z.string().default("http://localhost:3001"),
+
+  // Redis (optional, for caching & rate limiting)
+  REDIS_URL: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
