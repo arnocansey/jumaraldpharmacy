@@ -61,7 +61,7 @@ export default function LoginPage() {
     <div className="min-h-[80vh] flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12 bg-slate-50 dark:bg-slate-950">
       <div className="max-w-md w-full space-y-6">
         <div className="text-center space-y-2">
-          <div className="h-14 w-14 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+          <div className="h-14 w-14 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
             <Pill className="h-7 w-7" />
           </div>
           <Badge variant="emerald">Ghana Patient Portal</Badge>
@@ -99,7 +99,7 @@ export default function LoginPage() {
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                  className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
                 >
                   Forgot Password?
                 </Link>
@@ -117,6 +117,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -138,14 +139,14 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-500">
             Don&apos;t have a patient account?{" "}
-            <Link href="/register" className="font-extrabold text-emerald-600 dark:text-emerald-400 hover:underline">
+            <Link href="/register" className="font-extrabold text-emerald-700 dark:text-emerald-400 hover:underline">
               Create New Account
             </Link>
           </div>
         </Card>
 
         <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400">
-          <ShieldCheck className="h-4 w-4 text-emerald-600" /> Protected by 256-bit GPHC Encrypted Portal
+          <ShieldCheck className="h-4 w-4 text-emerald-700 dark:text-emerald-400" /> Protected by 256-bit SSL Encryption
         </div>
       </div>
     </div>

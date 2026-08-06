@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Pill, Search, ShoppingBag, UploadCloud, Stethoscope, Menu, X, Sun, Moon, LogIn, UserPlus, User, LogOut, LayoutDashboard } from "lucide-react";
+import { Search, ShoppingBag, UploadCloud, Menu, X, Sun, Moon, LogIn, UserPlus, User, LogOut, Phone } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/Button";
 import { useCartStore } from "@/store/useCartStore";
@@ -43,6 +43,14 @@ export function Navbar() {
     router.push("/");
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
+      setMobileMenuOpen(false);
+    }
+  };
+
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "Shop Medicines", href: "/shop" },
@@ -59,46 +67,53 @@ export function Navbar() {
       <div className="w-full px-4 sm:px-8 lg:px-12">
         <div className="flex h-20 items-center justify-between gap-4">
           {/* Brand Logo */}
-          <Link href="/" className="flex items-center group">
+          <Link href="/" className="flex items-center group shrink-0">
             <img src="/jumaraldlogo.png" alt="Jumarald Pharmacy and Wellness Center" className="h-11 w-auto object-contain group-hover:scale-105 transition-transform" />
           </Link>
 
-          {/* Search Bar */}
-          <div className="hidden lg:flex flex-1 max-w-md relative">
+          {/* Search Bar — visible md+ */}
+          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
               placeholder="Search prescription drugs, vitamins, brands..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 rounded-xl text-sm bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+              aria-label="Search products"
+              className="w-full h-11 pl-10 pr-4 rounded-xl text-sm bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
             />
-          </div>
+          </form>
 
           {/* Right Action Icons & Auth Buttons */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            {/* Phone — visible lg+ */}
+            <a href="tel:+233544772483" className="hidden lg:flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors px-2 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30" aria-label="Call pharmacy">
+              <Phone className="h-3.5 w-3.5" />
+              <span>+233 54 477 2483</span>
+            </a>
+
             {/* Theme Toggle */}
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              aria-label="Toggle Theme"
+              aria-label="Toggle dark mode"
             >
               {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
 
-            {/* Prescription Upload Quick Button */}
-            <Link href="/prescriptions/upload" className="hidden xl:inline-flex">
+            {/* Prescription Upload Quick Button — visible lg+ */}
+            <Link href="/prescriptions/upload" className="hidden lg:inline-flex">
               <Button variant="glass" size="md">
-                <UploadCloud className="h-4 w-4 text-emerald-600" />
+                <UploadCloud className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
                 <span>Upload Rx</span>
               </Button>
             </Link>
 
-            {/* Cart Icon */}
-            <Link href="/cart" className="relative p-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            {/* Cart Icon with Badge */}
+            <Link href="/cart" className="relative p-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label={`Shopping cart, ${totalItemCount} items`}>
               <ShoppingBag className="h-6 w-6" />
               {totalItemCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white shadow-md animate-pulse">
+                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white shadow-md" aria-hidden="true">
                   {totalItemCount}
                 </span>
               )}
@@ -110,13 +125,13 @@ export function Navbar() {
                 <div className="flex items-center gap-2">
                   <Link href="/dashboard">
                     <Button variant="outline" size="md" className="border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold hover:bg-emerald-100">
-                      <User className="h-4 w-4 text-emerald-600" />
+                      <User className="h-4 w-4 text-emerald-700" />
                       <span>{user.name}</span>
                     </Button>
                   </Link>
                   <button
                     onClick={handleLogout}
-                    title="Sign Out"
+                    aria-label="Sign out"
                     className="p-2.5 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
                   >
                     <LogOut className="h-4 w-4" />
@@ -126,7 +141,7 @@ export function Navbar() {
                 <>
                   <Link href="/login">
                     <Button variant="outline" size="md" className="border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-100 dark:hover:bg-slate-800">
-                      <LogIn className="h-4 w-4 text-emerald-600" />
+                      <LogIn className="h-4 w-4 text-emerald-700" />
                       <span>Sign In</span>
                     </Button>
                   </Link>
@@ -144,6 +159,8 @@ export function Navbar() {
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -151,7 +168,7 @@ export function Navbar() {
         </div>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-8 py-2.5 border-t border-slate-200/50 dark:border-slate-800/50 text-sm font-medium">
+        <nav className="hidden lg:flex items-center gap-8 py-2.5 border-t border-slate-200/50 dark:border-slate-800/50 text-sm font-medium" aria-label="Main navigation">
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
             return (
@@ -160,9 +177,10 @@ export function Navbar() {
                 href={link.href}
                 className={`transition-colors py-1 ${
                   isActive
-                    ? "text-emerald-600 dark:text-emerald-400 font-bold border-b-2 border-emerald-600"
-                    : "text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+                    ? "text-emerald-700 dark:text-emerald-400 font-bold border-b-2 border-emerald-700 dark:border-emerald-400"
+                    : "text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400"
                 }`}
+                aria-current={isActive ? "page" : undefined}
               >
                 {link.name}
               </Link>
@@ -174,24 +192,40 @@ export function Navbar() {
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden glass-card border-b border-slate-200 dark:border-slate-800 px-4 pt-2 pb-6 space-y-3">
-          <div className="relative mb-4">
+          <form onSubmit={handleSearch} className="relative mb-4">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
               placeholder="Search medicines..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search products"
               className="w-full h-11 pl-10 pr-4 rounded-xl text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
             />
+          </form>
+          <nav aria-label="Mobile navigation">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block py-2 text-base font-medium transition-colors ${
+                  pathname === link.href
+                    ? "text-emerald-700 dark:text-emerald-400 font-bold"
+                    : "text-slate-700 dark:text-slate-200 hover:text-emerald-700"
+                }`}
+                aria-current={pathname === link.href ? "page" : undefined}
+              >
+                {link.name}
+              </Link>
+            ))}
+          </nav>
+          <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+            <a href="tel:+233544772483" className="flex items-center gap-2 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400" aria-label="Call pharmacy">
+              <Phone className="h-4 w-4" />
+              +233 54 477 2483
+            </a>
           </div>
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 text-base font-medium text-slate-700 dark:text-slate-200 hover:text-emerald-600"
-            >
-              {link.name}
-            </Link>
-          ))}
           <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
             {user ? (
               <div className="space-y-2">
@@ -208,7 +242,7 @@ export function Navbar() {
               <div className="grid grid-cols-2 gap-2">
                 <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="outline" size="md" className="w-full font-bold">
-                    <LogIn className="h-4 w-4 text-emerald-600" /> Sign In
+                    <LogIn className="h-4 w-4 text-emerald-700" /> Sign In
                   </Button>
                 </Link>
                 <Link href="/register" onClick={() => setMobileMenuOpen(false)}>

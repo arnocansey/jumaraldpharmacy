@@ -79,6 +79,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [dateRange, setDateRange] = useState<"today" | "7d" | "30d" | "90d" | "all">("all");
 
   const loadDashboard = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
@@ -136,6 +137,27 @@ export default function AdminDashboard() {
           <p className="text-slate-500 dark:text-slate-400 text-sm">Real-time pharmacy operations overview</p>
         </div>
         <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
+            {([
+              { key: "today" as const, label: "Today" },
+              { key: "7d" as const, label: "7D" },
+              { key: "30d" as const, label: "30D" },
+              { key: "90d" as const, label: "90D" },
+              { key: "all" as const, label: "All" },
+            ]).map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setDateRange(opt.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  dateRange === opt.key
+                    ? "bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           {lastUpdated && <span className="text-xs text-slate-400 dark:text-slate-500">Updated {lastUpdated.toLocaleTimeString()}</span>}
           <button onClick={() => loadDashboard(true)} disabled={refreshing}
             className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50">

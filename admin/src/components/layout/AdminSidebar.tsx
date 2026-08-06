@@ -3,30 +3,68 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Pill, FileText, ShoppingCart, Stethoscope, Settings, ShieldCheck, Building2, Package, Truck, BarChart3, Bell, Trophy, Megaphone } from "lucide-react";
+import { LayoutDashboard, Pill, FileText, ShoppingCart, Settings, ShieldCheck, Building2, Package, Truck, BarChart3, Bell, Trophy, Megaphone, Stethoscope, ChevronDown } from "lucide-react";
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+const sections: NavSection[] = [
+  {
+    label: "Operations",
+    items: [
+      { name: "Dashboard", href: "/", icon: LayoutDashboard },
+      { name: "Products", href: "/products", icon: Pill },
+      { name: "Inventory", href: "/inventory", icon: Package },
+      { name: "Orders", href: "/orders", icon: ShoppingCart },
+      { name: "Prescriptions", href: "/prescriptions", icon: FileText },
+      { name: "Deliveries", href: "/deliveries", icon: Truck },
+    ],
+  },
+  {
+    label: "Network",
+    items: [
+      { name: "Branches", href: "/branches", icon: Building2 },
+      { name: "Telehealth", href: "/telehealth", icon: Stethoscope },
+    ],
+  },
+  {
+    label: "Growth",
+    items: [
+      { name: "Analytics", href: "/analytics", icon: BarChart3 },
+      { name: "Marketing", href: "/marketing", icon: Megaphone },
+      { name: "Loyalty", href: "/loyalty", icon: Trophy },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { name: "Notifications", href: "/notifications", icon: Bell },
+      { name: "Settings", href: "/settings", icon: Settings },
+    ],
+  },
+];
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>(
+    Object.fromEntries(sections.map((s) => [s.label, true]))
+  );
 
-  const links = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Products", href: "/products", icon: Pill },
-    { name: "Inventory", href: "/inventory", icon: Package },
-    { name: "Orders", href: "/orders", icon: ShoppingCart },
-    { name: "Prescriptions", href: "/prescriptions", icon: FileText },
-    { name: "Branches", href: "/branches", icon: Building2 },
-    { name: "Deliveries", href: "/deliveries", icon: Truck },
-    { name: "Analytics", href: "/analytics", icon: BarChart3 },
-    { name: "Marketing", href: "/marketing", icon: Megaphone },
-    { name: "Loyalty", href: "/loyalty", icon: Trophy },
-    { name: "Notifications", href: "/notifications", icon: Bell },
-    { name: "Telehealth", href: "/telehealth", icon: Stethoscope },
-    { name: "Settings", href: "/settings", icon: Settings },
-  ];
+  const toggleSection = (label: string) => {
+    setOpenSections((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
 
   return (
     <aside className="w-64 bg-emerald-950 dark:bg-emerald-950 border-r border-emerald-900 dark:border-emerald-900 flex flex-col justify-between p-4 min-h-screen">
-      <div className="space-y-6">
+      <div className="space-y-6 overflow-y-auto">
         <Link href="/" className="block px-2">
           <div className="bg-white dark:bg-slate-800 p-2.5 rounded-xl shadow-md">
             <img src="/jumaraldlogo.png" alt="Jumarald Pharmacy Operations" className="h-9 w-auto object-contain mx-auto" />
@@ -36,25 +74,42 @@ export function AdminSidebar() {
           </p>
         </Link>
 
-        <nav className="space-y-0.5 text-sm font-medium">
-          {links.map((link) => {
-            const Icon = link.icon;
-            const isActive = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${
-                  isActive
-                    ? "bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30"
-                    : "text-emerald-200/80 hover:text-white hover:bg-emerald-900/60"
-                }`}
+        <nav className="space-y-4 text-sm font-medium" aria-label="Admin navigation">
+          {sections.map((section) => (
+            <div key={section.label}>
+              <button
+                onClick={() => toggleSection(section.label)}
+                className="flex items-center justify-between w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400/60 hover:text-emerald-300 transition-colors"
+                aria-expanded={openSections[section.label]}
               >
-                <Icon className="h-4 w-4" />
-                <span className="text-xs">{link.name}</span>
-              </Link>
-            );
-          })}
+                {section.label}
+                <ChevronDown className={`h-3 w-3 transition-transform ${openSections[section.label] ? "" : "-rotate-90"}`} />
+              </button>
+              {openSections[section.label] && (
+                <div className="space-y-0.5 mt-1">
+                  {section.items.map((link) => {
+                    const Icon = link.icon;
+                    const isActive = pathname === link.href;
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${
+                          isActive
+                            ? "bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30"
+                            : "text-emerald-200/80 hover:text-white hover:bg-emerald-900/60"
+                        }`}
+                        aria-current={isActive ? "page" : undefined}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span className="text-xs">{link.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
         </nav>
       </div>
 
