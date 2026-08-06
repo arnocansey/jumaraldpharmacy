@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 160" fill="none">
+  <!-- Brand Text: ju -->
+  <text x="15" y="105" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="110" fill="#610c6d" letter-spacing="-4">ju</text>
+  
+  <!-- ECG Heartbeat Pulse in Green -->
+  <path d="M 115 85 L 140 85 L 160 40 L 185 140 L 210 15 L 235 110 L 255 70 L 275 85 L 305 85" stroke="#10b981" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Brand Text: arald -->
+  <text x="240" y="105" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="110" fill="#610c6d" letter-spacing="-3">arald</text>
+  
+  <!-- Subtitle Text -->
+  <text x="220" y="140" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="21" fill="#89559c" letter-spacing="3">PHARMACY AND WELLNESS CENTER</text>
+</svg>

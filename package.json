@@ -1,0 +1,13 @@
+{
+  "name": "jumarald-pharmacy-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "pnpm --filter jumarald-pharmacy-frontend dev",
+    "dev:backend": "pnpm --filter jumarald-pharmacy-backend dev",
+    "dev:admin": "pnpm --filter jumarald-pharmacy-admin dev",
+    "build": "pnpm --recursive run build",
+    "lint": "pnpm --recursive run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\""
+  }
+}
