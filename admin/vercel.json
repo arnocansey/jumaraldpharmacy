@@ -1,6 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm install -g pnpm@9 && pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter jumarald-pharmacy-admin build",
-  "outputDirectory": "admin/.next"
+  "framework": "nextjs"
 }
