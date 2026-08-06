@@ -63,9 +63,9 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside className="w-64 bg-emerald-950 dark:bg-emerald-950 border-r border-emerald-900 dark:border-emerald-900 flex flex-col justify-between p-4 min-h-screen">
-      <div className="space-y-6 overflow-y-auto">
-        <Link href="/" className="block px-2">
+    <aside className="w-64 shrink-0 bg-emerald-950 dark:bg-emerald-950 border-r border-emerald-900 dark:border-emerald-900 flex flex-col h-screen sticky top-0 p-4">
+      <div className="flex flex-col h-full">
+        <Link href="/" className="block px-2 shrink-0">
           <div className="bg-white dark:bg-slate-800 p-2.5 rounded-xl shadow-md">
             <img src="/jumaraldlogo.png" alt="Jumarald Pharmacy Operations" className="h-9 w-auto object-contain mx-auto" />
           </div>
@@ -74,7 +74,7 @@ export function AdminSidebar() {
           </p>
         </Link>
 
-        <nav className="space-y-4 text-sm font-medium" aria-label="Admin navigation">
+        <nav className="flex-1 overflow-y-auto space-y-4 text-sm font-medium mt-6 scrollbar-thin scrollbar-thumb-emerald-800 scrollbar-track-transparent" aria-label="Admin navigation">
           {sections.map((section) => (
             <div key={section.label}>
               <button
@@ -111,13 +111,13 @@ export function AdminSidebar() {
             </div>
           ))}
         </nav>
-      </div>
 
-      <div className="pt-4 border-t border-emerald-900 text-xs text-emerald-300/70 space-y-2">
-        <div className="flex items-center gap-2 text-emerald-300 font-semibold">
-          <ShieldCheck className="h-4 w-4 text-emerald-400" /> Chief Pharmacist Mode
+        <div className="pt-4 border-t border-emerald-900 text-xs text-emerald-300/70 space-y-2 shrink-0 mt-auto">
+          <div className="flex items-center gap-2 text-emerald-300 font-semibold">
+            <ShieldCheck className="h-4 w-4 text-emerald-400" /> Chief Pharmacist Mode
+          </div>
+          <p>&copy; 2026 Jumarald Pharmacy</p>
         </div>
-        <p>&copy; 2026 Jumarald Pharmacy</p>
       </div>
     </aside>
   );
