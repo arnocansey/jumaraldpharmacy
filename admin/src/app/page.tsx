@@ -46,8 +46,8 @@ export default function AdminDashboard() {
   }, []);
 
   if (loading) return (
-    <div className="p-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="bg-white rounded-2xl p-6 animate-pulse">
             <div className="h-4 bg-slate-200 rounded w-1/2 mb-3" />
@@ -59,13 +59,13 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="p-8">
+    <div className="w-full">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-800">Executive Dashboard</h1>
         <p className="text-slate-500 text-sm">Welcome back. Here&apos;s your pharmacy overview.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatsCard icon={DollarSign} title="Total Revenue" value={`GHS ${(analytics?.summary.totalRevenue || 0).toLocaleString()}`} change="+12.5% this month" color="bg-emerald-500" />
         <StatsCard icon={ShoppingCart} title="Total Orders" value={(analytics?.summary.totalOrders || 0).toLocaleString()} change="+8.2% this month" color="bg-blue-500" />
         <StatsCard icon={Users} title="Active Users" value={(analytics?.summary.totalUsers || 0).toLocaleString()} change="+5.1% this month" color="bg-purple-500" />
@@ -111,7 +111,7 @@ export default function AdminDashboard() {
 
       <div className="bg-white rounded-2xl border border-slate-100 p-6">
         <h3 className="font-bold text-slate-800 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
             { label: "Manage Products", href: "/products", icon: Package },
             { label: "Order Queue", href: "/orders", icon: ShoppingCart },
