@@ -3,9 +3,5 @@
   "framework": "nextjs",
   "buildCommand": "cd ../.. && pnpm install --frozen-lockfile && cd frontend && pnpm build",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
-  "outputDirectory": ".next",
-  "regions": ["fra1"],
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@backend-url"
-  }
+  "outputDirectory": ".next"
 }
