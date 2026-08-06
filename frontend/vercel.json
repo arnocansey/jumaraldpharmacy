@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "npm install -g pnpm@9 && pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm build:frontend",
+  "buildCommand": "pnpm --filter jumarald-pharmacy-frontend build",
   "outputDirectory": "frontend/.next"
 }

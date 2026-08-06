@@ -6,7 +6,6 @@
     "dev:frontend": "pnpm --filter jumarald-pharmacy-frontend dev",
     "dev:backend": "pnpm --filter jumarald-pharmacy-backend dev",
     "dev:admin": "pnpm --filter jumarald-pharmacy-admin dev",
-    "build": "pnpm --recursive run build",
     "build:frontend": "pnpm --filter jumarald-pharmacy-frontend build",
     "build:admin": "pnpm --filter jumarald-pharmacy-admin build",
     "lint": "pnpm --recursive run lint",
