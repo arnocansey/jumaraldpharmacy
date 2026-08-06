@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Pill, FileText, ShoppingCart, Stethoscope, Settings, LogOut, ShieldCheck, Building2, Package, Truck, BarChart3, Bell, Trophy, Megaphone } from "lucide-react";
+import { LayoutDashboard, Pill, FileText, ShoppingCart, Stethoscope, Settings, ShieldCheck, Building2, Package, Truck, BarChart3, Bell, Trophy, Megaphone } from "lucide-react";
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -25,10 +25,10 @@ export function AdminSidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-emerald-950 border-r border-emerald-900 flex flex-col justify-between p-4 min-h-screen">
+    <aside className="w-64 bg-emerald-950 dark:bg-emerald-950 border-r border-emerald-900 dark:border-emerald-900 flex flex-col justify-between p-4 min-h-screen">
       <div className="space-y-6">
         <Link href="/" className="block px-2">
-          <div className="bg-white p-2.5 rounded-xl shadow-md">
+          <div className="bg-white dark:bg-slate-800 p-2.5 rounded-xl shadow-md">
             <img src="/jumaraldlogo.png" alt="Jumarald Pharmacy Operations" className="h-9 w-auto object-contain mx-auto" />
           </div>
           <p className="text-[10px] text-emerald-300 font-semibold tracking-wider uppercase text-center mt-2">
@@ -45,7 +45,9 @@ export function AdminSidebar() {
                 key={link.href}
                 href={link.href}
                 className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${
-                  isActive ? "bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30" : "text-emerald-200/80 hover:text-white hover:bg-emerald-900/60"
+                  isActive
+                    ? "bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30"
+                    : "text-emerald-200/80 hover:text-white hover:bg-emerald-900/60"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -60,7 +62,7 @@ export function AdminSidebar() {
         <div className="flex items-center gap-2 text-emerald-300 font-semibold">
           <ShieldCheck className="h-4 w-4 text-emerald-400" /> Chief Pharmacist Mode
         </div>
-        <p>© 2026 Jumarald Pharmacy</p>
+        <p>&copy; 2026 Jumarald Pharmacy</p>
       </div>
     </aside>
   );
