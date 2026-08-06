@@ -20,6 +20,7 @@ import loyaltyRoutes from "./routes/loyalty.routes";
 import deliveryRoutes from "./routes/delivery.routes";
 import interactionRoutes from "./routes/interaction.routes";
 import searchRoutes from "./routes/search.routes";
+import couponRoutes from "./routes/coupon.routes";
 
 const app = express();
 
@@ -82,6 +83,7 @@ app.use("/api/v1/loyalty", loyaltyRoutes);
 app.use("/api/v1/deliveries", deliveryRoutes);
 app.use("/api/v1/interactions", interactionRoutes);
 app.use("/api/v1/search", searchLimiter, searchRoutes);
+app.use("/api/v1/coupons", couponRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ message: "Route not found" });
