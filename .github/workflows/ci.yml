@@ -1,0 +1,88 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [backend, frontend, admin]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+      - name: Install dependencies
+        working-directory: ${{ matrix.project }}
+        run: npm ci
+      - name: Typecheck
+        working-directory: ${{ matrix.project }}
+        run: npx tsc --noEmit
+      - name: Build
+        working-directory: ${{ matrix.project }}
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://jumaraldpharmacy.onrender.com/api/v1
+          DATABASE_URL: postgresql://placeholder:placeholder@placeholder:5432/placeholder
+
+  prisma-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Validate schema
+        working-directory: backend
+        run: npx prisma validate
+      - name: Generate client
+        working-directory: backend
+        run: npx prisma generate
+
+  deploy-backend:
+    needs: [lint-and-typecheck, prisma-validate]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trigger Render deploy
+        run: |
+          curl -X POST "$RENDER_DEPLOY_HOOK" || echo "Render deploy hook not configured"
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+
+  deploy-frontend:
+    needs: [lint-and-typecheck]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trigger Vercel deploy (frontend)
+        run: |
+          curl -X POST "$VERCEL_FRONTEND_DEPLOY_HOOK" || echo "Vercel frontend deploy hook not configured"
+        env:
+          VERCEL_FRONTEND_DEPLOY_HOOK: ${{ secrets.VERCEL_FRONTEND_DEPLOY_HOOK }}
+
+  deploy-admin:
+    needs: [lint-and-typecheck]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trigger Vercel deploy (admin)
+        run: |
+          curl -X POST "$VERCEL_ADMIN_DEPLOY_HOOK" || echo "Vercel admin deploy hook not configured"
+        env:
+          VERCEL_ADMIN_DEPLOY_HOOK: ${{ secrets.VERCEL_ADMIN_DEPLOY_HOOK }}

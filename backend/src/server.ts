@@ -26,12 +26,19 @@ import couponRoutes from "./routes/coupon.routes";
 import twoFactorRoutes from "./routes/twoFactor.routes";
 import auditRoutes from "./routes/audit.routes";
 import reportRoutes from "./routes/report.routes";
+import reviewRoutes from "./routes/review.routes";
+import pushRoutes from "./routes/push.routes";
+import newsletterRoutes from "./routes/newsletter.routes";
+import settingRoutes from "./routes/setting.routes";
+import { configureWebPush } from "./lib/push";
+import { setupSwagger } from "./config/swagger";
 
 const app = express();
 const httpServer = createServer(app);
 
 const io = initSocketServer(httpServer);
 app.set("io", io);
+configureWebPush();
 
 app.use(helmet());
 
@@ -104,6 +111,12 @@ app.use("/api/v1/coupons", couponRoutes);
 app.use("/api/v1/2fa", twoFactorRoutes);
 app.use("/api/v1/audit", auditRoutes);
 app.use("/api/v1/reports", reportRoutes);
+app.use("/api/v1/reviews", reviewRoutes);
+app.use("/api/v1/push", pushRoutes);
+app.use("/api/v1/newsletter", newsletterRoutes);
+app.use("/api/v1/settings", settingRoutes);
+
+setupSwagger(app);
 
 app.use((_req, res) => {
   res.status(404).json({ message: "Route not found" });

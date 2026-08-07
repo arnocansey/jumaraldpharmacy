@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { WhatsAppWidget } from "@/components/ui/WhatsAppWidget";
 import { useSocket } from "@/hooks/useSocket";
+import { I18nProvider } from "@/hooks/useI18n";
 
 const SocketContext = createContext<ReturnType<typeof useSocket> | null>(null);
 
@@ -46,14 +47,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <SocketProvider>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-            <ServiceWorkerRegistration />
-            {children}
-            <Toaster position="top-right" richColors />
-            <WhatsAppWidget />
-          </ThemeProvider>
-        </SocketProvider>
+        <I18nProvider>
+          <SocketProvider>
+            <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+              <ServiceWorkerRegistration />
+              {children}
+              <Toaster position="top-right" richColors />
+              <WhatsAppWidget />
+            </ThemeProvider>
+          </SocketProvider>
+        </I18nProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
