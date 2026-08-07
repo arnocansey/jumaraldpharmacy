@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { GitCompare, X, ShoppingCart, Star, AlertCircle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
@@ -98,7 +99,7 @@ export default function ComparePage() {
                 <button key={p.id} onClick={() => addProduct(p)}
                   className="w-full text-left p-3 hover:bg-emerald-50 rounded-xl flex items-center gap-3 transition-colors">
                   <div className="w-10 h-10 bg-slate-100 rounded-lg overflow-hidden shrink-0">
-                    {p.images[0] ? <img src={p.images[0]} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">No img</div>}
+                    {p.images[0] ? <Image src={p.images[0]} alt="" width={40} height={40} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">No img</div>}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-slate-800 truncate">{p.name}</p>
@@ -130,7 +131,7 @@ export default function ComparePage() {
                           <X className="h-3 w-3" />
                         </button>
                         <div className="w-24 h-24 bg-slate-100 rounded-xl mx-auto mb-3 overflow-hidden">
-                          {p.images[0] ? <img src={p.images[0]} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">No image</div>}
+                          {p.images[0] ? <Image src={p.images[0]} alt="" width={96} height={96} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">No image</div>}
                         </div>
                         <p className="font-bold text-slate-800 text-sm">{p.name}</p>
                       </motion.div>

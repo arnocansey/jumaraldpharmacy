@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, PackageOpen } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
@@ -76,9 +77,14 @@ export default function CategoriesPage() {
               >
                 <div className="space-y-4">
                   <div className="overflow-hidden rounded-2xl h-44 border border-slate-200 dark:border-slate-800">
-                    <img
+                    <Image
                       src={cat.imageUrl || FALLBACK_IMAGE}
                       alt={cat.name}
+                      width={400}
+                      height={176}
+                      quality={80}
+                      placeholder="blur"
+                      blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
                       className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>

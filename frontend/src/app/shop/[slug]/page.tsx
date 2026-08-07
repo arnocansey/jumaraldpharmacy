@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import {
   Star,
@@ -205,9 +206,14 @@ export default function ProductDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         <div className="lg:col-span-5 space-y-4">
           <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md">
-            <img
+            <Image
               src={product.images[selectedImage] || product.images[0] || "/placeholder.png"}
               alt={product.name}
+              width={600}
+              height={384}
+              quality={85}
+              placeholder="blur"
+              blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
               className="h-96 w-full object-cover"
             />
           </div>
@@ -223,7 +229,7 @@ export default function ProductDetailPage() {
                       : "border-slate-200 dark:border-slate-700 opacity-60 hover:opacity-100"
                   }`}
                 >
-                  <img src={img} alt="" className="h-full w-full object-cover" />
+                  <Image src={img} alt="" width={64} height={64} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>
@@ -528,9 +534,14 @@ export default function ProductDetailPage() {
               <Link key={alt.id} href={`/shop/${alt.slug}`}>
                 <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:shadow-lg transition-all group cursor-pointer space-y-3">
                   <div className="h-32 w-full rounded-xl overflow-hidden bg-slate-50">
-                    <img
+                    <Image
                       src={alt.images[0] || "/placeholder.png"}
                       alt={alt.name}
+                      width={300}
+                      height={128}
+                      quality={80}
+                      placeholder="blur"
+                      blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
                       className="h-full w-full object-cover group-hover:scale-105 transition-transform"
                     />
                   </div>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Package, FileText, Calendar, User, Clock, CheckCircle, Mail, Phone, ShieldCheck, LogOut,
@@ -569,7 +570,7 @@ export default function PatientDashboardPage() {
                 <Card key={item.id} className="p-4 space-y-3">
                   <div className="h-28 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                     {item.images?.[0] ? (
-                      <img src={item.images[0]} alt={item.name} className="h-full w-full object-contain rounded-xl" />
+                      <Image src={item.images[0]} alt={item.name} width={300} height={112} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="h-full w-full object-contain rounded-xl" />
                     ) : (
                       <Package className="h-8 w-8 text-slate-300 dark:text-slate-600" />
                     )}

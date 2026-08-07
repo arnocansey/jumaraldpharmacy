@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { UploadCloud, CheckCircle2, ShieldCheck, FileText, ArrowRight, X, Camera, Image as ImageIcon, Clock, Phone, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -163,7 +164,7 @@ export default function PrescriptionUploadPage() {
                 {file && uploadedUrl ? (
                   <div className="space-y-3">
                     {preview ? (
-                      <img src={preview} alt="Prescription preview" className="max-h-48 mx-auto rounded-xl object-contain" />
+                      <Image src={preview} alt="Prescription preview" width={384} height={192} quality={85} className="max-h-48 mx-auto rounded-xl object-contain" />
                     ) : (
                       <FileText className="h-12 w-12 text-emerald-600 mx-auto" />
                     )}

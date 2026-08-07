@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Search, ShoppingBag, UploadCloud, Menu, X, Sun, Moon, LogIn, UserPlus, User, LogOut, Phone } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -68,7 +69,7 @@ export function Navbar() {
         <div className="flex h-20 items-center justify-between gap-4">
           {/* Brand Logo */}
           <Link href="/" className="flex items-center group shrink-0">
-            <img src="/jumaraldlogo.png" alt="Jumarald Pharmacy and Wellness Center" className="h-11 w-auto object-contain group-hover:scale-105 transition-transform" />
+            <Image src="/jumaraldlogo.png" alt="Jumarald Pharmacy and Wellness Center" width={44} height={44} priority className="h-11 w-auto object-contain group-hover:scale-105 transition-transform" />
           </Link>
 
           {/* Search Bar — visible md+ */}

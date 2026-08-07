@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Clock, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+
+const BLUR_DATA = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" ;
 
 interface ViewedProduct {
   id: string;
@@ -44,7 +47,7 @@ export function RecentlyViewed() {
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-3 hover:shadow-lg transition-all">
               <div className="h-24 w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-700 mb-3">
                 {p.images?.[0] ? (
-                  <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
+                  <Image src={p.images[0]} alt={p.name} width={200} height={96} quality={80} placeholder="blur" blurDataURL={BLUR_DATA} className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-slate-300">
                     <Package className="h-6 w-6" />

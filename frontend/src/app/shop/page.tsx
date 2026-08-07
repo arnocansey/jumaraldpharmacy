@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Search, Filter, Star, Plus, ArrowUpDown, Package, ShoppingCart, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -241,7 +242,7 @@ export default function ShopPage() {
                       <div className="space-y-3">
                         <div className="relative h-44 w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
                           {product.images?.[0] ? (
-                            <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover" />
+                            <Image src={product.images[0]} alt={product.name} width={400} height={176} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="h-full w-full object-cover" />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center text-slate-300">
                               <Package className="h-10 w-10" />

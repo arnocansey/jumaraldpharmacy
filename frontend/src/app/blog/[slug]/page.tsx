@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
@@ -166,7 +167,7 @@ export default function BlogPostPage() {
         </div>
 
         {post.imageUrl && (
-          <img src={post.imageUrl} alt={post.title} className="w-full h-64 sm:h-80 object-cover rounded-2xl" />
+          <Image src={post.imageUrl} alt={post.title} width={800} height={320} quality={85} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="w-full h-64 sm:h-80 object-cover rounded-2xl" />
         )}
 
         {post.summary && (

@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Trash2, Plus, Minus, ShieldAlert, ArrowRight, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -50,7 +51,7 @@ export default function CartPage() {
           {items.map(({ product, quantity }) => (
             <Card key={product.id} className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4 w-full sm:w-auto">
-                <img src={product.images[0]} alt={product.name} className="h-20 w-20 rounded-xl object-cover" />
+                <Image src={product.images[0]} alt={product.name} width={80} height={80} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="h-20 w-20 rounded-xl object-cover" />
                 <div>
                   <h3 className="font-bold text-slate-900 dark:text-white text-base">{product.name}</h3>
                   <p className="text-xs text-slate-500">{typeof product.brand === "string" ? product.brand : product.brand?.name}</p>

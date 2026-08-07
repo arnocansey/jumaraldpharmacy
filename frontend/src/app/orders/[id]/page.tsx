@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import {
   Truck,
@@ -380,9 +381,14 @@ export default function OrderTrackingPage() {
                 >
                   <div className="h-14 w-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden">
                     {item.product.images?.[0] ? (
-                      <img
+                      <Image
                         src={item.product.images[0]}
                         alt={item.product.name}
+                        width={56}
+                        height={56}
+                        quality={80}
+                        placeholder="blur"
+                        blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
                         className="h-full w-full object-cover"
                       />
                     ) : (

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - Jumarald Pharmacy</title>
+  <meta name="theme-color" content="#059669">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 50%, #a7f3d0 100%);
+      color: #065f46;
+    }
+    .container {
+      text-align: center;
+      max-width: 400px;
+      padding: 2rem;
+      background: white;
+      border-radius: 1.5rem;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+      margin: 1rem;
+    }
+    .icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+      background: #059669;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon svg { width: 40px; height: 40px; }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: #065f46;
+    }
+    p {
+      color: #047857;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+    }
+    .retry-btn {
+      background: #059669;
+      color: white;
+      border: none;
+      padding: 0.875rem 2rem;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      max-width: 200px;
+    }
+    .retry-btn:hover {
+      background: #047857;
+      transform: translateY(-1px);
+    }
+    .retry-btn:active {
+      transform: translateY(0);
+    }
+    .brand {
+      margin-top: 1.5rem;
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.242 2.829a5 5 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
+      </svg>
+    </div>
+    <h1>You're Offline</h1>
+    <p>It looks like you've lost your internet connection. Don't worry &mdash; your pending orders are safe and will sync automatically.</p>
+    <button class="retry-btn" onclick="window.location.reload()">Try Again</button>
+    <div class="brand">Jumarald Pharmacy & Wellness</div>
+  </div>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((reg) => {
+        if (reg.sync) {
+          reg.sync.register('sync-pending-orders').catch(() => {});
+        }
+      });
+    }
+    window.addEventListener('online', () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((reg) => {
+          if (reg.sync) {
+            reg.sync.register('sync-pending-orders').catch(() => {});
+          }
+        });
+      }
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>

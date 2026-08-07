@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Pill,
@@ -79,7 +80,7 @@ export default function HomePage() {
       <section className="w-full px-4 sm:px-8 lg:px-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="p-8 rounded-3xl relative overflow-hidden text-white space-y-4 shadow-xl border border-emerald-800">
-            <img src="/images/hero-pharmacy.jpg" alt="Health Care Packages" className="absolute inset-0 w-full h-full object-cover filter brightness-[0.35]" />
+            <Image src="/images/hero-pharmacy.jpg" alt="Health Care Packages" fill quality={85} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMWYyOTM3Ii8+PC9zdmc+" className="absolute inset-0 w-full h-full object-cover filter brightness-[0.35]" />
             <div className="relative z-10 space-y-3">
               <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl" />
               <Badge variant="emerald" className="bg-emerald-500 text-white font-bold">Special Care Offer</Badge>
@@ -97,7 +98,7 @@ export default function HomePage() {
           </div>
 
           <div className="p-8 rounded-3xl relative overflow-hidden text-white space-y-4 shadow-xl border border-slate-800">
-            <img src="/images/diabetic-banner.jpg" alt="Diabetic Diagnostic Monitors" className="absolute inset-0 w-full h-full object-cover filter brightness-[0.35]" />
+            <Image src="/images/diabetic-banner.jpg" alt="Diabetic Diagnostic Monitors" fill quality={85} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMWYyOTM3Ii8+PC9zdmc+" className="absolute inset-0 w-full h-full object-cover filter brightness-[0.35]" />
             <div className="relative z-10 space-y-3">
               <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl" />
               <Badge variant="amber">Limited Time Flash Sale</Badge>
@@ -136,9 +137,14 @@ export default function HomePage() {
             <Card key={product.id} hoverEffect className="flex flex-col justify-between p-6 space-y-4">
               <div className="space-y-3">
                 <div className="relative h-48 w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
-                  <img
+                  <Image
                     src={product.images[0]}
                     alt={product.name}
+                    width={400}
+                    height={192}
+                    quality={80}
+                    placeholder="blur"
+                    blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
                     className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   {product.requiresPrescription && (
@@ -192,7 +198,7 @@ export default function HomePage() {
 
       {/* TELEHEALTH DOCTOR SPOTLIGHT WITH BACKGROUND PICTURE */}
       <section className="relative overflow-hidden bg-slate-950 text-white py-20">
-        <img src="/images/telehealth-banner.jpg" alt="Telehealth Medical Clinic" className="absolute inset-0 w-full h-full object-cover filter brightness-[0.25]" />
+        <Image src="/images/telehealth-banner.jpg" alt="Telehealth Medical Clinic" fill quality={85} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMWYyOTM3Ii8+PC9zdmc+" className="absolute inset-0 w-full h-full object-cover filter brightness-[0.25]" />
         <div className="relative z-10 w-full px-4 sm:px-8 lg:px-12 space-y-10">
           <div className="text-left max-w-2xl space-y-3">
             <Badge variant="emerald" className="bg-emerald-500 text-white font-bold">Online Consultations</Badge>
@@ -204,7 +210,7 @@ export default function HomePage() {
             {MOCK_DOCTORS.map((doctor) => (
               <Card key={doctor.id} className="bg-slate-900/90 backdrop-blur-md border-slate-800 p-6 space-y-4 shadow-xl">
                 <div className="flex items-center gap-4">
-                  <img src={doctor.avatarUrl} alt={doctor.name} className="h-16 w-16 rounded-full object-cover border-2 border-emerald-500" />
+                  <Image src={doctor.avatarUrl} alt={doctor.name} width={64} height={64} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="h-16 w-16 rounded-full object-cover border-2 border-emerald-500" />
                   <div>
                     <h3 className="font-bold text-white text-base">{doctor.name}</h3>
                     <p className="text-xs text-emerald-400 font-semibold">{doctor.specialty}</p>

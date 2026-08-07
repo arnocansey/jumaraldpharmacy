@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Star, ShoppingCart, Heart, Eye, AlertCircle, CheckCircle } from "lucide-react";
+import Image from "next/image";
 import { ProductQuickView } from "./ProductQuickView";
+
+const BLUR_DATA = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" ;
 
 interface ProductProps {
   id: string;
@@ -41,10 +44,15 @@ export function ProductCard({ product }: { product: ProductProps }) {
       >
         <div className="relative aspect-square bg-slate-50 overflow-hidden">
           {product.images[0] ? (
-            <img
+            <Image
               src={product.images[0]}
               alt={product.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              quality={80}
+              placeholder="blur"
+              blurDataURL={BLUR_DATA}
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-300">

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import {
   Stethoscope,
   Calendar,
@@ -310,9 +311,14 @@ export default function TelehealthPage() {
                 <Card key={doctor.id} hoverEffect className="p-6 space-y-4 flex flex-col justify-between">
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
-                      <img
+                      <Image
                         src={doctor.avatarUrl}
                         alt={doctor.name}
+                        width={64}
+                        height={64}
+                        quality={80}
+                        placeholder="blur"
+                        blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
                         className="h-16 w-16 rounded-full object-cover border-2 border-emerald-500 shadow-lg"
                       />
                       <div className="min-w-0">
@@ -397,9 +403,14 @@ export default function TelehealthPage() {
               <Card key={c.id} className="p-5 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <img
+                    <Image
                       src={c.doctor.user.avatarUrl || "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80"}
                       alt={c.doctor.user.name}
+                      width={48}
+                      height={48}
+                      quality={80}
+                      placeholder="blur"
+                      blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
                       className="h-12 w-12 rounded-full object-cover border-2 border-emerald-500"
                     />
                     <div>
@@ -478,9 +489,14 @@ export default function TelehealthPage() {
 
             {selectedDoctor && (
               <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
-                <img
+                <Image
                   src={selectedDoctor.avatarUrl}
                   alt={selectedDoctor.name}
+                  width={40}
+                  height={40}
+                  quality={80}
+                  placeholder="blur"
+                  blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
                   className="h-10 w-10 rounded-full object-cover border-2 border-emerald-500"
                 />
                 <div>
@@ -569,9 +585,14 @@ export default function TelehealthPage() {
             <>
               {/* Chat Header */}
               <div className="flex items-center gap-3 p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
-                <img
+                <Image
                   src={chatDoctor.avatarUrl}
                   alt={chatDoctor.name}
+                  width={36}
+                  height={36}
+                  quality={80}
+                  placeholder="blur"
+                  blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
                   className="h-9 w-9 rounded-full object-cover border-2 border-emerald-500"
                 />
                 <div className="min-w-0 flex-1">
@@ -657,9 +678,14 @@ export default function TelehealthPage() {
 
               {videoDoctor && (
                 <div className="relative z-10 text-center space-y-4">
-                  <img
+                  <Image
                     src={videoDoctor.avatarUrl || "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80"}
                     alt={videoDoctor.name}
+                    width={96}
+                    height={96}
+                    quality={80}
+                    placeholder="blur"
+                    blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
                     className="h-24 w-24 rounded-full object-cover border-4 border-emerald-500 mx-auto shadow-2xl"
                   />
                   <div>

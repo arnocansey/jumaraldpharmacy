@@ -2,9 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, ChevronLeft, ChevronRight, ShieldCheck, Thermometer, Stethoscope, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+
+const BLUR_DATA = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMWYyOTM3Ii8+PC9zdmc+" ;
 
 export function HeroCarousel() {
   const slides = [
@@ -59,10 +62,16 @@ export function HeroCarousel() {
             idx === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0"
           }`}
         >
-          <img
+          <Image
             src={slide.image}
             alt={slide.title}
-            className="w-full h-full object-cover object-center scale-105 transform transition-transform duration-10000 filter brightness-[0.4]"
+            fill
+            priority={idx === 0}
+            sizes="100vw"
+            quality={85}
+            placeholder="blur"
+            blurDataURL={BLUR_DATA}
+            className="object-cover object-center scale-105 transform transition-transform duration-10000 filter brightness-[0.4]"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent" />
         </div>

@@ -3,6 +3,9 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Star, ShoppingCart, AlertCircle, CheckCircle } from "lucide-react";
 import { useState } from "react";
+import Image from "next/image";
+
+const BLUR_DATA = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" ;
 
 interface Product {
   id: string;
@@ -39,7 +42,7 @@ export function ProductQuickView({ product, open, onClose }: { product: Product;
           <div className="bg-slate-50 p-6">
             <div className="aspect-square rounded-xl overflow-hidden mb-3">
               {product.images[currentImage] ? (
-                <img src={product.images[currentImage]} alt={product.name} className="w-full h-full object-cover" />
+                <Image src={product.images[currentImage]} alt={product.name} fill sizes="(max-width: 768px) 100vw, 50vw" quality={85} placeholder="blur" blurDataURL={BLUR_DATA} className="object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-slate-400">No image</div>
               )}
@@ -49,7 +52,7 @@ export function ProductQuickView({ product, open, onClose }: { product: Product;
                 {product.images.map((img, i) => (
                   <button key={i} onClick={() => setCurrentImage(i)}
                     className={`w-16 h-16 rounded-lg overflow-hidden border-2 ${i === currentImage ? "border-emerald-500" : "border-transparent"}`}>
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <Image src={img} alt="" fill sizes="64px" quality={80} placeholder="blur" blurDataURL={BLUR_DATA} className="object-cover" />
                   </button>
                 ))}
               </div>

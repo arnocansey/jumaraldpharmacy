@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -154,7 +155,7 @@ export default function BlogPage() {
             <Link key={post.id} href={`/blog/${post.slug}`}>
               <Card hoverEffect className="p-6 space-y-4 h-full cursor-pointer">
                 {post.imageUrl && (
-                  <img src={post.imageUrl} alt={post.title} className="h-48 w-full object-cover rounded-2xl" />
+                  <Image src={post.imageUrl} alt={post.title} width={400} height={192} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="h-48 w-full object-cover rounded-2xl" />
                 )}
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-1">
