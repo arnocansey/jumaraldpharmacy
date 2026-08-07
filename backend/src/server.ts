@@ -1,3 +1,4 @@
+import "./instrument";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -32,6 +33,7 @@ import newsletterRoutes from "./routes/newsletter.routes";
 import settingRoutes from "./routes/setting.routes";
 import { configureWebPush } from "./lib/push";
 import { setupSwagger } from "./config/swagger";
+import * as Sentry from "@sentry/node";
 
 const app = express();
 const httpServer = createServer(app);
@@ -117,6 +119,14 @@ app.use("/api/v1/newsletter", newsletterRoutes);
 app.use("/api/v1/settings", settingRoutes);
 
 setupSwagger(app);
+
+app.get("/debug-sentry", (_req, res) => {
+  Sentry.logger.info("User triggered test error", { action: "test_error_endpoint" });
+  Sentry.metrics.count("test_counter", 1);
+  throw new Error("Sentry test error!");
+});
+
+Sentry.setupExpressErrorHandler(app);
 
 app.use((_req, res) => {
   res.status(404).json({ message: "Route not found" });
