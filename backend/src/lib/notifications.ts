@@ -23,6 +23,34 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<boolean> {
+  const mailerUrl = env.MAILER_SERVICE_URL || process.env.MAILER_SERVICE_URL;
+  const mailerApiKey = env.MAILER_API_KEY || process.env.MAILER_API_KEY;
+
+  if (mailerUrl) {
+    try {
+      console.log(`[EMAIL DISPATCH] Forwarding email to Vercel Mailer microservice: ${mailerUrl}`);
+      const response = await fetch(mailerUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": mailerApiKey || "",
+        },
+        body: JSON.stringify({ to, subject, html }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`[EMAIL MICROSERVICE ERROR] HTTP ${response.status}: ${errText}`);
+      } else {
+        const data = await response.json();
+        console.log(`[EMAIL MICROSERVICE SUCCESS] Sent to ${to}. Response:`, data);
+        return true;
+      }
+    } catch (err: any) {
+      console.error(`[EMAIL MICROSERVICE FETCH ERROR] Failed to connect to Vercel mailer microservice:`, err.message || err);
+    }
+  }
+
   if (!env.SMTP_USER || !env.SMTP_PASS) {
     console.log(`[EMAIL DEV MOCK] Would send to ${to}: "${subject}"`);
     return true;

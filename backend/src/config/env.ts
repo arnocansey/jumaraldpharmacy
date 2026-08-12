@@ -19,12 +19,14 @@ const envSchema = z.object({
   PAYSTACK_SECRET_KEY: z.string().optional(),
   PAYSTACK_PUBLIC_KEY: z.string().optional(),
 
-  // Email (SMTP)
+  // Email (SMTP / Microservice)
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.string().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),
+  MAILER_SERVICE_URL: z.string().optional(),
+  MAILER_API_KEY: z.string().optional(),
 
   // URLs
   FRONTEND_URL: z.string().default("http://localhost:3000"),
