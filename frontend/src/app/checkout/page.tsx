@@ -48,6 +48,8 @@ export default function CheckoutPage() {
   const [deliveryOption, setDeliveryOption] = useState<"delivery" | "pickup">("delivery");
   const [confirmedOrderNumber, setConfirmedOrderNumber] = useState<string>("");
 
+  const [isVerifying, setIsVerifying] = useState(false);
+
   // Address state
   const [address, setAddress] = useState({
     fullName: "Kofi Owusu",
@@ -68,6 +70,42 @@ export default function CheckoutPage() {
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
   const [pointsLoading, setPointsLoading] = useState(false);
   const [pointsApplied, setPointsApplied] = useState(false);
+
+  // Verification Effect for Paystack Callback Redirect
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get("reference") || params.get("trxref");
+    if (reference) {
+      verifyPaystackPayment(reference);
+    }
+  }, []);
+
+  const verifyPaystackPayment = async (ref: string) => {
+    setIsVerifying(true);
+    try {
+      const token = localStorage.getItem("jumarald_token") || "";
+      const res = await fetch(`${API_URL}/payments/verify/${ref}`, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      const data = await res.json();
+      if (res.ok && (data.status === "success" || data.data?.status === "success")) {
+        setConfirmedOrderNumber(data.data?.orderNumber || ref);
+        setStep("confirmed");
+        clearCart();
+        toast.success("Payment verified successfully via Paystack Ghana!");
+      } else {
+        toast.error(data.message || "Payment verification failed. Please check your order status.");
+      }
+    } catch {
+      toast.error("Failed to verify Paystack payment.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   // Fetch loyalty points when entering payment step
   const fetchLoyaltyPoints = async () => {
@@ -197,7 +235,7 @@ export default function CheckoutPage() {
 
   const handleCompleteOrder = async () => {
     setIsProcessing(true);
-    toast.info("Processing your order...");
+    toast.info("Initializing Paystack transaction...");
 
     try {
       const token = localStorage.getItem("jumarald_token") || "";
@@ -240,8 +278,8 @@ export default function CheckoutPage() {
         throw new Error(err.message || "Failed to create order");
       }
 
-      // Paystack card payment
-      if (orderId && paymentMethod === "card") {
+      // Initialize Paystack Payment for both MoMo and Card
+      if (orderId) {
         try {
           const payRes = await fetch(`${API_URL}/payments/initialize`, {
             method: "POST",
@@ -251,20 +289,24 @@ export default function CheckoutPage() {
             },
             body: JSON.stringify({
               orderId,
-              email: user.email || address.phone + "@jumaraldpharmacy.com",
+              email: user.email || (address.phone.replace(/[^0-9]/g, "") + "@jumaraldpharmacy.com"),
               amount: grandTotal,
+              method: paymentMethod,
+              phone: momoNumber,
+              network: momoNetwork,
+              callback_url: `${window.location.origin}/checkout?reference={reference}&orderId=${orderId}`,
             }),
           });
 
+          const payData = await payRes.json();
           if (payRes.ok) {
-            const payData = await payRes.json();
             if (payData.authorization_url) {
               window.location.href = payData.authorization_url;
               return;
             }
+          } else {
+            throw new Error(payData.message || "Payment initialization failed");
           }
-          const payErr = await payRes.json().catch(() => ({}));
-          throw new Error(payErr.message || "Payment initialization failed");
         } catch (payErr) {
           toast.error(payErr instanceof Error ? payErr.message : "Payment failed");
           setIsProcessing(false);
@@ -281,6 +323,18 @@ export default function CheckoutPage() {
       setIsProcessing(false);
     }
   };
+
+  if (isVerifying) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4 px-4 py-16 text-center">
+        <Loader2 className="h-12 w-12 text-emerald-600 animate-spin mx-auto" />
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Verifying Paystack Payment...</h2>
+        <p className="text-sm text-slate-500 max-w-sm">
+          Please wait a moment while we confirm your transaction status with Paystack Ghana.
+        </p>
+      </div>
+    );
+  }
 
   if (step === "confirmed") {
     return (

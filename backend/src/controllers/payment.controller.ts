@@ -20,7 +20,7 @@ interface PaystackResponse {
 
 export async function initializePayment(req: AuthenticatedRequest, res: Response) {
   try {
-    const { orderId, email, amount, callback_url } = req.body;
+    const { orderId, email, amount, callback_url, method, phone, network } = req.body;
 
     if (!orderId || !email || !amount) {
       return res.status(400).json({ message: "orderId, email, and amount are required" });
@@ -40,7 +40,7 @@ export async function initializePayment(req: AuthenticatedRequest, res: Response
           reference,
           amount,
           status: "COMPLETED",
-          paymentMethod: "test",
+          paymentMethod: method || "test",
         },
       });
 
@@ -51,9 +51,28 @@ export async function initializePayment(req: AuthenticatedRequest, res: Response
 
       return res.json({
         status: "success",
-        message: "Test payment completed",
-        data: { reference, paymentId: payment.id },
+        message: "Test payment completed successfully",
+        data: { reference, paymentId: payment.id, isTest: true },
       });
+    }
+
+    const redirectUrl = callback_url || `${env.FRONTEND_URL}/checkout?reference=${reference}&orderId=${orderId}`;
+
+    const paystackBody: any = {
+      email,
+      amount: Math.round(amount * 100), // Pesewas (GHS)
+      currency: "GHS",
+      reference,
+      callback_url: redirectUrl,
+      metadata: { orderId, userId: req.user!.id, method, phone, network },
+      channels: method === "momo" ? ["mobile_money"] : ["card", "mobile_money"],
+    };
+
+    if (method === "momo" && phone) {
+      paystackBody.mobile_money = {
+        phone: phone.replace(/[^0-9]/g, ""),
+        provider: network || "mtn",
+      };
     }
 
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
@@ -62,13 +81,7 @@ export async function initializePayment(req: AuthenticatedRequest, res: Response
         Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        email,
-        amount: Math.round(amount * 100),
-        reference,
-        callback_url: callback_url || `${env.FRONTEND_URL}/checkout?payment=success`,
-        metadata: { orderId, userId: req.user!.id },
-      }),
+      body: JSON.stringify(paystackBody),
     });
 
     const data = (await response.json()) as PaystackResponse;
@@ -84,7 +97,7 @@ export async function initializePayment(req: AuthenticatedRequest, res: Response
         reference,
         amount,
         status: "PENDING",
-        paymentMethod: req.body.method || "card",
+        paymentMethod: method || "card",
       },
     });
 
@@ -95,7 +108,7 @@ export async function initializePayment(req: AuthenticatedRequest, res: Response
       reference,
     });
   } catch (error: any) {
-    return res.status(500).json({ message: "Payment initialization failed" });
+    return res.status(500).json({ message: "Payment initialization failed: " + (error.message || "") });
   }
 }
 
@@ -103,16 +116,23 @@ export async function verifyPayment(req: AuthenticatedRequest, res: Response) {
   try {
     const { reference } = req.params;
 
-    if (!env.PAYSTACK_SECRET_KEY) {
-      const payment = await prisma.payment.findUnique({ where: { reference } });
-      if (!payment) return res.status(404).json({ message: "Payment not found" });
+    if (!reference) {
+      return res.status(400).json({ message: "Payment reference is required" });
+    }
 
+    const payment = await prisma.payment.findFirst({ where: { reference } });
+    if (!payment) {
+      return res.status(404).json({ message: "Payment transaction not found" });
+    }
+
+    if (!env.PAYSTACK_SECRET_KEY) {
       return res.json({
         status: "success",
         data: {
           status: "success",
           reference: payment.reference,
           amount: payment.amount,
+          orderId: payment.orderId,
         },
       });
     }
@@ -124,28 +144,29 @@ export async function verifyPayment(req: AuthenticatedRequest, res: Response) {
     const result = (await response.json()) as PaystackResponse;
 
     if (!result.status) {
-      return res.status(400).json({ message: "Payment verification failed" });
+      return res.status(400).json({ message: "Payment verification failed with Paystack API" });
     }
 
     const paymentStatus = result.data?.status === "success" ? "COMPLETED" : "FAILED";
 
-    const payment = await prisma.payment.findFirst({ where: { reference } });
-    if (payment) {
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: { status: paymentStatus as any },
-      });
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: paymentStatus as any },
+    });
 
-      if (paymentStatus === "COMPLETED") {
-        await prisma.order.update({
-          where: { id: payment.orderId },
-          data: { status: "PROCESSING" },
-        });
-        emitToOrder(payment.orderId, "payment:completed", { orderId: payment.orderId, reference, amount: payment.amount });
-        emitToAdmins("order:payment", { orderId: payment.orderId, reference, amount: payment.amount });
-        createAuditLog(req.user!.id, "PAYMENT_COMPLETED", "payment", payment.id, { reference, amount: payment.amount });
+    if (paymentStatus === "COMPLETED") {
+      await prisma.order.update({
+        where: { id: payment.orderId },
+        data: { status: "PROCESSING" },
+      });
+      emitToOrder(payment.orderId, "payment:completed", { orderId: payment.orderId, reference, amount: payment.amount });
+      emitToAdmins("order:payment", { orderId: payment.orderId, reference, amount: payment.amount });
+      if (req.user?.id) {
+        createAuditLog(req.user.id, "PAYMENT_COMPLETED", "payment", payment.id, { reference, amount: payment.amount });
       }
     }
+
+    const updatedOrder = await prisma.order.findUnique({ where: { id: payment.orderId } });
 
     return res.json({
       status: "success",
@@ -153,6 +174,8 @@ export async function verifyPayment(req: AuthenticatedRequest, res: Response) {
         status: result.data?.status,
         reference: result.data?.reference,
         amount: (result.data?.amount || 0) / 100,
+        orderId: payment.orderId,
+        orderNumber: updatedOrder?.orderNumber,
       },
     });
   } catch (error: any) {
@@ -162,6 +185,17 @@ export async function verifyPayment(req: AuthenticatedRequest, res: Response) {
 
 export async function handlePaystackWebhook(req: any, res: Response) {
   try {
+    const signature = req.headers["x-paystack-signature"];
+    if (env.PAYSTACK_SECRET_KEY && signature) {
+      const hash = crypto
+        .createHmac("sha512", env.PAYSTACK_SECRET_KEY)
+        .update(JSON.stringify(req.body))
+        .digest("hex");
+      if (hash !== signature) {
+        return res.status(401).json({ message: "Invalid signature" });
+      }
+    }
+
     const body = req.body;
     const event = body.event;
 
