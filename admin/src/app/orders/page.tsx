@@ -76,7 +76,12 @@ export default function OrdersPage() {
 
   const filtered = orders
     .filter((o) => !statusFilter || o.status === statusFilter)
-    .filter((o) => !search || o.orderNumber.toLowerCase().includes(search.toLowerCase()) || o.user.name.toLowerCase().includes(search.toLowerCase()));
+    .filter(
+      (o) =>
+        !search ||
+        (o.orderNumber && o.orderNumber.toLowerCase().includes(search.toLowerCase())) ||
+        (o.user?.name && o.user.name.toLowerCase().includes(search.toLowerCase()))
+    );
 
   return (
     <div className="w-full">
@@ -127,8 +132,8 @@ export default function OrdersPage() {
               : filtered.map((order) => (
                 <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                   <td className="px-4 py-3 font-mono text-sm font-semibold text-slate-800 dark:text-slate-200">{order.orderNumber}</td>
-                  <td className="px-4 py-3"><p className="text-sm font-medium text-slate-800 dark:text-slate-200">{order.user.name}</p></td>
-                  <td className="px-4 py-3 font-semibold text-sm text-slate-800 dark:text-slate-200">GHS {order.totalAmount.toFixed(2)}</td>
+                  <td className="px-4 py-3"><p className="text-sm font-medium text-slate-800 dark:text-slate-200">{order.user?.name || "Guest Customer"}</p></td>
+                  <td className="px-4 py-3 font-semibold text-sm text-slate-800 dark:text-slate-200">GHS {Number(order.totalAmount || 0).toFixed(2)}</td>
                   <td className="px-4 py-3">
                     <select value={order.status} onChange={(e) => updateStatus(order.id, e.target.value)}
                       className={`text-xs font-semibold px-2 py-1 rounded-full border-0 cursor-pointer ${STATUS_COLORS[order.status] || "bg-slate-100 text-slate-600"}`}>
@@ -136,7 +141,7 @@ export default function OrdersPage() {
                     </select>
                   </td>
                   <td className="px-4 py-3">
-                    {order.payments[0] ? <span className={`text-xs font-semibold ${order.payments[0].status === "COMPLETED" ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}>{order.payments[0].status}</span> : <span className="text-xs text-slate-400">No payment</span>}
+                    {order.payments && order.payments[0] ? <span className={`text-xs font-semibold ${order.payments[0].status === "COMPLETED" ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}>{order.payments[0].status}</span> : <span className="text-xs text-slate-400">No payment</span>}
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">{new Date(order.createdAt).toLocaleDateString()}</td>
                 </tr>

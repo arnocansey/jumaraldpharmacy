@@ -42,9 +42,11 @@ interface Notification {
 interface OrderItem {
   id: string;
   productId: string;
-  productName: string;
+  productName?: string;
   quantity: number;
-  price: number;
+  price?: number;
+  unitPrice?: number;
+  total?: number;
   product?: { id: string; name: string; slug: string; price: number; images: string[]; stockQuantity: number; requiresPrescription: boolean; category: string; };
 }
 
@@ -129,12 +131,14 @@ export default function PatientDashboardPage() {
     let added = 0;
     (order.orderItems || []).forEach((item: OrderItem) => {
       if (item.product || item.productId) {
+        const itemPrice = Number(item.unitPrice ?? item.price ?? item.product?.price ?? 0);
+        const productName = item.productName || item.product?.name || "Medication";
         const product: CartProduct = item.product
           ? {
               id: item.product.id,
               name: item.product.name,
               slug: item.product.slug,
-              price: item.price,
+              price: itemPrice,
               stockQuantity: item.product.stockQuantity,
               requiresPrescription: item.product.requiresPrescription,
               images: item.product.images,
@@ -142,9 +146,9 @@ export default function PatientDashboardPage() {
             }
           : {
               id: item.productId,
-              name: item.productName,
-              slug: item.productName.toLowerCase().replace(/\s+/g, "-"),
-              price: item.price,
+              name: productName,
+              slug: productName.toLowerCase().replace(/\s+/g, "-"),
+              price: itemPrice,
               stockQuantity: 100,
               requiresPrescription: false,
               images: [],
@@ -503,20 +507,25 @@ export default function PatientDashboardPage() {
                     {isExpanded && (
                       <div className="border-t border-slate-100 dark:border-slate-800 px-5 pb-5 space-y-3">
                         <div className="space-y-2 pt-3">
-                          {(order.orderItems || []).map((item: OrderItem) => (
-                            <div key={item.id} className="flex items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                                  <Package className="h-5 w-5 text-slate-400" />
+                          {(order.orderItems || []).map((item: OrderItem) => {
+                            const name = item.productName || item.product?.name || "Medication";
+                            const itemPrice = Number(item.unitPrice ?? item.price ?? item.product?.price ?? 0);
+                            const itemTotal = Number(item.total ?? itemPrice * item.quantity);
+                            return (
+                              <div key={item.id} className="flex items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                                    <Package className="h-5 w-5 text-slate-400" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{name}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Qty: {item.quantity}</p>
+                                  </div>
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{item.productName}</p>
-                                  <p className="text-xs text-slate-500 dark:text-slate-400">Qty: {item.quantity}</p>
-                                </div>
+                                <span className="text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">{formatCurrency(itemTotal)}</span>
                               </div>
-                              <span className="text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">{formatCurrency(item.price * item.quantity)}</span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                         <div className="flex items-center justify-between pt-2">
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleReorder(order); }} className="text-emerald-600 dark:text-emerald-400">
