@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Pill, FileText, ShoppingCart, Settings, ShieldCheck, Building2, Package, Truck, BarChart3, Bell, Trophy, Megaphone, Stethoscope, ChevronDown, FileBarChart, Database } from "lucide-react";
+import { LayoutDashboard, Pill, FileText, ShoppingCart, Settings, ShieldCheck, Building2, Package, Truck, BarChart3, Bell, Trophy, Megaphone, Stethoscope, ChevronDown, FileBarChart, Database, Users } from "lucide-react";
 
 interface NavItem {
   name: string;
@@ -47,6 +47,7 @@ const sections: NavSection[] = [
   {
     label: "System",
     items: [
+      { name: "Staff & Users", href: "/users", icon: Users },
       { name: "Notifications", href: "/notifications", icon: Bell },
       { name: "Backups", href: "/backups", icon: Database },
       { name: "Settings", href: "/settings", icon: Settings },

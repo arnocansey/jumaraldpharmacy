@@ -32,6 +32,7 @@ import pushRoutes from "./routes/push.routes";
 import newsletterRoutes from "./routes/newsletter.routes";
 import settingRoutes from "./routes/setting.routes";
 import backupRoutes from "./routes/backup.routes";
+import userRoutes from "./routes/user.routes";
 import { configureWebPush } from "./lib/push";
 import { setupSwagger } from "./config/swagger";
 import * as Sentry from "@sentry/node";
@@ -124,6 +125,7 @@ app.use("/api/v1/push", pushRoutes);
 app.use("/api/v1/newsletter", newsletterRoutes);
 app.use("/api/v1/settings", settingRoutes);
 app.use("/api/v1/backups", backupRoutes);
+app.use("/api/v1/users", userRoutes);
 
 setupSwagger(app);
 
