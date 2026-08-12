@@ -171,6 +171,17 @@ export default function PatientDashboardPage() {
     finally { setProfileSaving(false); }
   };
 
+  const handleDeleteRx = async (rxId: string) => {
+    if (!confirm("Are you sure you want to delete this prescription?")) return;
+    try {
+      await apiFetch(`/prescriptions/${rxId}`, { method: "DELETE" });
+      toast.success("Prescription deleted successfully");
+      loadAllData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete prescription");
+    }
+  };
+
   const openAddAddress = () => {
     setEditingAddress(null);
     setAddressForm({ label: "Home", street: "", city: "", region: "", postalCode: "", isDefault: addresses.length === 0 });
@@ -516,11 +527,18 @@ export default function PatientDashboardPage() {
                           {new Date(rx.createdAt).toLocaleDateString("en-GH", { day: "2-digit", month: "short", year: "numeric" })}
                         </p>
                       </div>
-                      {rx.fileUrl && (
-                        <a href={rx.fileUrl} target="_blank" rel="noopener noreferrer">
-                          <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /> View File</Button>
-                        </a>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {(rx.documentUrl || rx.fileUrl) && (
+                          <a href={rx.documentUrl || rx.fileUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /> View File</Button>
+                          </a>
+                        )}
+                        {(rxStatus === "SUBMITTED" || rxStatus === "REJECTED" || rxStatus === "PENDING") && (
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteRx(rx.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30">
+                            <Trash2 className="h-4 w-4" /> Delete
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     {rx.patientNotes && (

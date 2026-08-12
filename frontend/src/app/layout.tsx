@@ -22,7 +22,6 @@ export const metadata: Metadata = {
     "Order certified prescription medications, OTC remedies, immunity supplements, and book online doctor consultations with delivery across Greater Accra, Ghana.",
   keywords: ["Pharmacy", "Prescription medicines", "Telehealth", "Ghana", "Jumarald Pharmacy", "Doctor consultation"],
   manifest: "/manifest.json",
-  themeColor: "#059669",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

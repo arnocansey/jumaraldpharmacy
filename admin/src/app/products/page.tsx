@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload, Download } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 import ProductImportModal from "@/components/ProductImportModal";
@@ -185,12 +185,41 @@ export default function ProductsPage() {
         </div>
         <div className="flex items-center gap-3">
           {tab === "products" && (
-            <button
-              onClick={() => setShowImport(true)}
-              className="px-4 py-2 rounded-xl font-semibold border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" /> Import CSV
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  if (products.length === 0) { toast.error("No products to export"); return; }
+                  const headers = ["ID", "SKU", "Name", "Category", "Price", "StockQuantity", "RequiresPrescription"];
+                  const rows = products.map(p => [
+                    p.id,
+                    `"${p.sku}"`,
+                    `"${p.name.replace(/"/g, '""')}"`,
+                    `"${p.category?.name || ''}"`,
+                    p.price,
+                    p.stockQuantity,
+                    p.requiresPrescription ? "Yes" : "No"
+                  ]);
+                  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+                  const encodedUri = encodeURI(csvContent);
+                  const link = document.createElement("a");
+                  link.setAttribute("href", encodedUri);
+                  link.setAttribute("download", `jumarald_products_${new Date().toISOString().slice(0, 10)}.csv`);
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  toast.success("Products CSV exported!");
+                }}
+                className="px-4 py-2 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" /> Export CSV
+              </button>
+              <button
+                onClick={() => setShowImport(true)}
+                className="px-4 py-2 rounded-xl font-semibold border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" /> Import CSV
+              </button>
+            </>
           )}
           <button onClick={() => tab === "products" ? (resetForm(), setShowForm(true)) : (resetCatForm(), setShowCatForm(true))}
             className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-emerald-700 flex items-center gap-2">

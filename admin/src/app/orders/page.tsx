@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, Download } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -40,10 +40,38 @@ export default function OrdersPage() {
   }
 
   async function updateStatus(orderId: string, status: string) {
+    const originalOrders = [...orders];
+    // Optimistic UI Update
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
     try {
       await apiFetch(`/orders/${orderId}/status`, { method: "PUT", body: JSON.stringify({ status }) });
-      toast.success("Status updated"); loadOrders();
-    } catch { toast.error("Failed to update status"); }
+      toast.success("Order status updated");
+    } catch {
+      setOrders(originalOrders);
+      toast.error("Failed to update status");
+    }
+  }
+
+  function exportOrdersCSV() {
+    if (orders.length === 0) { toast.error("No orders to export"); return; }
+    const headers = ["OrderNumber", "CustomerName", "CustomerEmail", "TotalAmount", "Status", "CreatedAt"];
+    const rows = orders.map(o => [
+      `"${o.orderNumber}"`,
+      `"${o.user?.name || ''}"`,
+      `"${o.user?.email || ''}"`,
+      o.totalAmount,
+      o.status,
+      `"${o.createdAt}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `jumarald_orders_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Orders CSV exported!");
   }
 
   const filtered = orders
@@ -52,9 +80,17 @@ export default function OrdersPage() {
 
   return (
     <div className="w-full">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Order Fulfillment</h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">{orders.length} total orders</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Order Fulfillment</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">{orders.length} total orders</p>
+        </div>
+        <button
+          onClick={exportOrdersCSV}
+          className="px-4 py-2 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+        >
+          <Download className="h-4 w-4" /> Export CSV
+        </button>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">

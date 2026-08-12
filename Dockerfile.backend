@@ -1,0 +1,28 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY backend/package.json ./backend/
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm install --filter backend...
+
+COPY backend ./backend
+
+WORKDIR /app/backend
+RUN pnpm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=5000
+
+COPY --from=builder /app/backend/dist ./dist
+COPY --from=builder /app/backend/node_modules ./node_modules
+COPY --from=builder /app/backend/package.json ./package.json
+
+EXPOSE 5000
+
+CMD ["node", "dist/server.js"]

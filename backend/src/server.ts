@@ -42,7 +42,7 @@ const io = initSocketServer(httpServer);
 app.set("io", io);
 configureWebPush();
 
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
 const allowedOrigins = env.ALLOWED_ORIGINS
   ? env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
@@ -61,8 +61,13 @@ app.use(
   })
 );
 
+import path from "path";
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Serve any remaining local uploads (legacy support only)
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use(morgan("dev"));
 
 const authLimiter = rateLimit({

@@ -60,14 +60,14 @@ const PRESCRIPTION_COLORS: Record<string, string> = {
 function MiniStat({ label, value, icon: Icon, color, href }: { label: string; value: string | number; icon: any; color: string; href?: string }) {
   const Content = (
     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-      className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5 hover:shadow-lg transition-all group">
+      className="glass-panel glass-panel-hover rounded-2xl p-4.5 group cursor-pointer">
       <div className="flex items-center gap-3">
-        <div className={`p-2.5 rounded-xl ${color}`}><Icon className="h-5 w-5 text-white" /></div>
+        <div className={`p-2.5 rounded-xl ${color} shadow-lg shadow-emerald-500/10`}><Icon className="h-4 w-4 text-white" /></div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{label}</p>
-          <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{value}</p>
+          <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">{label}</p>
+          <p className="text-lg font-bold text-slate-800 dark:text-slate-100 mt-0.5">{value}</p>
         </div>
-        {href && <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600 group-hover:text-emerald-500 transition-colors" />}
+        {href && <ChevronRight className="h-4 w-4 text-slate-400 dark:text-slate-500 group-hover:text-emerald-500 transition-colors" />}
       </div>
     </motion.div>
   );
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
       {/* Row 2: Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Trend */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6">
+        <div className="lg:col-span-2 glass-panel rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 dark:text-slate-100">Revenue Trend</h3>
             <span className="text-xs text-slate-400 dark:text-slate-500">Last 6 months</span>
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Order Volume */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6">
+        <div className="glass-panel rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 dark:text-slate-100">Order Volume</h3>
             <span className="text-xs text-slate-400 dark:text-slate-500">Last 6 months</span>
@@ -224,7 +224,7 @@ export default function AdminDashboard() {
       {/* Row 3: Orders + Prescriptions + Deliveries Status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Orders by Status */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6">
+        <div className="glass-panel rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 dark:text-slate-100">Orders by Status</h3>
             <Link href="/orders" className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
@@ -256,7 +256,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Prescription Pipeline */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6">
+        <div className="glass-panel rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 dark:text-slate-100">Prescription Pipeline</h3>
             <Link href="/prescriptions" className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
@@ -293,7 +293,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Delivery Status */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6">
+        <div className="glass-panel rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 dark:text-slate-100">Delivery Status</h3>
             <Link href="/deliveries" className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
@@ -333,7 +333,7 @@ export default function AdminDashboard() {
       {/* Row 4: Top Products + Recent Orders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Products */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6">
+        <div className="glass-panel rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 dark:text-slate-100">Top Selling Products</h3>
             <Link href="/products" className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
@@ -355,7 +355,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Orders */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6">
+        <div className="glass-panel rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 dark:text-slate-100">Recent Orders</h3>
             <Link href="/orders" className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
@@ -382,7 +382,7 @@ export default function AdminDashboard() {
       {/* Row 5: Alerts + Branches + User Growth */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Low Stock Alerts */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6">
+        <div className="glass-panel rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 dark:text-slate-100">Low Stock Alerts</h3>
             <Link href="/inventory" className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">Manage</Link>
@@ -408,7 +408,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Expiring Batches */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6">
+        <div className="glass-panel rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 dark:text-slate-100">Expiring Soon</h3>
             <Link href="/inventory" className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">View</Link>
@@ -435,7 +435,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Branch Performance */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6">
+        <div className="glass-panel rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 dark:text-slate-100">Branch Performance</h3>
             <Link href="/branches" className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>

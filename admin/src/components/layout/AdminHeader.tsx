@@ -40,13 +40,13 @@ export function AdminHeader() {
   const ThemeIcon = !mounted ? Monitor : theme === "dark" ? Moon : theme === "system" ? Monitor : Sun;
 
   return (
-    <header className="h-16 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 flex items-center justify-between shadow-xs">
+    <header className="h-16 glass-header px-6 flex items-center justify-between z-20">
       <div className="flex items-center gap-3 w-80">
-        <Search className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+        <Search className="h-4 w-4 text-emerald-400" />
         <input
           type="text"
           placeholder="Search products, orders, patients..."
-          className="w-full h-9 px-3 rounded-lg text-xs bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+          className="w-full h-9 px-3 rounded-xl text-xs bg-emerald-500/10 dark:bg-slate-900/60 border border-emerald-500/20 dark:border-white/10 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 placeholder:text-slate-400 dark:placeholder:text-slate-500 backdrop-blur-md"
         />
       </div>
 

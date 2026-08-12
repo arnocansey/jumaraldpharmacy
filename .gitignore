@@ -41,6 +41,13 @@ coverage/
 # vercel
 .vercel
 
-# typescript
+# typescript & build artifacts
 *.tsbuildinfo
 next-env.d.ts
+
+# uploads and archives
+uploads/
+backend/uploads/
+*.zip
+
+

@@ -64,23 +64,23 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside className="w-64 shrink-0 bg-emerald-950 dark:bg-emerald-950 border-r border-emerald-900 dark:border-emerald-900 flex flex-col h-screen sticky top-0 p-4">
+    <aside className="w-64 shrink-0 glass-sidebar flex flex-col h-screen sticky top-0 p-4 z-20">
       <div className="flex flex-col h-full">
         <Link href="/" className="block px-2 shrink-0">
-          <div className="bg-white dark:bg-slate-800 p-2.5 rounded-xl shadow-md">
+          <div className="bg-white/95 p-3 rounded-2xl border border-white/20 shadow-xl shadow-emerald-950/20 backdrop-blur-md">
             <img src="/jumaraldlogo.png" alt="Jumarald Pharmacy Operations" className="h-9 w-auto object-contain mx-auto" />
           </div>
-          <p className="text-[10px] text-emerald-300 font-semibold tracking-wider uppercase text-center mt-2">
-            Admin Operations Panel
+          <p className="text-[10px] text-emerald-200/80 font-bold tracking-widest uppercase text-center mt-2.5">
+            Pharmacy Control Panel
           </p>
         </Link>
 
-        <nav className="flex-1 overflow-y-auto space-y-4 text-sm font-medium mt-6 scrollbar-thin scrollbar-thumb-emerald-800 scrollbar-track-transparent" aria-label="Admin navigation">
+        <nav className="flex-1 overflow-y-auto space-y-4 text-sm font-medium mt-6 scrollbar-thin" aria-label="Admin navigation">
           {sections.map((section) => (
             <div key={section.label}>
               <button
                 onClick={() => toggleSection(section.label)}
-                className="flex items-center justify-between w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400/60 hover:text-emerald-300 transition-colors"
+                className="flex items-center justify-between w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-200/60 hover:text-emerald-200 transition-colors"
                 aria-expanded={openSections[section.label]}
               >
                 {section.label}
@@ -95,15 +95,14 @@ export function AdminSidebar() {
                       <Link
                         key={link.href}
                         href={link.href}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
                           isActive
-                            ? "bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30"
-                            : "text-emerald-200/80 hover:text-white hover:bg-emerald-900/60"
+                            ? "bg-white/20 text-white font-bold border border-white/30 shadow-lg shadow-emerald-950/40 backdrop-blur-md"
+                            : "text-emerald-100/70 hover:text-white hover:bg-white/10 border border-transparent"
                         }`}
-                        aria-current={isActive ? "page" : undefined}
                       >
-                        <Icon className="h-4 w-4" />
-                        <span className="text-xs">{link.name}</span>
+                        <Icon className={`h-4 w-4 ${isActive ? "text-emerald-300" : "text-emerald-200/60"}`} />
+                        <span>{link.name}</span>
                       </Link>
                     );
                   })}
