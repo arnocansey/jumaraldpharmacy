@@ -110,7 +110,7 @@ export async function deletePrescription(req: AuthenticatedRequest, res: Respons
       });
     }
 
-    // Clean up from Cloudinary if applicable
+    // Clean up file asset (Cloudinary or local file system)
     if (prescription.documentUrl.includes("cloudinary.com")) {
       try {
         const parts = prescription.documentUrl.split("/upload/");
@@ -118,8 +118,18 @@ export async function deletePrescription(req: AuthenticatedRequest, res: Respons
           const publicId = parts[1].replace(/^v\d+\//, "").replace(/\.[^.]+$/, "");
           await cloudinary.uploader.destroy(publicId);
         }
-      } catch {
-        // Cloudinary cleanup is best-effort; don't block deletion
+      } catch (err: any) {
+        console.warn("Failed to delete Cloudinary asset:", err.message);
+      }
+    } else if (!prescription.documentUrl.startsWith("data:")) {
+      try {
+        const filename = prescription.documentUrl.replace(/^\/?(?:prescriptions|uploads)\//, "");
+        const localPath = path.join(process.cwd(), "uploads", filename);
+        if (fs.existsSync(localPath)) {
+          fs.unlinkSync(localPath);
+        }
+      } catch (err: any) {
+        console.warn("Failed to delete local file:", err.message);
       }
     }
 
@@ -143,7 +153,7 @@ export async function adminDeletePrescription(req: any, res: Response) {
       return res.status(404).json({ message: "Prescription not found" });
     }
 
-    // Clean up from Cloudinary if applicable
+    // Clean up file asset (Cloudinary or local file system)
     if (prescription.documentUrl.includes("cloudinary.com")) {
       try {
         const parts = prescription.documentUrl.split("/upload/");
@@ -151,8 +161,18 @@ export async function adminDeletePrescription(req: any, res: Response) {
           const publicId = parts[1].replace(/^v\d+\//, "").replace(/\.[^.]+$/, "");
           await cloudinary.uploader.destroy(publicId);
         }
-      } catch {
-        // Cloudinary cleanup is best-effort
+      } catch (err: any) {
+        console.warn("Failed to delete Cloudinary asset:", err.message);
+      }
+    } else if (!prescription.documentUrl.startsWith("data:")) {
+      try {
+        const filename = prescription.documentUrl.replace(/^\/?(?:prescriptions|uploads)\//, "");
+        const localPath = path.join(process.cwd(), "uploads", filename);
+        if (fs.existsSync(localPath)) {
+          fs.unlinkSync(localPath);
+        }
+      } catch (err: any) {
+        console.warn("Failed to delete local file:", err.message);
       }
     }
 
