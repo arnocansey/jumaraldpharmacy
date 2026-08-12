@@ -26,7 +26,7 @@ export function HeroCarousel() {
       badge: "Limited Time Offer — 24% OFF",
       title: "Diabetic Monitors & Blood Glucose Strips",
       subtitle: "Save big on SD Codefree Glucose Kits, OneTouch Select Plus Meters, and essential diagnostic devices with GPHC pharmacist support.",
-      primaryCta: { text: "Shop Diabetic Care", href: "/shop?category=diabetic-care" },
+      primaryCta: { text: "Shop Diagnostic Devices", href: "/shop" },
       secondaryCta: { text: "View Offers", href: "/shop" },
     },
     {

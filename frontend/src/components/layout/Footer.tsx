@@ -40,11 +40,11 @@ export function Footer() {
           <div>
             <h4 className="text-sm font-bold uppercase tracking-wider text-white mb-4">Categories</h4>
             <ul className="space-y-2.5 text-sm">
-              <li><Link href="/shop?category=prescription-medicines" className="hover:text-emerald-400 transition-colors">Prescription Drugs</Link></li>
-              <li><Link href="/shop?category=diabetic-care" className="hover:text-emerald-400 transition-colors">Diabetic Monitors & Strips</Link></li>
-              <li><Link href="/shop?category=over-the-counter" className="hover:text-emerald-400 transition-colors">OTC Relief</Link></li>
-              <li><Link href="/shop?category=vitamins-supplements" className="hover:text-emerald-400 transition-colors">Vitamins & Immunity</Link></li>
-              <li><Link href="/shop?category=personal-care" className="hover:text-emerald-400 transition-colors">Local Herbal Soaps & Care</Link></li>
+              <li><Link href="/categories" className="hover:text-emerald-400 transition-colors">All Categories</Link></li>
+              <li><Link href="/shop" className="hover:text-emerald-400 transition-colors">Prescription Drugs</Link></li>
+              <li><Link href="/shop" className="hover:text-emerald-400 transition-colors">Over The Counter (OTC)</Link></li>
+              <li><Link href="/shop" className="hover:text-emerald-400 transition-colors">Vitamins & Supplements</Link></li>
+              <li><Link href="/shop" className="hover:text-emerald-400 transition-colors">Personal Care & Wellness</Link></li>
             </ul>
           </div>
 

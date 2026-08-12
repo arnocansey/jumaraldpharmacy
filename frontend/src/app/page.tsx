@@ -180,7 +180,7 @@ export default function HomePage() {
               <p className="text-sm text-slate-300 max-w-sm">
                 Save big on SD Codefree Glucose Kits, OneTouch Select Plus Meters, and Blood Pressure devices.
               </p>
-              <Link href="/shop?category=diabetic-care" className="inline-block pt-2">
+              <Link href="/shop" className="inline-block pt-2">
                 <Button variant="primary" size="md" className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold">
                   <span>Shop Diagnostic Sale</span>
                   <ArrowRight className="h-4 w-4" />
