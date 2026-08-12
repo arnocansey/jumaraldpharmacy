@@ -20,16 +20,24 @@ export async function apiFetch<T>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  try {
+    const res = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (!res.ok) {
-    throw new Error(data.message || "API request failed");
+    if (!res.ok) {
+      throw new Error(data.message || "API request failed");
+    }
+
+    return data as T;
+  } catch (err: any) {
+    if (typeof window === "undefined") {
+      console.warn(`[SSG Build] API fetch failed for ${endpoint}:`, err.message);
+      return [] as unknown as T;
+    }
+    throw err;
   }
-
-  return data as T;
 }
