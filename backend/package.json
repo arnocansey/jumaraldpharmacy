@@ -11,7 +11,9 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "prisma:seed-categories": "ts-node prisma/seed-categories.ts",
     "prisma:seed-blog": "ts-node prisma/seed-blog.ts",
-    "prisma:seed-enterprise": "ts-node prisma/seed-enterprise.ts"
+    "prisma:seed-enterprise": "ts-node prisma/seed-enterprise.ts",
+    "db:backup": "ts-node src/scripts/backup.ts",
+    "db:restore": "ts-node src/scripts/restore.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

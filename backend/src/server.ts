@@ -31,6 +31,7 @@ import reviewRoutes from "./routes/review.routes";
 import pushRoutes from "./routes/push.routes";
 import newsletterRoutes from "./routes/newsletter.routes";
 import settingRoutes from "./routes/setting.routes";
+import backupRoutes from "./routes/backup.routes";
 import { configureWebPush } from "./lib/push";
 import { setupSwagger } from "./config/swagger";
 import * as Sentry from "@sentry/node";
@@ -122,6 +123,7 @@ app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/push", pushRoutes);
 app.use("/api/v1/newsletter", newsletterRoutes);
 app.use("/api/v1/settings", settingRoutes);
+app.use("/api/v1/backups", backupRoutes);
 
 setupSwagger(app);
 
