@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload, Download } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload, Download, Loader2, Image as ImageIcon } from "lucide-react";
+import { apiFetch, apiUpload } from "@/lib/api";
 import { toast } from "sonner";
 import ProductImportModal from "@/components/ProductImportModal";
 
@@ -15,7 +15,7 @@ interface Product {
   createdAt: string;
 }
 
-interface Category { id: string; name: string; slug: string; description?: string; _count?: { products: number } }
+interface Category { id: string; name: string; slug: string; description?: string; imageUrl?: string; _count?: { products: number } }
 
 const EMPTY_FORM = {
   name: "", sku: "", description: "", price: "", compareAtPrice: "", stockQuantity: "0",
@@ -42,15 +42,75 @@ export default function ProductsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [showImport, setShowImport] = useState(false);
+
+  async function handleImageFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImage(true);
+    try {
+      const uploadedUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const res = await apiUpload(files[i]);
+        if (res.url) {
+          uploadedUrls.push(res.url);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        const currentList = form.images
+          ? form.images.split(",").map((s) => s.trim()).filter(Boolean)
+          : [];
+        const updatedList = [...currentList, ...uploadedUrls];
+        setForm((prev) => ({ ...prev, images: updatedList.join(", ") }));
+        toast.success(`${uploadedUrls.length} image(s) uploaded successfully!`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload image");
+    } finally {
+      setUploadingImage(false);
+      e.target.value = "";
+    }
+  }
+
+  function removeImage(indexToRemove: number) {
+    const currentList = form.images
+      ? form.images.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+    const updatedList = currentList.filter((_, idx) => idx !== indexToRemove);
+    setForm((prev) => ({ ...prev, images: updatedList.join(", ") }));
+  }
 
   // Category management state
   const [showCatForm, setShowCatForm] = useState(false);
   const [editCatId, setEditCatId] = useState<string | null>(null);
   const [catName, setCatName] = useState("");
   const [catDesc, setCatDesc] = useState("");
+  const [catImageUrl, setCatImageUrl] = useState("");
   const [catSaving, setCatSaving] = useState(false);
+  const [uploadingCatImage, setUploadingCatImage] = useState(false);
+
+  async function handleCatImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingCatImage(true);
+    try {
+      const res = await apiUpload(file);
+      if (res.url) {
+        setCatImageUrl(res.url);
+        toast.success("Category image uploaded!");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload category image");
+    } finally {
+      setUploadingCatImage(false);
+      e.target.value = "";
+    }
+  }
 
   useEffect(() => { loadProducts(); }, [page, search]);
   useEffect(() => { loadCategories(); }, []);
@@ -135,10 +195,10 @@ export default function ProductsPage() {
   }
 
   // Category CRUD
-  function resetCatForm() { setCatName(""); setCatDesc(""); setEditCatId(null); setShowCatForm(false); }
+  function resetCatForm() { setCatName(""); setCatDesc(""); setCatImageUrl(""); setEditCatId(null); setShowCatForm(false); }
 
   function startEditCat(c: Category) {
-    setCatName(c.name); setCatDesc(c.description || ""); setEditCatId(c.id); setShowCatForm(true);
+    setCatName(c.name); setCatDesc(c.description || ""); setCatImageUrl(c.imageUrl || ""); setEditCatId(c.id); setShowCatForm(true);
   }
 
   async function handleCatSubmit(e: React.FormEvent) {
@@ -148,12 +208,12 @@ export default function ProductsPage() {
     try {
       if (editCatId) {
         await apiFetch(`/products/categories/${editCatId}`, {
-          method: "PUT", body: JSON.stringify({ name: catName.trim(), description: catDesc.trim() || undefined }),
+          method: "PUT", body: JSON.stringify({ name: catName.trim(), description: catDesc.trim() || undefined, imageUrl: catImageUrl || undefined }),
         });
         toast.success("Category updated");
       } else {
         await apiFetch("/products/categories", {
-          method: "POST", body: JSON.stringify({ name: catName.trim(), description: catDesc.trim() || undefined }),
+          method: "POST", body: JSON.stringify({ name: catName.trim(), description: catDesc.trim() || undefined, imageUrl: catImageUrl || undefined }),
         });
         toast.success("Category created");
       }
@@ -330,9 +390,68 @@ export default function ProductsPage() {
                 <label className={labelClass}>Warnings & Contraindications</label>
                 <textarea rows={2} placeholder="Important warnings..." value={form.warnings} onChange={(e) => setForm({ ...form, warnings: e.target.value })} className={`${inputClass} resize-none`} />
               </div>
-              <div>
-                <label className={labelClass}>Image URLs (comma separated)</label>
-                <input placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg" value={form.images} onChange={(e) => setForm({ ...form, images: e.target.value })} className={inputClass} />
+              <div className="space-y-3">
+                <label className={labelClass}>Product Images</label>
+                
+                {/* Image Upload Dropzone & Button */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <label className="flex-1 cursor-pointer flex items-center justify-center gap-2 border-2 border-dashed border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 p-3 rounded-xl transition-colors">
+                    {uploadingImage ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Uploading Image...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                          Upload Image Files (PNG, JPG, WebP)
+                        </span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageFileUpload}
+                      disabled={uploadingImage}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {/* Uploaded Image Thumbnails Grid */}
+                {form.images.trim() && (
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 pt-1">
+                    {form.images
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean)
+                      .map((imgUrl, idx) => (
+                        <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 h-20 bg-slate-100 dark:bg-slate-800">
+                          <img src={imgUrl} alt={`Product ${idx + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(idx)}
+                            className="absolute top-1 right-1 p-1 rounded-full bg-red-600 text-white opacity-90 hover:opacity-100 transition-opacity shadow-md"
+                            title="Remove Image"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                )}
+
+                <div>
+                  <span className="text-[11px] text-slate-400 block mb-1">Direct Image URLs (comma separated)</span>
+                  <input
+                    placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg"
+                    value={form.images}
+                    onChange={(e) => setForm({ ...form, images: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
               </div>
               <div className="flex items-center gap-6">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -404,6 +523,35 @@ export default function ProductsPage() {
               <div>
                 <label className={labelClass}>Description</label>
                 <textarea rows={3} placeholder="Optional description..." value={catDesc} onChange={(e) => setCatDesc(e.target.value)} className={`${inputClass} resize-none`} />
+              </div>
+              <div>
+                <label className={labelClass}>Category Cover Image</label>
+                <div className="flex items-center gap-3 mb-2">
+                  {catImageUrl ? (
+                    <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
+                      <img src={catImageUrl} alt="Category preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setCatImageUrl("")}
+                        className="absolute top-1 right-1 p-0.5 rounded-full bg-red-600 text-white"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : null}
+                  <label className="flex-1 cursor-pointer flex items-center justify-center gap-2 border-2 border-dashed border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/20 p-2.5 rounded-xl hover:bg-emerald-100/50 transition-colors">
+                    {uploadingCatImage ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                    ) : (
+                      <Upload className="h-4 w-4 text-emerald-600" />
+                    )}
+                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                      {uploadingCatImage ? "Uploading..." : "Upload Category Image"}
+                    </span>
+                    <input type="file" accept="image/*" onChange={handleCatImageUpload} disabled={uploadingCatImage} className="hidden" />
+                  </label>
+                </div>
+                <input placeholder="Or enter direct image URL..." value={catImageUrl} onChange={(e) => setCatImageUrl(e.target.value)} className={inputClass} />
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={catSaving}
