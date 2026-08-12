@@ -3,10 +3,8 @@ import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Providers } from "./providers";
-import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
-
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const geist = { className: "font-sans", variable: "--font-sans" };
 
 export const viewport: Viewport = {
   width: "device-width",

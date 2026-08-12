@@ -2,7 +2,7 @@ import { prisma } from "../lib/prisma";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { Response } from "express";
 import { z } from "zod";
-import { PrescriptionStatus } from "@prisma/client";
+import { PrescriptionStatus, OrderStatus } from "@prisma/client";
 import { sendEmail, buildPrescriptionVerifiedEmail } from "../lib/notifications";
 import { cloudinary } from "../config/cloudinary";
 import { env } from "../config/env";
@@ -16,6 +16,21 @@ const submitPrescriptionSchema = z.object({
 
 const updatePrescriptionSchema = z.object({
   status: z.nativeEnum(PrescriptionStatus),
+  pharmacistNote: z.string().optional(),
+});
+
+const createPrescriptionOrderSchema = z.object({
+  items: z.array(
+    z.object({
+      productId: z.string().min(1),
+      quantity: z.number().int().positive(),
+      price: z.number().positive(),
+      dosage: z.string().optional(),
+      frequency: z.string().optional(),
+      duration: z.string().optional(),
+      instructions: z.string().optional(),
+    })
+  ).min(1),
   pharmacistNote: z.string().optional(),
 });
 
@@ -43,6 +58,10 @@ export async function getMyPrescriptions(req: AuthenticatedRequest, res: Respons
   try {
     const prescriptions = await prisma.prescription.findMany({
       where: { userId: req.user!.id },
+      include: {
+        items: { include: { product: true } },
+        orders: { include: { orderItems: { include: { product: true } } } },
+      },
       orderBy: { createdAt: "desc" },
     });
     return res.json(prescriptions);
@@ -54,7 +73,11 @@ export async function getMyPrescriptions(req: AuthenticatedRequest, res: Respons
 export async function getPrescriptionQueue(req: any, res: Response) {
   try {
     const queue = await prisma.prescription.findMany({
-      include: { user: { select: { name: true, email: true, phone: true } } },
+      include: {
+        user: { select: { id: true, name: true, email: true, phone: true } },
+        items: { include: { product: true } },
+        orders: { include: { orderItems: { include: { product: true } } } },
+      },
       orderBy: { createdAt: "desc" },
     });
     return res.json(queue);
@@ -62,6 +85,125 @@ export async function getPrescriptionQueue(req: any, res: Response) {
     return res.status(500).json({ message: "Failed to fetch prescription queue" });
   }
 }
+
+export async function createOrderFromPrescription(req: any, res: Response) {
+  try {
+    const { id } = req.params;
+    const data = createPrescriptionOrderSchema.parse(req.body);
+
+    const prescription = await prisma.prescription.findUnique({
+      where: { id },
+      include: { user: true },
+    });
+
+    if (!prescription) {
+      return res.status(404).json({ message: "Prescription not found" });
+    }
+
+    const productIds = data.items.map((i) => i.productId);
+    const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    for (const item of data.items) {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        return res.status(400).json({ message: `Product ${item.productId} not found` });
+      }
+    }
+
+    const totalAmount = data.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const orderNumber = `JUM-RX-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    let address = await prisma.address.findFirst({
+      where: { userId: prescription.userId },
+      orderBy: { isDefault: "desc" },
+    });
+
+    if (!address) {
+      address = await prisma.address.create({
+        data: {
+          userId: prescription.userId,
+          fullAddress: "Pharmacy Counter Pickup / Delivery on Request",
+          city: "Accra",
+          state: "Greater Accra",
+          postalCode: "00233",
+          country: "Ghana",
+          isDefault: true,
+        },
+      });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.prescriptionItem.deleteMany({ where: { prescriptionId: id } });
+
+      for (const item of data.items) {
+        await tx.prescriptionItem.create({
+          data: {
+            prescriptionId: id,
+            productId: item.productId,
+            quantity: item.quantity,
+            dosage: item.dosage || "As Directed",
+            frequency: item.frequency || "Daily",
+            duration: item.duration || "7 Days",
+            instructions: item.instructions || "",
+          },
+        });
+      }
+
+      await tx.prescription.update({
+        where: { id },
+        data: {
+          status: PrescriptionStatus.APPROVED,
+          isVerified: true,
+          pharmacistNote: data.pharmacistNote || prescription.pharmacistNote || "Prescription verified and order created.",
+        },
+      });
+
+      return tx.order.create({
+        data: {
+          orderNumber,
+          userId: prescription.userId,
+          addressId: address.id,
+          prescriptionId: id,
+          totalAmount,
+          shippingFee: 0,
+          taxAmount: 0,
+          status: OrderStatus.PENDING,
+          orderItems: {
+            create: data.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.price,
+              total: item.price * item.quantity,
+            })),
+          },
+        },
+        include: {
+          orderItems: { include: { product: true } },
+          user: { select: { email: true, name: true } },
+        },
+      });
+    });
+
+    if (result.user?.email) {
+      const emailContent = buildPrescriptionVerifiedEmail(
+        "APPROVED",
+        data.pharmacistNote || "Prescription verified and order prepared.",
+        "http://localhost:3000/dashboard"
+      );
+      sendEmail({ to: result.user.email, subject: emailContent.subject, html: emailContent.html }).catch(() => {});
+    }
+
+    return res.status(201).json(result);
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: "Invalid order input", errors: error.errors });
+    }
+    console.error("Failed to create order from prescription:", error);
+    return res.status(500).json({ message: error.message || "Failed to create order from prescription" });
+  }
+}
+
 
 export async function updatePrescriptionStatus(req: any, res: Response) {
   try {

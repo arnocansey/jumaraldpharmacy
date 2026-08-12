@@ -3,7 +3,7 @@ import { authenticateToken, requireRole } from "../middleware/auth";
 import { RoleName } from "@prisma/client";
 import {
   submitPrescription, getMyPrescriptions, getPrescriptionQueue, updatePrescriptionStatus,
-  deletePrescription, adminDeletePrescription,
+  createOrderFromPrescription, deletePrescription, adminDeletePrescription,
   migratePrescriptionsToCloudinary, cleanupOrphanPrescriptions,
 } from "../controllers/prescription.controller";
 
@@ -18,6 +18,7 @@ router.delete("/:id", authenticateToken, deletePrescription);
 router.get("/queue", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), getPrescriptionQueue);
 router.put("/:id/status", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), updatePrescriptionStatus);
 router.patch("/:id/verify", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), updatePrescriptionStatus);
+router.post("/:id/create-order", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), createOrderFromPrescription);
 router.delete("/:id/admin", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN]), adminDeletePrescription);
 
 // Maintenance routes (Super Admin only)

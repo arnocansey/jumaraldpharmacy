@@ -50,7 +50,7 @@ interface OrderItem {
 
 export default function PatientDashboardPage() {
   const router = useRouter();
-  const { addToCart } = useCartStore();
+  const { addToCart, clearCart } = useCartStore();
   const [tab, setTab] = useState<Tab>("overview");
   const [user, setUser] = useState<{ id?: string; name: string; email: string; phone?: string; role?: string } | null>(null);
   const [orders, setOrders] = useState<any[]>([]);
@@ -180,6 +180,41 @@ export default function PatientDashboardPage() {
     } catch (err: any) {
       toast.error(err.message || "Failed to delete prescription");
     }
+  };
+
+  const handleProceedToPrescriptionCheckout = (rx: any) => {
+    const itemsToProcess = (rx.items && rx.items.length > 0)
+      ? rx.items
+      : ((rx.prescriptionItems && rx.prescriptionItems.length > 0)
+        ? rx.prescriptionItems
+        : (rx.orders && rx.orders.length > 0 && rx.orders[0].orderItems ? rx.orders[0].orderItems : []));
+
+    if (itemsToProcess.length === 0) {
+      toast.error("No prescribed items attached to this prescription yet.");
+      return;
+    }
+
+    clearCart();
+    itemsToProcess.forEach((item: any) => {
+      const prod = item.product || { id: item.productId, name: item.productName || "Prescribed Medication", price: item.unitPrice || item.price || 0 };
+      addToCart(
+        {
+          id: prod.id,
+          name: prod.name,
+          slug: prod.slug || prod.id,
+          price: Number(prod.price),
+          stockQuantity: prod.stockQuantity || 10,
+          requiresPrescription: true,
+          images: prod.images || [],
+          category: prod.category || "Prescription",
+        },
+        item.quantity || 1
+      );
+    });
+
+    localStorage.setItem("jumarald_attached_prescription", rx.id);
+    toast.success("Prescribed medications loaded into checkout!");
+    router.push("/checkout");
   };
 
   const openAddAddress = () => {
@@ -556,6 +591,48 @@ export default function PatientDashboardPage() {
                         <p className="text-sm text-emerald-800 dark:text-emerald-300">{rx.pharmacistNote}</p>
                       </div>
                     )}
+
+                    {/* Prescribed Items & Fulfill Order Section */}
+                    {(() => {
+                      const displayItems = (rx.items && rx.items.length > 0) ? rx.items : (rx.prescriptionItems || []);
+                      if (displayItems.length === 0) return null;
+                      return (
+                        <div className="p-4 bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 rounded-xl space-y-3">
+                          <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                            <ShoppingBag className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Prescribed Medications:
+                          </p>
+                          <div className="space-y-2">
+                            {displayItems.map((item: any) => (
+                              <div key={item.id} className="flex items-center justify-between text-xs bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-emerald-100 dark:border-emerald-900/40">
+                                <div>
+                                  <p className="font-bold text-slate-900 dark:text-white">{item.product?.name || "Medication"}</p>
+                                  <p className="text-[11px] text-slate-500">{item.dosage || "As Directed"} &middot; Qty: {item.quantity}</p>
+                                </div>
+                                <span className="font-extrabold text-emerald-700 dark:text-emerald-400">
+                                  {formatCurrency((item.product?.price || 0) * item.quantity)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="pt-2 border-t border-emerald-200 dark:border-emerald-800/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div className="text-xs text-slate-600 dark:text-slate-300">
+                              Total Order: <span className="font-extrabold text-emerald-700 dark:text-emerald-400 text-sm">
+                                {formatCurrency(displayItems.reduce((sum: number, i: any) => sum + (i.product?.price || 0) * i.quantity, 0))}
+                              </span>
+                            </div>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleProceedToPrescriptionCheckout(rx)}
+                              className="w-full sm:w-auto shadow-md shadow-emerald-600/20"
+                            >
+                              <ShoppingBag className="h-4 w-4 mr-1.5" /> Proceed to Checkout & Pay
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {!rx.pharmacistNote && rxStatus === "PENDING" && (
                       <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl">
