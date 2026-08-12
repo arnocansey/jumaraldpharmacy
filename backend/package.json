@@ -13,7 +13,8 @@
     "prisma:seed-blog": "ts-node prisma/seed-blog.ts",
     "prisma:seed-enterprise": "ts-node prisma/seed-enterprise.ts",
     "db:backup": "ts-node src/scripts/backup.ts",
-    "db:restore": "ts-node src/scripts/restore.ts"
+    "db:restore": "ts-node src/scripts/restore.ts",
+    "db:purge": "ts-node src/scripts/purge-data.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

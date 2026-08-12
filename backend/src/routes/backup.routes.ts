@@ -7,6 +7,7 @@ import {
   deleteBackup,
   restoreBackup,
   exportTableCSV,
+  purgeNonAdminData,
 } from "../controllers/backup.controller";
 
 const router = Router();
@@ -20,5 +21,6 @@ router.get("/download/:filename", downloadBackup);
 router.post("/restore/:filename", restoreBackup);
 router.delete("/:filename", deleteBackup);
 router.get("/export/:table", exportTableCSV);
+router.post("/purge-data", purgeNonAdminData);
 
 export default router;

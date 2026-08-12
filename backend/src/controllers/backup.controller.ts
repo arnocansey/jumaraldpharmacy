@@ -413,3 +413,63 @@ export async function exportTableCSV(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ message: "CSV export failed: " + (error.message || "") });
   }
 }
+
+/**
+ * Purges all transactional data and non-admin user credentials while keeping tables and admin accounts
+ */
+export async function purgeNonAdminData(req: AuthenticatedRequest, res: Response) {
+  try {
+    const adminRoles = ["SUPER_ADMIN", "ADMIN", "PHARMACIST"];
+
+    await prisma.payment.deleteMany();
+    await prisma.orderItem.deleteMany();
+    await prisma.deliveryStatusLog.deleteMany();
+    await prisma.deliveryTracking.deleteMany();
+    await prisma.order.deleteMany();
+    await prisma.prescriptionItem.deleteMany();
+    await prisma.prescriptionVerificationLog.deleteMany();
+    await prisma.prescription.deleteMany();
+    await prisma.consultation.deleteMany();
+    await prisma.doctor.deleteMany();
+    await prisma.loyaltyPoint.deleteMany();
+    await prisma.loyaltyRedemption.deleteMany();
+    await prisma.loyaltyRewardClaim.deleteMany();
+    await prisma.loyaltyAccount.deleteMany();
+    await prisma.review.deleteMany();
+    await prisma.cartItem.deleteMany();
+    await prisma.wishlist.deleteMany();
+    await prisma.compareItem.deleteMany();
+    await prisma.comment.deleteMany();
+    await prisma.notification.deleteMany();
+    await prisma.passwordResetToken.deleteMany();
+    await prisma.refreshToken.deleteMany();
+
+    await prisma.address.deleteMany({
+      where: {
+        user: {
+          role: { notIn: adminRoles as any[] },
+        },
+      },
+    });
+
+    const deletedUsers = await prisma.user.deleteMany({
+      where: {
+        role: { notIn: adminRoles as any[] },
+      },
+    });
+
+    if (req.user?.id) {
+      await createAuditLog(req.user.id, "NON_ADMIN_DATA_PURGED", "system", "all_non_admin_data", {
+        deletedUsersCount: deletedUsers.count,
+      });
+    }
+
+    return res.json({
+      status: "success",
+      message: `Database purged successfully. ${deletedUsers.count} non-admin credentials and all transactional data cleared. Admin accounts preserved.`,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ message: "Failed to purge database: " + (error.message || "") });
+  }
+}
+

@@ -16,6 +16,7 @@ import {
   Loader2,
   CheckCircle2,
   X,
+  ShieldAlert,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
@@ -32,9 +33,12 @@ export default function AdminBackupsPage() {
   const [backups, setBackups] = useState<BackupItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [purging, setPurging] = useState(false);
   const [restoringFile, setRestoringFile] = useState<string | null>(null);
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
   const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
+  const [showPurgeModal, setShowPurgeModal] = useState(false);
+  const [purgeConfirmText, setPurgeConfirmText] = useState("");
 
   const fetchBackups = useCallback(async () => {
     setLoading(true);
@@ -123,6 +127,25 @@ export default function AdminBackupsPage() {
       toast.error(err.message || "Failed to delete backup");
     } finally {
       setDeletingFile(null);
+    }
+  };
+
+  const handlePurgeData = async () => {
+    if (purgeConfirmText !== "PURGE DATA") return;
+    setPurging(true);
+    toast.info("Purging non-admin credentials and transactional data...");
+    try {
+      const res = await apiFetch<{ status: string; message: string }>("/backups/purge-data", {
+        method: "POST",
+      });
+      toast.success(res.message || "Database purged successfully!");
+      setShowPurgeModal(false);
+      setPurgeConfirmText("");
+      fetchBackups();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to purge non-admin data");
+    } finally {
+      setPurging(false);
     }
   };
 
@@ -346,6 +369,43 @@ export default function AdminBackupsPage() {
         )}
       </div>
 
+      {/* Danger Zone: Purge Non-Admin Credentials */}
+      <div className="bg-red-50/70 dark:bg-red-950/30 rounded-2xl p-6 border border-red-200 dark:border-red-900/60 shadow-sm space-y-4">
+        <div className="flex items-center gap-3 text-red-700 dark:text-red-400">
+          <ShieldAlert className="h-6 w-6 shrink-0" />
+          <div>
+            <h2 className="text-base font-extrabold">Danger Zone: Database Reset & Credentials Purge</h2>
+            <p className="text-xs text-red-600/90 dark:text-red-300 mt-0.5">
+              Permanently clear non-admin user credentials while retaining admin accounts and table schemas.
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white/80 dark:bg-slate-900/80 p-4 rounded-xl border border-red-100 dark:border-red-950 text-xs text-slate-600 dark:text-slate-300 space-y-2">
+          <p className="font-semibold text-red-600 dark:text-red-400 flex items-center gap-1.5">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            ⚠️ Important Safeguard Warning:
+          </p>
+          <ul className="list-disc pl-5 space-y-1 text-slate-500 dark:text-slate-400">
+            <li>All patient & customer accounts will be permanently removed.</li>
+            <li>All orders, payments, prescriptions, consultations, and review logs will be purged.</li>
+            <li>
+              <strong>Preserved:</strong> All Admin (<code className="font-mono text-emerald-600">SUPER_ADMIN</code>, <code className="font-mono text-emerald-600">ADMIN</code>, <code className="font-mono text-emerald-600">PHARMACIST</code>) credentials, system settings, product catalog, and table structures remain untouched.
+            </li>
+          </ul>
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowPurgeModal(true)}
+            className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-red-600/20 transition-all"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>Purge All Non-Admin Credentials & Data</span>
+          </button>
+        </div>
+      </div>
+
       {/* Confirmation Modal for Restore */}
       {confirmRestore && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -386,6 +446,72 @@ export default function AdminBackupsPage() {
               >
                 {restoringFile === confirmRestore ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 <span>Confirm Restoration</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal for Purge Non-Admin Credentials */}
+      {showPurgeModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-md w-full border border-red-200 dark:border-red-900 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+                <ShieldAlert className="h-7 w-7" />
+                <h3 className="text-lg font-extrabold text-slate-800 dark:text-white">Purge Non-Admin Credentials</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPurgeModal(false);
+                  setPurgeConfirmText("");
+                }}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-800 dark:text-red-300 space-y-1">
+              <p className="font-bold flex items-center gap-1">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                CRITICAL WARNING:
+              </p>
+              <p>
+                This action will delete all patient accounts, orders, payment logs, and prescriptions. Only Admin & Pharmacist credentials will be preserved.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Type <span className="font-mono font-bold text-red-600 dark:text-red-400">PURGE DATA</span> to confirm:
+              </label>
+              <input
+                type="text"
+                value={purgeConfirmText}
+                onChange={(e) => setPurgeConfirmText(e.target.value)}
+                placeholder="PURGE DATA"
+                className="w-full px-3.5 py-2 rounded-xl text-xs border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 font-mono text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setShowPurgeModal(false);
+                  setPurgeConfirmText("");
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePurgeData}
+                disabled={purgeConfirmText !== "PURGE DATA" || purging}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white flex items-center gap-2 shadow-lg shadow-red-600/20"
+              >
+                {purging ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                <span>Execute Purge</span>
               </button>
             </div>
           </div>
