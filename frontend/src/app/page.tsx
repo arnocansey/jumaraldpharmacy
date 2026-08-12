@@ -64,7 +64,7 @@ export default function HomePage() {
       try {
         const [catRes, prodRes] = await Promise.all([
           fetch(`${API_URL}/products/categories`).then((r) => r.json()),
-          fetch(`${API_URL}/products?limit=6`).then((r) => r.json()),
+          fetch(`${API_URL}/products?limit=6&inStockOnly=true`).then((r) => r.json()),
         ]);
 
         setCategories(Array.isArray(catRes) ? catRes : []);

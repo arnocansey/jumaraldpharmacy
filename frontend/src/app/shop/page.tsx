@@ -43,16 +43,13 @@ export default function ShopPage() {
       if (search) params.set("search", search);
       if (selectedCategory !== "all") params.set("category", selectedCategory);
       if (rxOnly) params.set("requiresPrescription", "true");
+      if (inStockOnly) params.set("inStockOnly", "true");
       if (priceRange.min) params.set("minPrice", priceRange.min);
       if (priceRange.max) params.set("maxPrice", priceRange.max);
 
       const res = await fetch(`${API_URL}/products?${params}`);
       const data = await res.json();
-      let filteredProducts = data.products || [];
-
-      if (inStockOnly) {
-        filteredProducts = filteredProducts.filter((p: any) => p.stockQuantity > 0);
-      }
+      const filteredProducts = data.products || [];
 
       setProducts(filteredProducts);
       setTotalPages(data.pagination?.pages || 1);

@@ -8,6 +8,7 @@ const productQuerySchema = z.object({
   category: z.string().optional(),
   brand: z.string().optional(),
   requiresPrescription: z.string().optional(),
+  inStockOnly: z.string().optional(),
   minPrice: z.string().optional(),
   maxPrice: z.string().optional(),
   sortBy: z.enum(["price_asc", "price_desc", "rating", "name"]).optional(),
@@ -83,7 +84,7 @@ const DEFAULT_CATEGORIES = [
 export async function getProducts(req: any, res: Response) {
   try {
     const query = productQuerySchema.parse(req.query);
-    const { search, category, brand, requiresPrescription, minPrice, maxPrice, sortBy, page, limit } = query;
+    const { search, category, brand, requiresPrescription, inStockOnly, minPrice, maxPrice, sortBy, page, limit } = query;
 
     const where: any = {};
     if (search) {
@@ -97,6 +98,7 @@ export async function getProducts(req: any, res: Response) {
     if (category) where.category = { slug: category };
     if (brand) where.brand = { slug: brand };
     if (requiresPrescription !== undefined) where.requiresPrescription = requiresPrescription === "true";
+    if (inStockOnly === "true") where.stockQuantity = { gt: 0 };
     if (minPrice || maxPrice) {
       where.price = {};
       if (minPrice) where.price.gte = Number(minPrice);
