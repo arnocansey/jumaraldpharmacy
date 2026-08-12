@@ -5,31 +5,57 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   Pill,
-  ShieldCheck,
-  Truck,
   Stethoscope,
-  Sparkles,
   ArrowRight,
   Plus,
   Star,
   HelpCircle,
   Package,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { MOCK_DOCTORS, MOCK_FAQS } from "@/lib/mockData";
 import { formatCurrency } from "@/lib/utils";
-import { useCartStore } from "@/store/useCartStore";
+import { useCartStore, CartProduct } from "@/store/useCartStore";
 import { toast } from "sonner";
 import { HeroCarousel } from "@/components/home/HeroCarousel";
 import { API_URL } from "@/lib/api";
 
+interface CategoryItem {
+  id: string;
+  name: string;
+  slug: string;
+  _count?: {
+    products?: number;
+  };
+}
+
+interface ProductItem {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  price: number;
+  compareAtPrice?: number;
+  stockQuantity: number;
+  requiresPrescription: boolean;
+  category?: string | { id: string; name: string; slug: string };
+  images: string[];
+  dosageForm?: string;
+  brand?: {
+    name?: string;
+  };
+  rating?: number;
+  reviewCount?: number;
+}
+
 export default function HomePage() {
   const { addToCart } = useCartStore();
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [products, setProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,8 +79,20 @@ export default function HomePage() {
     loadHomeData();
   }, []);
 
-  const handleQuickAdd = (product: any) => {
-    addToCart(product, 1);
+  const handleQuickAdd = (product: ProductItem) => {
+    const cartProduct: CartProduct = {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      price: product.price,
+      compareAtPrice: product.compareAtPrice,
+      stockQuantity: product.stockQuantity,
+      requiresPrescription: product.requiresPrescription || false,
+      images: product.images || [],
+      category: product.category || "uncategorized",
+      brand: product.brand?.name,
+    };
+    addToCart(cartProduct, 1);
     toast.success(`${product.name} added to cart!`);
   };
 
@@ -80,7 +118,12 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {categories.length === 0 ? (
+        {loading ? (
+          <div className="p-8 text-center text-slate-400 flex items-center justify-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+            <span className="text-xs">Loading health categories...</span>
+          </div>
+        ) : categories.length === 0 ? (
           <Card className="p-8 text-center text-slate-400 space-y-2">
             <Pill className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-600" />
             <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No categories added yet</p>
@@ -163,7 +206,12 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {products.length === 0 ? (
+        {loading ? (
+          <div className="p-10 text-center text-slate-400 flex items-center justify-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+            <span className="text-xs">Loading featured medicines...</span>
+          </div>
+        ) : products.length === 0 ? (
           <Card className="p-10 text-center text-slate-400 space-y-2">
             <Package className="h-10 w-10 mx-auto text-slate-300 dark:text-slate-600" />
             <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No products in catalog yet</p>
@@ -183,9 +231,7 @@ export default function HomePage() {
                         height={192}
                         quality={80}
                         placeholder="blur"
-                        blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+                        blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5"/>
                     ) : (
                       <div className="h-full w-full flex items-center justify-center text-slate-300">
                         <Package className="h-10 w-10" />
@@ -216,13 +262,13 @@ export default function HomePage() {
 
                   <p className="text-xs text-slate-500 line-clamp-2">{product.description}</p>
 
-                  {product.rating > 0 && (
+                  {product.rating && product.rating > 0 ? (
                     <div className="flex items-center gap-1.5 text-xs text-amber-500 font-bold">
                       <Star className="h-4 w-4 fill-amber-400" />
                       <span>{product.rating.toFixed(1)}</span>
-                      <span className="text-slate-400 font-normal">({product.reviewCount} reviews)</span>
+                      <span className="text-slate-400 font-normal">({product.reviewCount || 0} reviews)</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
