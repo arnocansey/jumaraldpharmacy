@@ -82,8 +82,9 @@ export default function PrescriptionsPage() {
   async function loadProducts() {
     if (availableProducts.length > 0) return;
     try {
-      const data = await apiFetch<Product[]>("/products");
-      setAvailableProducts(data);
+      const data = await apiFetch<any>("/products");
+      const list = Array.isArray(data) ? data : (data?.products || []);
+      setAvailableProducts(list);
     } catch {
       toast.error("Failed to load products inventory");
     }
@@ -165,9 +166,9 @@ export default function PrescriptionsPage() {
     } catch { toast.error("Failed to delete prescription"); }
   }
 
-  const filtered = prescriptions.filter((p) => !statusFilter || p.status === statusFilter);
+  const filtered = (Array.isArray(prescriptions) ? prescriptions : []).filter((p) => !statusFilter || p.status === statusFilter);
 
-  const filteredProducts = availableProducts.filter((p) =>
+  const filteredProducts = (Array.isArray(availableProducts) ? availableProducts : []).filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (p.category?.name && p.category.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
