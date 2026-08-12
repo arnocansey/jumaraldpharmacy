@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import {
   Pill,
-  UploadCloud,
   ShieldCheck,
   Truck,
   Stethoscope,
@@ -14,23 +12,48 @@ import {
   ArrowRight,
   Plus,
   Star,
-  CheckCircle2,
   HelpCircle,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-import { MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_DOCTORS, MOCK_FAQS } from "@/lib/mockData";
+import { MOCK_DOCTORS, MOCK_FAQS } from "@/lib/mockData";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/useCartStore";
 import { toast } from "sonner";
 import { HeroCarousel } from "@/components/home/HeroCarousel";
+import { API_URL } from "@/lib/api";
 
 export default function HomePage() {
   const { addToCart } = useCartStore();
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleQuickAdd = (product: (typeof MOCK_PRODUCTS)[0]) => {
+  useEffect(() => {
+    async function loadHomeData() {
+      setLoading(true);
+      try {
+        const [catRes, prodRes] = await Promise.all([
+          fetch(`${API_URL}/products/categories`).then((r) => r.json()),
+          fetch(`${API_URL}/products?limit=6`).then((r) => r.json()),
+        ]);
+
+        setCategories(Array.isArray(catRes) ? catRes : []);
+        setProducts(prodRes.products || []);
+      } catch (err) {
+        console.error("Failed to load landing page data:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadHomeData();
+  }, []);
+
+  const handleQuickAdd = (product: any) => {
     addToCart(product, 1);
     toast.success(`${product.name} added to cart!`);
   };
@@ -51,29 +74,37 @@ export default function HomePage() {
             </h2>
             <p className="text-sm text-slate-500 mt-1">Browse authentic healthcare products by category</p>
           </div>
-          <Link href="/shop" className="text-sm font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1">
+          <Link href="/shop" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
             <span>View All</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {MOCK_CATEGORIES.map((cat) => (
-            <Link key={cat.id} href={`/shop?category=${cat.slug}`}>
-              <Card hoverEffect className="text-center p-5 space-y-3 cursor-pointer group">
-                <div className="h-12 w-12 mx-auto rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                  <Pill className="h-6 w-6" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">
-                    {cat.name}
-                  </h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{cat.itemCount}+ Items</p>
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        {categories.length === 0 ? (
+          <Card className="p-8 text-center text-slate-400 space-y-2">
+            <Pill className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-600" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No categories added yet</p>
+            <p className="text-xs text-slate-400">Categories added by administration will appear here automatically.</p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {categories.map((cat) => (
+              <Link key={cat.id} href={`/shop?category=${cat.slug}`}>
+                <Card hoverEffect className="text-center p-5 space-y-3 cursor-pointer group">
+                  <div className="h-12 w-12 mx-auto rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <Pill className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">
+                      {cat.name}
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{cat._count?.products || 0}+ Items</p>
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* PROMOTIONAL CARE PACKAGES & FLASH SALE BANNERS WITH BACKGROUND PICTURES */}
@@ -126,74 +157,94 @@ export default function HomePage() {
               Featured Pharmaceuticals & OTC
             </h2>
           </div>
-          <Link href="/shop" className="text-sm font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1">
+          <Link href="/shop" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
             <span>Browse Catalog</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {MOCK_PRODUCTS.map((product) => (
-            <Card key={product.id} hoverEffect className="flex flex-col justify-between p-6 space-y-4">
-              <div className="space-y-3">
-                <div className="relative h-48 w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
-                  <Image
-                    src={product.images[0]}
-                    alt={product.name}
-                    width={400}
-                    height={192}
-                    quality={80}
-                    placeholder="blur"
-                    blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
-                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  {product.requiresPrescription && (
-                    <div className="absolute top-3 left-3">
-                      <Badge variant="amber">Rx Required</Badge>
+        {products.length === 0 ? (
+          <Card className="p-10 text-center text-slate-400 space-y-2">
+            <Package className="h-10 w-10 mx-auto text-slate-300 dark:text-slate-600" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No products in catalog yet</p>
+            <p className="text-xs text-slate-400">All products have been cleared. Products added via admin dashboard will appear here.</p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {products.map((product) => (
+              <Card key={product.id} hoverEffect className="flex flex-col justify-between p-6 space-y-4">
+                <div className="space-y-3">
+                  <div className="relative h-48 w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+                    {product.images?.[0] ? (
+                      <Image
+                        src={product.images[0]}
+                        alt={product.name}
+                        width={400}
+                        height={192}
+                        quality={80}
+                        placeholder="blur"
+                        blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-slate-300">
+                        <Package className="h-10 w-10" />
+                      </div>
+                    )}
+                    {product.requiresPrescription && (
+                      <div className="absolute top-3 left-3">
+                        <Badge variant="amber">Rx Required</Badge>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    {product.brand?.name && <span className="font-semibold text-emerald-600">{product.brand.name}</span>}
+                    {product.dosageForm && (
+                      <>
+                        <span>•</span>
+                        <span>{product.dosageForm}</span>
+                      </>
+                    )}
+                  </div>
+
+                  <Link href={`/shop/${product.slug}`}>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white line-clamp-2 hover:text-emerald-600 transition-colors">
+                      {product.name}
+                    </h3>
+                  </Link>
+
+                  <p className="text-xs text-slate-500 line-clamp-2">{product.description}</p>
+
+                  {product.rating > 0 && (
+                    <div className="flex items-center gap-1.5 text-xs text-amber-500 font-bold">
+                      <Star className="h-4 w-4 fill-amber-400" />
+                      <span>{product.rating.toFixed(1)}</span>
+                      <span className="text-slate-400 font-normal">({product.reviewCount} reviews)</span>
                     </div>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className="font-semibold text-brand-600">{product.brand}</span>
-                  <span>•</span>
-                  <span>{product.dosageForm}</span>
-                </div>
-
-                <Link href={`/shop/${product.slug}`}>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white line-clamp-2 hover:text-brand-600 transition-colors">
-                    {product.name}
-                  </h3>
-                </Link>
-
-                <p className="text-xs text-slate-500 line-clamp-2">{product.description}</p>
-
-                <div className="flex items-center gap-1.5 text-xs text-amber-500 font-bold">
-                  <Star className="h-4 w-4 fill-amber-400" />
-                  <span>{product.rating}</span>
-                  <span className="text-slate-400 font-normal">({product.reviewCount} reviews)</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
-                <div>
-                  <span className="text-lg font-extrabold text-slate-900 dark:text-white">
-                    {formatCurrency(product.price)}
-                  </span>
-                  {product.compareAtPrice && (
-                    <span className="ml-2 text-xs text-slate-400 line-through">
-                      {formatCurrency(product.compareAtPrice)}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <div>
+                    <span className="text-lg font-extrabold text-slate-900 dark:text-white">
+                      {formatCurrency(product.price)}
                     </span>
-                  )}
-                </div>
+                    {product.compareAtPrice && (
+                      <span className="ml-2 text-xs text-slate-400 line-through">
+                        {formatCurrency(product.compareAtPrice)}
+                      </span>
+                    )}
+                  </div>
 
-                <Button variant="primary" size="sm" onClick={() => handleQuickAdd(product)}>
-                  <Plus className="h-4 w-4" /> Add
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
+                  <Button variant="primary" size="sm" onClick={() => handleQuickAdd(product)} disabled={product.stockQuantity === 0}>
+                    <Plus className="h-4 w-4" /> Add
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* TELEHEALTH DOCTOR SPOTLIGHT WITH BACKGROUND PICTURE */}
