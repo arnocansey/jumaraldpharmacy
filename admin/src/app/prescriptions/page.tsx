@@ -212,7 +212,7 @@ export default function PrescriptionsPage() {
                 </div>
                 <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base mb-0.5 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{p.user.name}</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{p.user.email} &middot; {p.user.phone || "No phone"}</p>
-                
+
                 {p.patientNotes && <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 mb-3 bg-white/40 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-800/50">&ldquo;{p.patientNotes}&rdquo;</p>}
                 {p.doctorName && <p className="text-xs text-slate-500 dark:text-slate-400">Prescribing Doctor: <span className="font-medium text-slate-700 dark:text-slate-300">{p.doctorName}</span></p>}
                 {hasOrder && (
@@ -228,54 +228,65 @@ export default function PrescriptionsPage() {
       </div>
 
       {selected && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div onClick={(e) => e.stopPropagation()} className="glass-panel border border-emerald-500/30 rounded-3xl max-w-2xl w-full p-6 max-h-[92vh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+          <div onClick={(e) => e.stopPropagation()} className="bg-slate-950 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 max-h-[92vh] overflow-y-auto shadow-2xl text-white">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-800/80">
               <div>
-                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Prescription Review</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Patient: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{selected.user.name}</span></p>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-1">
+                  Rx Review Fulfill & Order
+                </span>
+                <h2 className="text-xl font-extrabold text-white">Prescription Review</h2>
+                <p className="text-xs text-slate-300 font-medium">
+                  Patient: <span className="font-extrabold text-emerald-400">{selected.user.name}</span>
+                </p>
               </div>
-              <button onClick={() => setSelected(null)} className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white flex items-center justify-center transition-colors">&times;</button>
+              <button
+                onClick={() => setSelected(null)}
+                className="h-9 w-9 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 flex items-center justify-center font-bold text-xl transition-colors shadow-sm"
+              >
+                &times;
+              </button>
             </div>
 
-            <div className="space-y-4 mb-6">
+            <div className="space-y-5 mb-6">
               {/* Document Display Area */}
               {(() => {
                 const docUrl = getDocumentUrl(selected.documentUrl);
                 return (
-                  <div className="relative bg-slate-900/5 dark:bg-slate-900/60 rounded-2xl p-3 border border-slate-200/80 dark:border-slate-800/80 min-h-[200px] flex items-center justify-center">
+                  <div className="relative bg-slate-900/90 rounded-2xl p-4 border border-slate-800 min-h-[200px] flex items-center justify-center shadow-inner">
                     {!imgError && docUrl ? (
                       <div className="relative w-full text-center group">
                         <img
                           src={docUrl}
                           alt="Prescription Document"
-                          className="max-h-[300px] w-auto mx-auto object-contain rounded-xl shadow-md"
+                          className="max-h-[320px] w-auto mx-auto object-contain rounded-xl shadow-lg border border-slate-800"
                           onError={() => setImgError(true)}
                         />
                         <a
                           href={docUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mt-3 inline-flex items-center gap-1.5 bg-slate-900/80 hover:bg-slate-900 text-white text-xs font-semibold px-3.5 py-1.5 rounded-xl backdrop-blur-md shadow-md transition-colors"
+                          className="mt-3 inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-4 py-2 rounded-xl shadow-md transition-colors"
                         >
-                          <ExternalLink className="h-3.5 w-3.5 text-emerald-400" /> Open High-Res Document
+                          <ExternalLink className="h-4 w-4" /> Open Full Resolution Document
                         </a>
                       </div>
                     ) : (
-                      <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border-2 border-dashed border-emerald-300 dark:border-emerald-700/60 rounded-2xl p-6 text-center w-full">
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center mb-3 shadow-inner">
+                      <div className="bg-emerald-950/30 border-2 border-dashed border-emerald-500/40 rounded-2xl p-6 text-center w-full">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-400 mx-auto flex items-center justify-center mb-3 shadow-inner">
                           <FileText className="h-6 w-6" />
                         </div>
-                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-1">Prescription File Attached</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 break-all max-w-sm mx-auto">{selected.documentUrl || "Uploaded prescription document"}</p>
+                        <p className="text-sm font-extrabold text-white mb-1">Prescription Document Attached</p>
+                        <p className="text-xs text-slate-400 mb-4 break-all max-w-sm mx-auto font-mono">{selected.documentUrl || "Uploaded prescription file"}</p>
                         {docUrl && (
                           <a
                             href={docUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors shadow-lg shadow-emerald-600/20"
+                            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/30"
                           >
-                            <ExternalLink className="h-4 w-4" /> View Original Document File
+                            <ExternalLink className="h-4 w-4" /> Open Document File
                           </a>
                         )}
                       </div>
@@ -284,76 +295,82 @@ export default function PrescriptionsPage() {
                 );
               })()}
 
+              {/* Patient Info Cards */}
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="bg-white/50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
-                  <p className="text-slate-400">Patient Email</p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">{selected.user.email}</p>
+                <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl">
+                  <p className="text-slate-400 font-semibold mb-1">Patient Email</p>
+                  <p className="font-extrabold text-white truncate">{selected.user.email}</p>
                 </div>
-                <div className="bg-white/50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
-                  <p className="text-slate-400">Phone</p>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">{selected.user.phone || "Not provided"}</p>
+                <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl">
+                  <p className="text-slate-400 font-semibold mb-1">Phone Number</p>
+                  <p className="font-extrabold text-white">{selected.user.phone || "Not provided"}</p>
                 </div>
               </div>
 
               {selected.patientNotes && (
                 <div>
-                  <p className="text-xs text-slate-400 block mb-1">Patient Notes</p>
-                  <div className="bg-white/50 dark:bg-slate-900/40 p-3 rounded-xl text-xs text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-800/50">
-                    {selected.patientNotes}
+                  <p className="text-xs font-bold text-slate-300 block mb-1.5">Patient Notes / Requests</p>
+                  <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl text-xs font-medium text-slate-200">
+                    &ldquo;{selected.patientNotes}&rdquo;
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Superintendent Pharmacist Notes</label>
+                <label className="text-xs font-bold text-slate-200 block mb-1.5">Superintendent Pharmacist Notes & Instructions</label>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Enter dosage directives, substitution instructions, or notes for patient..."
-                  className="w-full border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-emerald-500 bg-white/80 dark:bg-slate-900/80 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 backdrop-blur-md"
+                  className="w-full border border-slate-700/80 rounded-2xl p-3.5 text-xs outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-900 text-white placeholder:text-slate-500 font-medium leading-relaxed"
                   rows={2}
                 />
               </div>
 
               {/* Order Fulfill Builder Section */}
               {showOrderBuilder ? (
-                <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-2xl p-4 space-y-4 animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                <div className="bg-slate-900 border-2 border-emerald-500/40 rounded-2xl p-5 space-y-4 shadow-xl">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <h3 className="text-sm font-extrabold text-emerald-400 flex items-center gap-2">
                       <ShoppingBag className="h-4 w-4" /> Select Prescribed Inventory Items
                     </h3>
-                    <button onClick={() => setShowOrderBuilder(false)} className="text-xs text-slate-400 hover:text-slate-200">Cancel</button>
+                    <button
+                      onClick={() => setShowOrderBuilder(false)}
+                      className="text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
                   </div>
 
                   {/* Search Product */}
                   <div className="relative">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-emerald-400" />
                     <input
                       type="text"
                       placeholder="Search medications from inventory..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 bg-slate-900/60 border border-slate-700/60 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-xs font-bold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-inner"
                     />
                   </div>
 
                   {/* Product Search Results */}
                   {searchQuery && (
-                    <div className="max-h-40 overflow-y-auto bg-slate-900/90 border border-slate-700/60 rounded-xl p-2 space-y-1">
+                    <div className="max-h-52 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl p-2 space-y-1.5 shadow-2xl">
                       {filteredProducts.length === 0 ? (
-                        <p className="text-xs text-slate-400 p-2 text-center">No products found matching &ldquo;{searchQuery}&rdquo;</p>
+                        <p className="text-xs font-semibold text-slate-400 p-3 text-center">No products found matching &ldquo;{searchQuery}&rdquo;</p>
                       ) : (
                         filteredProducts.slice(0, 5).map((prod) => (
-                          <div key={prod.id} className="flex items-center justify-between p-2 hover:bg-slate-800 rounded-lg text-xs">
+                          <div key={prod.id} className="flex items-center justify-between p-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs transition-colors">
                             <div>
-                              <p className="font-semibold text-white">{prod.name}</p>
-                              <p className="text-[11px] text-emerald-400">GHS {Number(prod.price).toFixed(2)} &middot; Stock: {prod.stockQuantity}</p>
+                              <p className="font-extrabold text-white text-xs">{prod.name}</p>
+                              <p className="text-[11px] font-bold text-emerald-400 mt-0.5">GHS {Number(prod.price).toFixed(2)} &middot; Stock: {prod.stockQuantity}</p>
                             </div>
                             <button
                               onClick={() => { handleAddProductToOrder(prod); setSearchQuery(""); }}
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 text-[11px]"
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-extrabold flex items-center gap-1 text-xs shadow-md shadow-emerald-600/30 transition-all"
                             >
-                              <Plus className="h-3 w-3" /> Add
+                              <Plus className="h-3.5 w-3.5" /> Add
                             </button>
                           </div>
                         ))
@@ -363,28 +380,36 @@ export default function PrescriptionsPage() {
 
                   {/* Selected Items List */}
                   {orderItems.length > 0 ? (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-slate-300">Selected Prescribed Items ({orderItems.length}):</p>
+                    <div className="space-y-3">
+                      <p className="text-xs font-extrabold text-slate-200">Selected Prescribed Items ({orderItems.length}):</p>
                       {orderItems.map((item) => (
-                        <div key={item.productId} className="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex flex-col gap-1.5 text-xs">
+                        <div key={item.productId} className="bg-slate-950 border border-slate-800 p-3.5 rounded-xl flex flex-col gap-2.5 text-xs shadow-md">
                           <div className="flex items-center justify-between">
-                            <span className="font-bold text-white">{item.name}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-emerald-400">GHS {(item.price * item.quantity).toFixed(2)}</span>
-                              <button onClick={() => handleRemoveProductFromOrder(item.productId)} className="text-rose-400 hover:text-rose-300 text-[11px] font-bold">&times;</button>
+                            <span className="font-extrabold text-white text-sm">{item.name}</span>
+                            <div className="flex items-center gap-3">
+                              <span className="font-black text-emerald-400 text-sm">GHS {(item.price * item.quantity).toFixed(2)}</span>
+                              <button
+                                onClick={() => handleRemoveProductFromOrder(item.productId)}
+                                className="bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white px-2 py-0.5 rounded-md font-bold text-xs transition-colors"
+                              >
+                                Delete &times;
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              min="1"
-                              value={item.quantity}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value) || 1;
-                                setOrderItems(orderItems.map((i) => i.productId === item.productId ? { ...i, quantity: val } : i));
-                              }}
-                              className="w-16 bg-slate-800 border border-slate-700 text-white px-2 py-0.5 rounded text-xs"
-                            />
+                          <div className="flex items-center gap-2 pt-1 border-t border-slate-900">
+                            <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg">
+                              <span className="text-[11px] font-bold text-slate-400">Qty:</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 1;
+                                  setOrderItems(orderItems.map((i) => i.productId === item.productId ? { ...i, quantity: val } : i));
+                                }}
+                                className="w-12 bg-transparent text-white font-extrabold text-xs outline-none text-center"
+                              />
+                            </div>
                             <input
                               type="text"
                               placeholder="Dosage instruction (e.g. 1 tab 3x daily)"
@@ -393,24 +418,24 @@ export default function PrescriptionsPage() {
                                 const val = e.target.value;
                                 setOrderItems(orderItems.map((i) => i.productId === item.productId ? { ...i, dosage: val } : i));
                               }}
-                              className="flex-1 bg-slate-800 border border-slate-700 text-white px-2 py-0.5 rounded text-xs"
+                              className="flex-1 bg-slate-900 border border-slate-800 text-white font-medium placeholder:text-slate-500 px-3 py-1.5 rounded-lg text-xs outline-none focus:border-emerald-500"
                             />
                           </div>
                         </div>
                       ))}
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
-                        <span className="text-slate-300 font-semibold">Total Prescribed Order:</span>
-                        <span className="text-base font-extrabold text-emerald-400">GHS {orderTotal.toFixed(2)}</span>
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs">
+                        <span className="text-slate-300 font-extrabold">Total Prescribed Order Amount:</span>
+                        <span className="text-xl font-black text-emerald-400">GHS {orderTotal.toFixed(2)}</span>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-400 italic text-center py-2">Search and add medications from inventory above.</p>
+                    <p className="text-xs text-slate-400 font-medium italic text-center py-3">Search and add medications from inventory above.</p>
                   )}
 
                   <button
                     onClick={handleCreateOrder}
                     disabled={isSubmittingOrder || orderItems.length === 0}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all"
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white py-3.5 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/30 transition-all cursor-pointer"
                   >
                     <Check className="h-4 w-4" /> {isSubmittingOrder ? "Generating Order..." : `Confirm & Create Order (GHS ${orderTotal.toFixed(2)})`}
                   </button>
@@ -418,7 +443,7 @@ export default function PrescriptionsPage() {
               ) : (
                 <button
                   onClick={handleOpenOrderBuilder}
-                  className="w-full bg-emerald-950/30 hover:bg-emerald-900/40 text-emerald-400 border border-emerald-500/40 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-inner"
+                  className="w-full bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-400 border border-emerald-500/40 py-3.5 rounded-2xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer"
                 >
                   <ShoppingBag className="h-4 w-4" /> Approve & Create Prescribed Order for Patient
                 </button>
@@ -426,11 +451,11 @@ export default function PrescriptionsPage() {
             </div>
 
             <div className="flex gap-3">
-              <button onClick={() => updateStatus(selected.id, "APPROVED")} className="flex-1 bg-emerald-600 text-white py-2.5 rounded-xl font-bold hover:bg-emerald-700 flex items-center justify-center gap-2 text-xs shadow-lg shadow-emerald-600/20 transition-all"><CheckCircle className="h-4 w-4" /> Approve</button>
-              <button onClick={() => updateStatus(selected.id, "REJECTED")} className="flex-1 bg-rose-600 text-white py-2.5 rounded-xl font-bold hover:bg-rose-700 flex items-center justify-center gap-2 text-xs shadow-lg shadow-rose-600/20 transition-all"><XCircle className="h-4 w-4" /> Reject</button>
-              <button onClick={() => updateStatus(selected.id, "CLARIFICATION_NEEDED")} className="flex-1 bg-amber-600 text-white py-2.5 rounded-xl font-bold hover:bg-amber-700 flex items-center justify-center gap-2 text-xs shadow-lg shadow-amber-600/20 transition-all"><MessageSquare className="h-4 w-4" /> Clarify</button>
+              <button onClick={() => updateStatus(selected.id, "APPROVED")} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-extrabold hover:bg-emerald-500 flex items-center justify-center gap-2 text-xs shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"><CheckCircle className="h-4 w-4" /> Approve</button>
+              <button onClick={() => updateStatus(selected.id, "REJECTED")} className="flex-1 bg-rose-600 text-white py-3 rounded-xl font-extrabold hover:bg-rose-500 flex items-center justify-center gap-2 text-xs shadow-lg shadow-rose-600/30 transition-all cursor-pointer"><XCircle className="h-4 w-4" /> Reject</button>
+              <button onClick={() => updateStatus(selected.id, "CLARIFICATION_NEEDED")} className="flex-1 bg-amber-600 text-white py-3 rounded-xl font-extrabold hover:bg-amber-500 flex items-center justify-center gap-2 text-xs shadow-lg shadow-amber-600/30 transition-all cursor-pointer"><MessageSquare className="h-4 w-4" /> Clarify</button>
             </div>
-            <button onClick={() => handleDelete(selected.id)} className="w-full mt-3 bg-slate-100 dark:bg-slate-900/60 text-red-600 dark:text-red-400 py-2 rounded-xl font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center gap-2 text-xs border border-red-200 dark:border-red-800/40 transition-all"><Trash2 className="h-3.5 w-3.5" /> Delete Prescription Permanently</button>
+            <button onClick={() => handleDelete(selected.id)} className="w-full mt-3 bg-slate-900 text-rose-400 hover:text-white py-2.5 rounded-xl font-bold hover:bg-rose-950/60 flex items-center justify-center gap-2 text-xs border border-rose-900/40 transition-all cursor-pointer"><Trash2 className="h-3.5 w-3.5" /> Delete Prescription Permanently</button>
           </div>
         </div>
       )}
