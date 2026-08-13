@@ -35,6 +35,7 @@ export const metadata: Metadata = {
 };
 
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
+import { AIAssistantWidget } from "@/components/ai/AIAssistantWidget";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const jsonLd = {
@@ -105,6 +106,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main id="main-content" className="flex-1">{children}</main>
           <Footer />
           <PWAInstallPrompt />
+          <AIAssistantWidget />
         </Providers>
       </body>
     </html>

@@ -17,6 +17,7 @@
     "db:purge": "ts-node src/scripts/purge-data.ts"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.22.0",
     "@sentry/node": "^10.69.0",
     "@sentry/profiling-node": "^10.69.0",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Package, CheckCircle, XCircle, Clock, Eye, MessageSquare, FileText, ExternalLink, Download, Trash2, Plus, ShoppingBag, Check } from "lucide-react";
+import { Search, Package, CheckCircle, XCircle, Clock, Eye, MessageSquare, FileText, ExternalLink, Download, Trash2, Plus, ShoppingBag, Check, Sparkles, ShieldAlert } from "lucide-react";
 import { apiFetch, API_URL } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -68,6 +68,35 @@ export default function PrescriptionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [orderItems, setOrderItems] = useState<OrderItemInput[]>([]);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+
+  // AI Clinical Audit state
+  const [aiCheckResult, setAiCheckResult] = useState<any>(null);
+  const [runningAICheck, setRunningAICheck] = useState(false);
+
+  const handleRunAICheck = async () => {
+    if (!selected) return;
+    setRunningAICheck(true);
+    setAiCheckResult(null);
+
+    try {
+      const textToAnalyze = selected.patientNotes || orderItems.map((i) => i.name).join(", ") || "General Prescription Review";
+      
+      const res = await fetch(`${API_URL}/ai/explain-prescription`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prescriptionText: textToAnalyze }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "AI check failed");
+      setAiCheckResult(data);
+      toast.success("AI Clinical Safety Audit Completed!");
+    } catch (err: any) {
+      toast.error(err.message || "AI check failed");
+    } finally {
+      setRunningAICheck(false);
+    }
+  };
 
   useEffect(() => { loadPrescriptions(); }, [statusFilter]);
 
@@ -322,6 +351,48 @@ export default function PrescriptionsPage() {
                   </div>
                 </div>
               )}
+
+              {/* AI Clinical Safety Audit Button */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-slate-900/80 to-slate-950/80 border border-emerald-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-emerald-400 animate-pulse" />
+                    <span className="text-xs font-extrabold text-white">AI Clinical Safety Audit</span>
+                  </div>
+                  <button
+                    onClick={handleRunAICheck}
+                    disabled={runningAICheck}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/30 disabled:opacity-50"
+                  >
+                    <ShieldAlert className="h-3.5 w-3.5" />
+                    {runningAICheck ? "Auditing..." : "Run AI Audit"}
+                  </button>
+                </div>
+
+                {aiCheckResult && (
+                  <div className="space-y-2 text-xs text-slate-300 pt-2 border-t border-white/10">
+                    <p className="font-bold text-emerald-300">{aiCheckResult.summary}</p>
+                    {aiCheckResult.medications && (
+                      <div className="space-y-1">
+                        {aiCheckResult.medications.map((m: any, idx: number) => (
+                          <div key={idx} className="p-2 rounded-xl bg-slate-900/80 border border-white/10 flex justify-between">
+                            <span className="font-bold text-white">{m.name}</span>
+                            <span className="text-emerald-400 font-semibold">{m.dosage} ({m.frequency})</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {aiCheckResult.precautions && (
+                      <div className="text-[11px] text-slate-400 space-y-0.5">
+                        <p className="font-bold text-slate-300">Safety Precautions:</p>
+                        {aiCheckResult.precautions.map((p: string, idx: number) => (
+                          <p key={idx}>• {p}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-200 block mb-1.5">Superintendent Pharmacist Notes &amp; Instructions</label>
