@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { MessageCircle, X, Phone, Send } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { usePathname } from "next/navigation";
 
 const WHATSAPP_NUMBER = "2330544772483";
 const PRESET_MESSAGES = [
@@ -13,8 +14,13 @@ const PRESET_MESSAGES = [
 ];
 
 export function WhatsAppWidget() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
+
+  if (pathname === "/ai-assistant") {
+    return null;
+  }
 
   const openWhatsApp = (message: string) => {
     const encoded = encodeURIComponent(message);
@@ -29,7 +35,7 @@ export function WhatsAppWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-24 right-6 z-40">
       {isOpen && (
         <div className="mb-4 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
           <div className="bg-emerald-600 p-4 text-white">

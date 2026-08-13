@@ -235,7 +235,7 @@ export function AIAssistantWidget() {
   return (
     <>
       {/* Floating Toggle Button */}
-      <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40">
+      <div className="fixed bottom-6 right-6 z-50">
         <motion.button
           onClick={() => setIsOpen(!isOpen)}
           whileHover={{ scale: 1.05 }}
