@@ -22,6 +22,7 @@ import {
   Building,
   User as UserIcon,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -244,7 +245,7 @@ export default function UserManagementPage() {
         </div>
       </div>
 
-      {/* Controls Bar: Search & Role Filter */}
+      {/* Controls Bar: Search, Role Filter & Add User Button */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -256,18 +257,26 @@ export default function UserManagementPage() {
             className="w-full h-10 pl-10 pr-4 rounded-xl text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Role:</span>
-          <select
-            value={roleFilter}
-            onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-            className="h-10 px-3 rounded-xl text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Role:</span>
+            <select
+              value={roleFilter}
+              onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+              className="h-10 px-3 rounded-xl text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="all">All Roles</option>
+              {ROLES.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/30"
           >
-            <option value="all">All Roles</option>
-            {ROLES.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </select>
+            <UserPlus className="h-3.5 w-3.5" /> + Add Account
+          </button>
         </div>
       </div>
 
@@ -385,74 +394,150 @@ export default function UserManagementPage() {
       </div>
 
       {/* ========== ADD STAFF / ADMIN MODAL ========== */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setShowAddModal(false)} />
-          <div className="relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg p-6 z-10 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-4">
-              <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100 font-bold text-lg">
-                <UserPlus className="h-5 w-5 text-emerald-600" /> Add New Staff or Admin
-              </div>
-              <button onClick={() => setShowAddModal(false)} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
-                <X className="h-5 w-5 text-slate-400" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateUser} className="space-y-4 text-sm">
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Full Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Dr. Kwame Mensah"
-                  value={newUser.name}
-                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                  className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Email Address *</label>
-                <input
-                  type="email"
-                  placeholder="e.g. kwame.mensah@jumarald.com"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. 0244123456"
-                    value={newUser.phone}
-                    onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
-                    className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
+      <AnimatePresence>
+        {showAddModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+              onClick={() => setShowAddModal(false)}
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg p-6 z-10 space-y-5"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-4">
+                <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100 font-bold text-lg">
+                  <UserPlus className="h-5 w-5 text-emerald-600" /> Create Account (Admin / Staff / Customer)
                 </div>
+                <button onClick={() => setShowAddModal(false)} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                  <X className="h-5 w-5 text-slate-400" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateUser} className="space-y-4 text-sm">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Password *</label>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Full Name *</label>
                   <input
-                    type="password"
-                    placeholder="At least 6 characters"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    type="text"
+                    placeholder="e.g. Dr. Kwame Mensah"
+                    value={newUser.name}
+                    onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                     className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     required
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Email Address *</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. kwame.mensah@jumarald.com"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Phone Number</label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 0244123456"
+                      value={newUser.phone}
+                      onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                      className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Password *</label>
+                    <input
+                      type="password"
+                      placeholder="At least 6 characters"
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                      className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Assign Role / Account Type *</label>
+                  <select
+                    value={newUser.role}
+                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="px-5 py-2.5 rounded-xl font-bold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-5 py-2.5 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-emerald-600/30"
+                  >
+                    {saving ? "Creating..." : "Create Account"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ========== EDIT ROLE MODAL ========== */}
+      <AnimatePresence>
+        {editingUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+              onClick={() => setEditingUser(null)}
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md p-6 z-10 space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">Change User Role</h3>
+                <button onClick={() => setEditingUser(null)} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                  <X className="h-5 w-5 text-slate-400" />
+                </button>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{editingUser.name}</p>
+                <p className="text-xs text-slate-400">{editingUser.email}</p>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Assign Role *</label>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Select New Role</label>
                 <select
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                  className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm"
                 >
                   {ROLES.map((r) => (
                     <option key={r.value} value={r.value}>{r.label}</option>
@@ -460,76 +545,26 @@ export default function UserManagementPage() {
                 </select>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-5 py-2.5 rounded-xl font-bold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200"
+                  onClick={() => setEditingUser(null)}
+                  className="px-4 py-2 rounded-xl font-bold text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-5 py-2.5 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
+                  type="button"
+                  onClick={handleRoleUpdate}
+                  className="px-4 py-2 rounded-xl font-bold text-xs bg-emerald-600 text-white hover:bg-emerald-700"
                 >
-                  {saving ? "Creating..." : "Create Account"}
+                  Update Role
                 </button>
               </div>
-            </form>
+            </motion.div>
           </div>
-        </div>
-      )}
-
-      {/* ========== EDIT ROLE MODAL ========== */}
-      {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setEditingUser(null)} />
-          <div className="relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md p-6 z-10 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
-              <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">Change User Role</h3>
-              <button onClick={() => setEditingUser(null)} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
-                <X className="h-5 w-5 text-slate-400" />
-              </button>
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{editingUser.name}</p>
-              <p className="text-xs text-slate-400">{editingUser.email}</p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Select New Role</label>
-              <select
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm"
-              >
-                {ROLES.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setEditingUser(null)}
-                className="px-4 py-2 rounded-xl font-bold text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleRoleUpdate}
-                className="px-4 py-2 rounded-xl font-bold text-xs bg-emerald-600 text-white hover:bg-emerald-700"
-              >
-                Update Role
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }
