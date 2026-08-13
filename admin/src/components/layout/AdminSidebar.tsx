@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Pill, FileText, ShoppingCart, Settings, ShieldCheck, Building2, Package, Truck, BarChart3, Bell, Trophy, Megaphone, Stethoscope, ChevronDown, FileBarChart, Database, Users } from "lucide-react";
+import { LayoutDashboard, Pill, FileText, ShoppingCart, Settings, ShieldCheck, Building2, Package, Truck, BarChart3, Bell, Trophy, Megaphone, Stethoscope, ChevronDown, FileBarChart, Database, Users, Bot, Sparkles, Brain } from "lucide-react";
 
 interface NavItem {
   name: string;
@@ -26,6 +26,14 @@ const sections: NavSection[] = [
       { name: "Orders", href: "/orders", icon: ShoppingCart },
       { name: "Prescriptions", href: "/prescriptions", icon: FileText },
       { name: "Deliveries", href: "/deliveries", icon: Truck },
+    ],
+  },
+  {
+    label: "AI & Copilot",
+    items: [
+      { name: "Pharmacist Copilot", href: "/copilot", icon: Bot },
+      { name: "AI Knowledge Base", href: "/ai-knowledge", icon: Brain },
+      { name: "AI Analytics", href: "/ai-analytics", icon: Sparkles },
     ],
   },
   {
