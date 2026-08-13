@@ -964,3 +964,168 @@ model PasswordResetToken {
   @@index([userId])
   @@map("password_reset_tokens")
 }
+
+// ============================================================
+// JUMARALD AI PLATFORM MODELS
+// ============================================================
+
+enum AIConversationChannel {
+  WEB_WIDGET
+  WEB_FULLSCREEN
+  MOBILE_APP
+  PHARMACIST_COPILOT
+}
+
+enum AISafetyRiskLevel {
+  LOW
+  MODERATE
+  HIGH
+  EMERGENCY
+}
+
+enum AIEscalationStatus {
+  OPEN
+  ASSIGNED
+  RESOLVED
+}
+
+enum AIKnowledgeStatus {
+  DRAFT
+  APPROVED
+  ARCHIVED
+}
+
+model AIConversation {
+  id          String                @id @default(uuid())
+  userId      String?
+  channel     AIConversationChannel @default(WEB_WIDGET)
+  title       String?
+  isArchived  Boolean               @default(false)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  messages    AIMessage[]
+  escalations AIEscalation[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("ai_conversations")
+}
+
+model AIMessage {
+  id             String            @id @default(uuid())
+  conversationId String
+  conversation   AIConversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String            // user | assistant | system | tool
+  content        String
+  intent         String?
+  riskLevel      AISafetyRiskLevel @default(LOW)
+  toolCallsJson  String?           // Executed tool logs
+  citationsJson  String?           // Grounded RAG sources
+  createdAt      DateTime          @default(now())
+
+  toolCalls      AIToolCall[]
+  feedbacks      AIFeedback[]
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("ai_messages")
+}
+
+model AIToolCall {
+  id              String    @id @default(uuid())
+  messageId       String
+  message         AIMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  toolName        String
+  inputJson       String
+  outputJson      String?
+  executionTimeMs Int       @default(0)
+  status          String    @default("SUCCESS") // SUCCESS | FAILED | BLOCKED
+  createdAt       DateTime  @default(now())
+
+  @@index([messageId])
+  @@index([toolName])
+  @@map("ai_tool_calls")
+}
+
+model AIEscalation {
+  id                   String             @id @default(uuid())
+  conversationId       String
+  conversation         AIConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId               String?
+  reason               String
+  severity             AISafetyRiskLevel  @default(HIGH)
+  summary              String
+  status               AIEscalationStatus @default(OPEN)
+  assignedPharmacistId String?
+  pharmacistNotes      String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([conversationId])
+  @@index([status])
+  @@index([severity])
+  @@map("ai_escalations")
+}
+
+model AIKnowledgeDocument {
+  id          String            @id @default(uuid())
+  title       String
+  source      String
+  category    String            @default("Clinical Guidelines")
+  status      AIKnowledgeStatus @default(APPROVED)
+  content     String
+  version     Int               @default(1)
+  approvedBy  String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  chunks      AIKnowledgeChunk[]
+
+  @@index([category])
+  @@index([status])
+  @@map("ai_knowledge_documents")
+}
+
+model AIKnowledgeChunk {
+  id            String              @id @default(uuid())
+  documentId    String
+  document      AIKnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex    Int
+  content       String
+  metadataJson  String?
+  embeddings    Float[]
+  createdAt     DateTime            @default(now())
+
+  @@index([documentId])
+  @@map("ai_knowledge_chunks")
+}
+
+model AIFeedback {
+  id        String    @id @default(uuid())
+  messageId String
+  message   AIMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String?
+  isHelpful Boolean
+  comment   String?
+  createdAt DateTime  @default(now())
+
+  @@index([messageId])
+  @@map("ai_feedbacks")
+}
+
+model AISafetyEvent {
+  id             String            @id @default(uuid())
+  conversationId String?
+  userId         String?
+  eventCategory  String            // EMERGENCY_SYMPTOM | UNSAFE_DOSAGE | PROMPT_INJECTION
+  inputSnippet   String
+  riskLevel      AISafetyRiskLevel @default(HIGH)
+  actionTaken    String            // ESCALATED | REFUSED | WARNED
+  createdAt      DateTime          @default(now())
+
+  @@index([eventCategory])
+  @@index([createdAt])
+  @@map("ai_safety_events")
+}
+
