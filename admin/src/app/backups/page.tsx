@@ -179,7 +179,7 @@ export default function AdminBackupsPage() {
   const totalStorageFormatted = (totalStorageBytes / (1024 * 1024)).toFixed(2);
 
   return (
-    <div className="w-full max-w-6xl space-y-6">
+    <div className="w-full space-y-6">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

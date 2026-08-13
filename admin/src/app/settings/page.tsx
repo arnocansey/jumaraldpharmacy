@@ -136,7 +136,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="w-full max-w-5xl">
+    <div className="w-full space-y-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Settings</h1>
