@@ -22,6 +22,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { toast } from "sonner";
 
+import { usePathname } from "next/navigation";
+
 interface Message {
   id: string;
   role: "user" | "model";
@@ -45,8 +47,10 @@ const QUICK_PROMPTS = [
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 export function AIAssistantWidget() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"chat" | "interactions" | "prescription">("chat");
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
 
   // Chat State
   const [messages, setMessages] = useState<Message[]>([
@@ -60,6 +64,11 @@ export function AIAssistantWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Hide floating widget if user is on full-screen AI assistant page
+  if (pathname === "/ai-assistant") {
+    return null;
+  }
 
   // Interaction State
   const [drugList, setDrugList] = useState<string[]>(["Paracetamol", "Ibuprofen"]);
@@ -92,24 +101,35 @@ export function AIAssistantWidget() {
     setLoading(true);
 
     try {
-      const history = messages.map((m) => ({ role: m.role, content: m.text }));
-      history.push({ role: "user", content: text });
-
-      const res = await fetch(`${API_URL}/ai/consult`, {
+      const res = await fetch(`${API_URL}/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history }),
+        body: JSON.stringify({
+          conversationId,
+          message: text,
+          channel: "WEB_WIDGET",
+        }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Consultation failed");
 
+      if (data.conversationId) setConversationId(data.conversationId);
+
+      const products = data.executedTools
+        ? data.executedTools.find((t: any) => t.name === "searchProducts")?.output?.products
+        : [];
+
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "model",
         text: data.reply || "No response received.",
-        products: data.recommendedProducts || [],
-        triage: data.triage,
+        products: products || [],
+        triage: {
+          severity: data.riskLevel || "LOW",
+          suggestDoctorConsultation: data.isEscalated || data.riskLevel === "EMERGENCY",
+          emergencyWarning: data.riskLevel === "EMERGENCY" ? "Emergency alert: Seek emergency care if severe." : undefined,
+        },
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
 
