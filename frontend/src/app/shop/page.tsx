@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Search, Filter, Star, Plus, ArrowUpDown, Package } from "lucide-react";
@@ -12,9 +12,8 @@ import { ProductCardSkeleton } from "@/components/ui/Skeleton";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/useCartStore";
 import { toast } from "sonner";
-import { API_URL } from "@/lib/api";
 
-import { useCategoriesQuery, useProductsQuery, Category, Product } from "@/hooks/useShopQueries";
+import { useCategoriesQuery, useProductsQuery } from "@/hooks/useShopQueries";
 
 export default function ShopPage() {
   const { addToCart } = useCartStore();
