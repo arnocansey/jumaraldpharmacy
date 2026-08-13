@@ -34,6 +34,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const jsonLd = {
     "@context": "https://schema.org",
@@ -102,6 +104,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Navbar />
           <main id="main-content" className="flex-1">{children}</main>
           <Footer />
+          <PWAInstallPrompt />
         </Providers>
       </body>
     </html>
