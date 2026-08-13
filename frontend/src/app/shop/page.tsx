@@ -14,10 +14,35 @@ import { useCartStore } from "@/store/useCartStore";
 import { toast } from "sonner";
 import { API_URL } from "@/lib/api";
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  _count?: { products: number };
+}
+
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  sku?: string;
+  price: number;
+  compareAtPrice?: number;
+  stockQuantity: number;
+  requiresPrescription: boolean;
+  isFeatured?: boolean;
+  images: string[];
+  description?: string;
+  category: Category;
+  brand?: { id: string; name: string; slug: string };
+  rating?: number;
+  reviewCount?: number;
+}
+
 export default function ShopPage() {
   const { addToCart } = useCartStore();
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [rxOnly, setRxOnly] = useState(false);
@@ -269,10 +294,10 @@ export default function ShopPage() {
                         {product.brand && <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold">{product.brand.name}</p>}
                         <p className="text-xs text-slate-500 line-clamp-2">{product.description}</p>
 
-                        {product.rating > 0 && (
+                        {Boolean(product.rating && product.rating > 0) && (
                           <div className="flex items-center gap-1 text-xs text-amber-500 font-bold">
                             <Star className="h-3.5 w-3.5 fill-amber-400" />
-                            <span>{product.rating.toFixed(1)}</span>
+                            <span>{product.rating?.toFixed(1)}</span>
                             <span className="text-slate-400 font-normal">({product.reviewCount} reviews)</span>
                           </div>
                         )}

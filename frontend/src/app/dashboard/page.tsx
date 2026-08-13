@@ -50,15 +50,81 @@ interface OrderItem {
   product?: { id: string; name: string; slug: string; price: number; images: string[]; stockQuantity: number; requiresPrescription: boolean; category: string; };
 }
 
+interface PrescribedItem {
+  id: string;
+  quantity: number;
+  dosage?: string;
+  productId?: string;
+  productName?: string;
+  unitPrice?: number;
+  price?: number;
+  product?: {
+    id: string;
+    name: string;
+    slug?: string;
+    price: number;
+    stockQuantity?: number;
+    requiresPrescription?: boolean;
+    images?: string[];
+    category?: string;
+  };
+}
+
+interface Prescription {
+  id: string;
+  prescriptionNumber?: string;
+  documentUrl?: string;
+  fileUrl?: string;
+  status: string;
+  patientNotes?: string;
+  pharmacistNote?: string;
+  createdAt: string;
+  items?: PrescribedItem[];
+  prescriptionItems?: PrescribedItem[];
+  orders?: { orderItems: OrderItem[] }[];
+}
+
+interface Order {
+  id: string;
+  orderNumber?: string;
+  totalAmount: number;
+  status: string;
+  paymentStatus?: string;
+  createdAt: string;
+  orderItems?: OrderItem[];
+}
+
+interface WishlistItem {
+  id: string;
+  productId: string;
+  name?: string;
+  price?: number;
+  slug?: string;
+  stockQuantity?: number;
+  requiresPrescription?: boolean;
+  category?: string;
+  images?: string[];
+  product?: {
+    id: string;
+    name: string;
+    slug: string;
+    price: number;
+    images: string[];
+    stockQuantity: number;
+    requiresPrescription: boolean;
+    category: string;
+  };
+}
+
 export default function PatientDashboardPage() {
   const router = useRouter();
   const { addToCart, clearCart } = useCartStore();
   const [tab, setTab] = useState<Tab>("overview");
   const [user, setUser] = useState<{ id?: string; name: string; email: string; phone?: string; role?: string } | null>(null);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [prescriptions, setPrescriptions] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
-  const [wishlist, setWishlist] = useState<any[]>([]);
+  const [wishlist] = useState<WishlistItem[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
@@ -95,10 +161,10 @@ export default function PatientDashboardPage() {
     setDataLoading(true);
     try {
       const [ordersRes, rxsRes, addrRes, notifRes, loyaltyRes] = await Promise.allSettled([
-        apiFetch<any[]>("/orders/my"),
-        apiFetch<any[]>("/prescriptions/my"),
-        apiFetch<any[]>("/users/addresses"),
-        apiFetch<any[]>("/users/notifications"),
+        apiFetch<Order[]>("/orders/my"),
+        apiFetch<Prescription[]>("/prescriptions/my"),
+        apiFetch<Address[]>("/users/addresses"),
+        apiFetch<Notification[]>("/users/notifications"),
         apiFetch<{ points: number }>("/users/loyalty"),
       ]);
       if (ordersRes.status === "fulfilled") setOrders(Array.isArray(ordersRes.value) ? ordersRes.value : []);
@@ -127,7 +193,7 @@ export default function PatientDashboardPage() {
     router.push("/login");
   };
 
-  const handleReorder = (order: any) => {
+  const handleReorder = (order: Order) => {
     let added = 0;
     (order.orderItems || []).forEach((item: OrderItem) => {
       if (item.product || item.productId) {
@@ -171,7 +237,7 @@ export default function PatientDashboardPage() {
       localStorage.setItem("jumarald_user", JSON.stringify(updated));
       setEditProfileOpen(false);
       toast.success("Profile updated successfully");
-    } catch (e: any) { toast.error(e.message || "Failed to update profile"); }
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed to update profile"); }
     finally { setProfileSaving(false); }
   };
 
@@ -181,12 +247,12 @@ export default function PatientDashboardPage() {
       await apiFetch(`/prescriptions/${rxId}`, { method: "DELETE" });
       toast.success("Prescription deleted successfully");
       loadAllData();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete prescription");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete prescription");
     }
   };
 
-  const handleProceedToPrescriptionCheckout = (rx: any) => {
+  const handleProceedToPrescriptionCheckout = (rx: Prescription) => {
     const itemsToProcess = (rx.items && rx.items.length > 0)
       ? rx.items
       : ((rx.prescriptionItems && rx.prescriptionItems.length > 0)
@@ -199,8 +265,8 @@ export default function PatientDashboardPage() {
     }
 
     clearCart();
-    itemsToProcess.forEach((item: any) => {
-      const prod = item.product || { id: item.productId, name: item.productName || "Prescribed Medication", price: item.unitPrice || item.price || 0 };
+    itemsToProcess.forEach((item: PrescribedItem | OrderItem) => {
+      const prod = item.product || { id: item.productId || "", name: item.productName || "Prescribed Medication", price: item.unitPrice || item.price || 0 };
       addToCart(
         {
           id: prod.id,
@@ -250,7 +316,7 @@ export default function PatientDashboardPage() {
         toast.success("Address added");
       }
       setAddressDialogOpen(false);
-    } catch (e: any) { toast.error(e.message || "Failed to save address"); }
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed to save address"); }
     finally { setAddressSaving(false); }
   };
 
@@ -259,7 +325,7 @@ export default function PatientDashboardPage() {
       await apiFetch(`/users/addresses/${id}`, { method: "DELETE" });
       setAddresses((prev) => prev.filter((a) => a.id !== id));
       toast.success("Address deleted");
-    } catch (e: any) { toast.error(e.message || "Failed to delete address"); }
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed to delete address"); }
   };
 
   const markNotificationRead = async (id: string) => {
@@ -281,7 +347,7 @@ export default function PatientDashboardPage() {
   };
 
   const recentOrders = orders.slice(0, 3);
-  const totalSpent = orders.reduce((sum: number, o: any) => sum + (o.totalAmount || 0), 0);
+  const totalSpent = orders.reduce((sum: number, o: Order) => sum + (o.totalAmount || 0), 0);
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: "overview", label: "Overview", icon: <Home className="h-4 w-4" /> },
@@ -435,14 +501,14 @@ export default function PatientDashboardPage() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {recentOrders.map((order: any) => {
+                {recentOrders.map((order: Order) => {
                   const sc = statusConfig[order.status] || statusConfig.PENDING;
                   return (
                     <Card key={order.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-extrabold text-slate-900 dark:text-white">{order.orderNumber}</span>
-                          <Badge variant={sc.color as any} className="flex items-center gap-1">
+                          <Badge variant={sc.color as "amber" | "blue" | "emerald" | "red" | "slate"} className="flex items-center gap-1">
                             {sc.icon} {order.status}
                           </Badge>
                         </div>
@@ -475,7 +541,7 @@ export default function PatientDashboardPage() {
               <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{orders.length} order(s) total</p>
               </div>
-              {orders.map((order: any) => {
+              {orders.map((order: Order) => {
                 const sc = statusConfig[order.status] || statusConfig.PENDING;
                 const isExpanded = expandedOrder === order.id;
                 return (
@@ -488,7 +554,7 @@ export default function PatientDashboardPage() {
                       <div className="space-y-1 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-extrabold text-slate-900 dark:text-white">{order.orderNumber}</span>
-                          <Badge variant={sc.color as any} className="flex items-center gap-1">
+                          <Badge variant={sc.color as "amber" | "blue" | "emerald" | "red" | "slate"} className="flex items-center gap-1">
                             {sc.icon} {order.status}
                           </Badge>
                         </div>
@@ -556,7 +622,7 @@ export default function PatientDashboardPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {prescriptions.map((rx: any) => {
+              {prescriptions.map((rx: Prescription) => {
                 const rxStatus = rx.status || "PENDING";
                 const rxBadge = rxStatus === "APPROVED" ? "emerald" : rxStatus === "REJECTED" ? "red" : "amber";
                 return (
@@ -565,7 +631,7 @@ export default function PatientDashboardPage() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">RX-{rx.id.slice(0, 8).toUpperCase()}</span>
-                          <Badge variant={rxBadge as any}>{rxStatus.replace("_", " ")}</Badge>
+                          <Badge variant={rxBadge as "amber" | "blue" | "emerald" | "red" | "slate"}>{rxStatus.replace("_", " ")}</Badge>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           {new Date(rx.createdAt).toLocaleDateString("en-GH", { day: "2-digit", month: "short", year: "numeric" })}
@@ -611,7 +677,7 @@ export default function PatientDashboardPage() {
                             <ShoppingBag className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Prescribed Medications:
                           </p>
                           <div className="space-y-2">
-                            {displayItems.map((item: any) => (
+                            {displayItems.map((item: PrescribedItem) => (
                               <div key={item.id} className="flex items-center justify-between text-xs bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-emerald-100 dark:border-emerald-900/40">
                                 <div>
                                   <p className="font-bold text-slate-900 dark:text-white">{item.product?.name || "Medication"}</p>
@@ -627,7 +693,7 @@ export default function PatientDashboardPage() {
                           <div className="pt-2 border-t border-emerald-200 dark:border-emerald-800/50 flex flex-col sm:flex-row items-center justify-between gap-3">
                             <div className="text-xs text-slate-600 dark:text-slate-300">
                               Total Order: <span className="font-extrabold text-emerald-700 dark:text-emerald-400 text-sm">
-                                {formatCurrency(displayItems.reduce((sum: number, i: any) => sum + (i.product?.price || 0) * i.quantity, 0))}
+                                {formatCurrency(displayItems.reduce((sum: number, i: PrescribedItem) => sum + (i.product?.price || 0) * i.quantity, 0))}
                               </span>
                             </div>
                             <Button
@@ -670,27 +736,51 @@ export default function PatientDashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {wishlist.map((item: any) => (
-                <Card key={item.id} className="p-4 space-y-3">
-                  <div className="h-28 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    {item.images?.[0] ? (
-                      <Image src={item.images[0]} alt={item.name} width={300} height={112} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="h-full w-full object-contain rounded-xl" />
-                    ) : (
-                      <Package className="h-8 w-8 text-slate-300 dark:text-slate-600" />
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{item.name}</p>
-                    <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">{formatCurrency(item.price)}</p>
-                  </div>
-                  <Button variant="primary" size="sm" className="w-full" onClick={() => {
-                    addToCart(item, 1);
-                    toast.success(`${item.name} added to cart!`);
-                  }}>
-                    <ShoppingBag className="h-4 w-4" /> Add to Cart
-                  </Button>
-                </Card>
-              ))}
+              {wishlist.map((item: WishlistItem) => {
+                const prod: CartProduct = item.product
+                  ? {
+                      id: item.product.id,
+                      name: item.product.name,
+                      slug: item.product.slug,
+                      price: item.product.price,
+                      stockQuantity: item.product.stockQuantity,
+                      requiresPrescription: item.product.requiresPrescription,
+                      images: item.product.images,
+                      category: item.product.category,
+                    }
+                  : {
+                      id: item.productId || item.id,
+                      name: item.name || "Medication",
+                      slug: item.slug || item.id,
+                      price: item.price || 0,
+                      stockQuantity: item.stockQuantity || 10,
+                      requiresPrescription: item.requiresPrescription || false,
+                      images: item.images || [],
+                      category: item.category || "General",
+                    };
+                const itemImage = prod.images[0];
+                return (
+                  <Card key={item.id} className="p-4 space-y-3">
+                    <div className="h-28 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      {itemImage ? (
+                        <Image src={itemImage} alt={prod.name} width={300} height={112} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="h-full w-full object-contain rounded-xl" />
+                      ) : (
+                        <Package className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{prod.name}</p>
+                      <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">{formatCurrency(prod.price)}</p>
+                    </div>
+                    <Button variant="primary" size="sm" className="w-full" onClick={() => {
+                      addToCart(prod, 1);
+                      toast.success(`${prod.name} added to cart!`);
+                    }}>
+                      <ShoppingBag className="h-4 w-4" /> Add to Cart
+                    </Button>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>

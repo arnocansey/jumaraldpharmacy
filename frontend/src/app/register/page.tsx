@@ -66,8 +66,8 @@ export default function RegisterPage() {
 
       toast.success("Account created successfully! Welcome to Jumarald Pharmacy.");
       window.location.href = "/dashboard";
-    } catch (err: any) {
-      toast.error(err.message || "Registration failed. Please try again.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }

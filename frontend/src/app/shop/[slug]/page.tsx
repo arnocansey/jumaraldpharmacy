@@ -89,7 +89,7 @@ function ProductDetailSkeleton() {
   );
 }
 
-function ProductDetailError({ slug }: { slug?: string }) {
+function ProductDetailError() {
   return (
     <div className="w-full px-4 sm:px-8 lg:px-12 py-10">
       <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-6 text-center">
@@ -180,7 +180,7 @@ export default function ProductDetailPage() {
   }, [product, activeTab, reviewsPage]);
 
   if (loading) return <ProductDetailSkeleton />;
-  if (error || !product) return <ProductDetailError slug={slug} />;
+  if (error || !product) return <ProductDetailError />;
 
   const inStock = product.stockQuantity > 0;
   const lowStock = inStock && product.stockQuantity <= (product.minStockAlert || 10);

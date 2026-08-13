@@ -62,8 +62,8 @@ export default function PrescriptionUploadPage() {
       const data = await res.json();
       setUploadedUrl(data.url);
       toast.success("File uploaded successfully");
-    } catch (err: any) {
-      toast.error(err.message || "File upload failed");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "File upload failed");
       setFile(null);
       setPreview(null);
     } finally {
@@ -122,8 +122,8 @@ export default function PrescriptionUploadPage() {
 
       toast.success("Prescription submitted to pharmacist queue!");
       window.location.href = "/dashboard";
-    } catch (err: any) {
-      toast.error(err.message || "Submission failed");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Submission failed");
       setIsSubmitting(false);
     }
   };
