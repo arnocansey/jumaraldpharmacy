@@ -12,7 +12,6 @@ import {
   FileText,
   AlertTriangle,
   CheckCircle2,
-  ShoppingCart,
   ChevronRight,
   RefreshCw,
   Plus,
@@ -21,7 +20,6 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { toast } from "sonner";
-
 import { usePathname } from "next/navigation";
 
 interface Message {
@@ -35,6 +33,33 @@ interface Message {
     emergencyWarning?: string;
   };
   timestamp: string;
+}
+
+interface InteractionDetail {
+  drugA: string;
+  drugB: string;
+  effect?: string;
+  recommendation: string;
+}
+
+interface InteractionResult {
+  severity: "LOW" | "MODERATE" | "SEVERE";
+  summary: string;
+  details?: InteractionDetail[];
+}
+
+interface RxMedication {
+  name: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  purpose: string;
+}
+
+interface RxResult {
+  summary: string;
+  medications?: RxMedication[];
+  precautions?: string[];
 }
 
 const QUICK_PROMPTS = [
@@ -65,25 +90,25 @@ export function AIAssistantWidget() {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Hide floating widget if user is on full-screen AI assistant page
-  if (pathname === "/ai-assistant") {
-    return null;
-  }
-
   // Interaction State
   const [drugList, setDrugList] = useState<string[]>(["Paracetamol", "Ibuprofen"]);
   const [newDrug, setNewDrug] = useState("");
-  const [interactionResult, setInteractionResult] = useState<any>(null);
+  const [interactionResult, setInteractionResult] = useState<InteractionResult | null>(null);
   const [checkingInteractions, setCheckingInteractions] = useState(false);
 
   // Prescription Explainer State
   const [rxText, setRxText] = useState("");
-  const [rxResult, setRxResult] = useState<any>(null);
+  const [rxResult, setRxResult] = useState<RxResult | null>(null);
   const [explainingRx, setExplainingRx] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  // Early return after all hook declarations
+  if (pathname === "/ai-assistant") {
+    return null;
+  }
 
   async function handleSendMessage(textToSend?: string) {
     const text = textToSend || input;
@@ -116,15 +141,17 @@ export function AIAssistantWidget() {
 
       if (data.conversationId) setConversationId(data.conversationId);
 
-      const products = data.executedTools
-        ? data.executedTools.find((t: any) => t.name === "searchProducts")?.output?.products
+      const toolProducts = data.executedTools
+        ? data.executedTools.find(
+            (t: { name: string; output?: { products?: any[] } }) => t.name === "searchProducts"
+          )?.output?.products
         : [];
 
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "model",
         text: data.reply || "No response received.",
-        products: products || [],
+        products: toolProducts || [],
         triage: {
           severity: data.riskLevel || "LOW",
           suggestDoctorConsultation: data.isEscalated || data.riskLevel === "EMERGENCY",
@@ -134,8 +161,9 @@ export function AIAssistantWidget() {
       };
 
       setMessages((prev) => [...prev, botMsg]);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to reach Dr. Jumarald AI");
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to reach Dr. Jumarald AI";
+      toast.error(errorMsg);
       setMessages((prev) => [
         ...prev,
         {
@@ -169,8 +197,9 @@ export function AIAssistantWidget() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Analysis failed");
       setInteractionResult(data);
-    } catch (err: any) {
-      toast.error(err.message || "Interaction analysis failed");
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Interaction analysis failed";
+      toast.error(errorMsg);
     } finally {
       setCheckingInteractions(false);
     }
@@ -195,8 +224,9 @@ export function AIAssistantWidget() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Decoding failed");
       setRxResult(data);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to decode prescription");
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to decode prescription";
+      toast.error(errorMsg);
     } finally {
       setExplainingRx(false);
     }
@@ -244,7 +274,7 @@ export function AIAssistantWidget() {
                     Dr. Jumarald AI <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">Clinical 3.0</span>
                   </h3>
                   <p className="text-[11px] text-slate-300 flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> 24/7 AI Pharmacy & Symptom Assistant
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> 24/7 AI Pharmacy &amp; Symptom Assistant
                   </p>
                 </div>
               </div>
@@ -507,12 +537,12 @@ export function AIAssistantWidget() {
 
                     {interactionResult.details && interactionResult.details.length > 0 && (
                       <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                        {interactionResult.details.map((item: any, idx: number) => (
+                        {interactionResult.details.map((item, idx: number) => (
                           <div key={idx} className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
                             <p className="font-bold text-slate-800 dark:text-slate-100">
                               {item.drugA} + {item.drugB}
                             </p>
-                            <p className="text-slate-500 dark:text-slate-400">{item.effect}</p>
+                            {item.effect && <p className="text-slate-500 dark:text-slate-400">{item.effect}</p>}
                             <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                               💡 Advice: {item.recommendation}
                             </p>
@@ -556,7 +586,7 @@ export function AIAssistantWidget() {
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-4 w-4" /> Decode & Explain Rx
+                      <Sparkles className="h-4 w-4" /> Decode &amp; Explain Rx
                     </>
                   )}
                 </button>
@@ -569,7 +599,7 @@ export function AIAssistantWidget() {
                     {rxResult.medications && (
                       <div className="space-y-2">
                         <label className="block text-[10px] font-bold uppercase text-slate-400">Decoded Medications:</label>
-                        {rxResult.medications.map((m: any, idx: number) => (
+                        {rxResult.medications.map((m, idx: number) => (
                           <div key={idx} className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
                             <div className="flex justify-between font-bold text-slate-800 dark:text-slate-100">
                               <span>{m.name}</span>
@@ -585,7 +615,7 @@ export function AIAssistantWidget() {
 
                     {rxResult.precautions && rxResult.precautions.length > 0 && (
                       <div className="space-y-1 pt-2 border-t border-slate-200 dark:border-slate-700">
-                        <label className="block text-[10px] font-bold uppercase text-slate-400">Precautions & Safety:</label>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400">Precautions &amp; Safety:</label>
                         {rxResult.precautions.map((p: string, idx: number) => (
                           <p key={idx} className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
