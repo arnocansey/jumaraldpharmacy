@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { WhatsAppWidget } from "@/components/ui/WhatsAppWidget";
 import { useSocket } from "@/hooks/useSocket";
 import { useSocketAutoInvalidate } from "@/hooks/useSocketAutoInvalidate";
 import { I18nProvider } from "@/hooks/useI18n";
@@ -64,7 +63,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <ServiceWorkerRegistration />
               {children}
               <Toaster position="top-right" richColors />
-              <WhatsAppWidget />
             </ThemeProvider>
           </SocketProvider>
         </I18nProvider>
