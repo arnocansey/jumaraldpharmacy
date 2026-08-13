@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useCallback } from "react";
-import Link from "next/link";
 import Image from "next/image";
-import { UploadCloud, CheckCircle2, ShieldCheck, FileText, ArrowRight, X, Camera, Image as ImageIcon, Clock, Phone, MessageCircle } from "lucide-react";
+import { UploadCloud, CheckCircle2, ShieldCheck, FileText, X, Camera, Image as ImageIcon, Clock, Phone, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";

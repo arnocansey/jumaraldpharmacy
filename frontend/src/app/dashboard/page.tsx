@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
-  Package, FileText, Calendar, User, Clock, CheckCircle, Mail, Phone, ShieldCheck, LogOut,
+  Package, FileText, User, Clock, Mail, Phone, ShieldCheck, LogOut,
   UploadCloud, ShoppingBag, Heart, Bell, MapPin, Home, Pencil, Trash2, Plus, ChevronDown,
   ChevronRight, Star, Repeat, Info, AlertCircle, CheckCircle2, XCircle, Loader2, Eye,
 } from "lucide-react";
@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
-import { API_URL, apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { useCartStore, CartProduct } from "@/store/useCartStore";
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
 

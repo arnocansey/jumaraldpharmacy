@@ -29,7 +29,7 @@ export default function RegisterPage() {
       if (stored) {
         router.replace("/dashboard");
       }
-    } catch (e) {}
+    } catch {}
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {

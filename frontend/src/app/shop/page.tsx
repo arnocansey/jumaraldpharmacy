@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, Filter, Star, Plus, ArrowUpDown, Package, ShoppingCart, TrendingDown } from "lucide-react";
+import { Search, Filter, Star, Plus, ArrowUpDown, Package } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
@@ -54,7 +54,7 @@ export default function ShopPage() {
       setProducts(filteredProducts);
       setTotalPages(data.pagination?.pages || 1);
       setTotalCount(data.pagination?.total || filteredProducts.length);
-    } catch (e) {
+    } catch {
       toast.error("Could not load products");
       setProducts([]);
     } finally {

@@ -26,7 +26,7 @@ export function Navbar() {
       } else {
         setUser(null);
       }
-    } catch (e) {
+    } catch {
       setUser(null);
     }
   };

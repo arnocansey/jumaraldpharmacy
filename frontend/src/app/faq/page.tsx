@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { HelpCircle, ChevronDown, ShieldCheck, Truck, Stethoscope, FileText } from "lucide-react";
+import { HelpCircle, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 

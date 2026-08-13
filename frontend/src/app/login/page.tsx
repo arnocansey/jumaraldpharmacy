@@ -24,7 +24,7 @@ export default function LoginPage() {
       if (stored) {
         router.replace("/dashboard");
       }
-    } catch (e) {}
+    } catch {}
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {

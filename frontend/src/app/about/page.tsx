@@ -1,5 +1,5 @@
 import React from "react";
-import { Pill, ShieldCheck, HeartPulse, Award } from "lucide-react";
+import { ShieldCheck, HeartPulse, Award } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 

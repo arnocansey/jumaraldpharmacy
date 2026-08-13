@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CreditCard,
   CheckCircle2,
@@ -39,6 +40,7 @@ interface CouponData {
 }
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const { items, subtotalAmount, clearCart } = useCartStore();
   const [step, setStep] = useState<"address" | "payment" | "confirmed">("address");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -76,36 +78,36 @@ export default function CheckoutPage() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const reference = params.get("reference") || params.get("trxref");
-    if (reference) {
-      verifyPaystackPayment(reference);
-    }
-  }, []);
 
-  const verifyPaystackPayment = async (ref: string) => {
-    setIsVerifying(true);
-    try {
-      const token = localStorage.getItem("jumarald_token") || "";
-      const res = await fetch(`${API_URL}/payments/verify/${ref}`, {
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-      const data = await res.json();
-      if (res.ok && (data.status === "success" || data.data?.status === "success")) {
-        setConfirmedOrderNumber(data.data?.orderNumber || ref);
-        setStep("confirmed");
-        clearCart();
-        toast.success("Payment verified successfully via Paystack Ghana!");
-      } else {
-        toast.error(data.message || "Payment verification failed. Please check your order status.");
+    async function verifyRef(ref: string) {
+      setIsVerifying(true);
+      try {
+        const token = localStorage.getItem("jumarald_token") || "";
+        const res = await fetch(`${API_URL}/payments/verify/${ref}`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        const data = await res.json();
+        if (data.status === "COMPLETED" || data.status === "SUCCESS") {
+          toast.success("Payment verified successfully!");
+          clearCart();
+          router.push(`/orders/${data.orderId || ""}`);
+        } else {
+          toast.error(data.message || "Payment verification failed.");
+        }
+      } catch {
+        toast.error("Error verifying payment.");
+      } finally {
+        setIsVerifying(false);
       }
-    } catch {
-      toast.error("Failed to verify Paystack payment.");
-    } finally {
-      setIsVerifying(false);
     }
-  };
+
+    if (reference) {
+      verifyRef(reference);
+    }
+  }, [clearCart, router]);
 
   // Fetch loyalty points when entering payment step
   const fetchLoyaltyPoints = async () => {

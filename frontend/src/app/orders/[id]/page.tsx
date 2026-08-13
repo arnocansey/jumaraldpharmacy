@@ -18,7 +18,6 @@ import {
   Cog,
   Send,
   XCircle,
-  RotateCcw,
   ShoppingCart,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";

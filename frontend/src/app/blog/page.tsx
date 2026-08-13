@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { API_URL } from "@/lib/api";
-import { Calendar, User, ArrowRight, Search } from "lucide-react";
+import { Calendar, User, Search } from "lucide-react";
 
 interface BlogPost {
   id: string;
@@ -30,8 +30,50 @@ export default function BlogPage() {
   const [pagination, setPagination] = useState({ total: 0, pages: 0 });
 
   useEffect(() => {
-    fetchPosts();
-  }, [page, selectedTag]);
+    async function loadPosts() {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({ page: String(page), limit: "9" });
+        if (selectedTag) params.set("tag", selectedTag);
+        if (search) params.set("search", search);
+
+        const res = await fetch(`${API_URL}/blog?${params}`);
+        if (res.ok) {
+          const data = await res.json();
+          setPosts(data.posts);
+          setPagination(data.pagination);
+        }
+      } catch {
+        setPosts([
+          {
+            id: "post-1",
+            title: "Understanding Antibiotic Resistance & Proper Dosage Adherence",
+            slug: "understanding-antibiotic-resistance",
+            summary: "Why completing your prescribed course of antibiotics is essential to prevent bacterial mutation and treatment failure.",
+            author: "Dr. Chioma Nwachukwu, PharmD",
+            imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&q=80",
+            tags: ["Antibiotics", "Health Tips"],
+            createdAt: "2026-08-02T00:00:00Z",
+            _count: { comments: 0 },
+          },
+          {
+            id: "post-2",
+            title: "The Role of Cold-Chain Storage in Biological & Insulin Quality",
+            slug: "cold-chain-storage-insulin",
+            summary: "How thermal degradation affects sensitive pharmaceuticals and how Jumarald ensures 2°C–8°C storage during transport.",
+            author: "Dr. Adebayo Ogunlesi, MD",
+            imageUrl: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=800&q=80",
+            tags: ["Diabetes", "Storage"],
+            createdAt: "2026-07-28T00:00:00Z",
+            _count: { comments: 0 },
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPosts();
+  }, [page, selectedTag, search]);
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -47,7 +89,6 @@ export default function BlogPage() {
         setPagination(data.pagination);
       }
     } catch {
-      // Use fallback static posts
       setPosts([
         {
           id: "post-1",

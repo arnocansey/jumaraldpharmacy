@@ -8,7 +8,6 @@ import {
   Star,
   ShieldAlert,
   CheckCircle,
-  Heart,
   ArrowLeft,
   UploadCloud,
   Plus,
@@ -21,7 +20,6 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-import { Spinner } from "@/components/ui/Spinner";
 import { apiFetch } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/useCartStore";
