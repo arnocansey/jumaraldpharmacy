@@ -152,3 +152,73 @@ export async function getDashboardSummary(req: any, res: Response) {
     res.status(500).json({ message: err.message });
   }
 }
+
+export async function exportOrdersCSV(req: any, res: Response) {
+  try {
+    const orders = await prisma.order.findMany({
+      take: 1000,
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { name: true, email: true } } },
+    });
+
+    let csv = "Order Number,Customer Name,Customer Email,Status,Total Amount (GHS),Created At\n";
+    for (const o of orders) {
+      const cleanName = (o.user?.name || "Guest").replace(/,/g, " ");
+      const cleanEmail = (o.user?.email || "").replace(/,/g, " ");
+      csv += `${o.orderNumber},"${cleanName}","${cleanEmail}",${o.status},${o.totalAmount},${o.createdAt.toISOString()}\n`;
+    }
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename=orders_export_${Date.now()}.csv`);
+    return res.status(200).send(csv);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+}
+
+export async function exportInventoryCSV(req: any, res: Response) {
+  try {
+    const products = await prisma.product.findMany({
+      take: 1000,
+      orderBy: { name: "asc" },
+      include: { category: { select: { name: true } } },
+    });
+
+    let csv = "SKU,Product Name,Category,Price (GHS),Stock Quantity,Requires Prescription,Is Active\n";
+    for (const p of products) {
+      const cleanName = p.name.replace(/,/g, " ");
+      const cleanCat = (p.category?.name || "General").replace(/,/g, " ");
+      csv += `${p.sku},"${cleanName}","${cleanCat}",${p.price},${p.stockQuantity},${p.requiresPrescription},${p.isActive}\n`;
+    }
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename=inventory_export_${Date.now()}.csv`);
+    return res.status(200).send(csv);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+}
+
+export async function exportPrescriptionsCSV(req: any, res: Response) {
+  try {
+    const rxs = await prisma.prescription.findMany({
+      take: 1000,
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { name: true, email: true } } },
+    });
+
+    let csv = "Prescription ID,Patient Name,Patient Email,Status,Doctor Name,Created At\n";
+    for (const r of rxs) {
+      const cleanName = (r.user?.name || "Patient").replace(/,/g, " ");
+      const cleanEmail = (r.user?.email || "").replace(/,/g, " ");
+      const cleanDoctor = (r.doctorName || "N/A").replace(/,/g, " ");
+      csv += `${r.id},"${cleanName}","${cleanEmail}",${r.status},"${cleanDoctor}",${r.createdAt.toISOString()}\n`;
+    }
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename=prescriptions_export_${Date.now()}.csv`);
+    return res.status(200).send(csv);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+}

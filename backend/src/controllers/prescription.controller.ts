@@ -8,6 +8,7 @@ import { cloudinary } from "../config/cloudinary";
 import { env } from "../config/env";
 import fs from "fs";
 import path from "path";
+import { createAuditLog } from "../lib/audit";
 
 const submitPrescriptionSchema = z.object({
   documentUrl: z.string().min(1),
@@ -204,7 +205,6 @@ export async function createOrderFromPrescription(req: any, res: Response) {
   }
 }
 
-
 export async function updatePrescriptionStatus(req: any, res: Response) {
   try {
     const data = updatePrescriptionSchema.parse(req.body);
@@ -213,6 +213,22 @@ export async function updatePrescriptionStatus(req: any, res: Response) {
       data: { status: data.status, pharmacistNote: data.pharmacistNote },
       include: { user: { select: { email: true } } },
     });
+
+    if (req.user?.id) {
+      await createAuditLog(
+        req.user.id,
+        "PRESCRIPTION_UPDATED",
+        "Prescription",
+        updated.id,
+        { newStatus: data.status, note: data.pharmacistNote },
+        req.ip
+      );
+    }
+
+    const io = req.app?.get("io");
+    if (io) {
+      io.emit("prescription_updated", updated);
+    }
 
     if (updated.user?.email) {
       const emailContent = buildPrescriptionVerifiedEmail(data.status, data.pharmacistNote);

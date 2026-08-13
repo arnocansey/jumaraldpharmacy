@@ -4,6 +4,8 @@ import { prisma } from "../lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { RoleName } from "@prisma/client";
+import { createAuditLog } from "../lib/audit";
+import { sendEmail } from "../lib/notifications";
 
 const userQuerySchema = z.object({
   search: z.string().optional(),
@@ -116,6 +118,37 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
       },
     });
 
+    if (req.user?.id) {
+      await createAuditLog(
+        req.user.id,
+        "USER_CREATED",
+        "User",
+        user.id,
+        { createdUserEmail: user.email, role: user.role },
+        req.ip
+      );
+    }
+
+    // Dispatch welcome email with credentials if role is staff/admin
+    if (data.role !== RoleName.CUSTOMER && data.role !== RoleName.PATIENT) {
+      sendEmail({
+        to: user.email,
+        subject: "Welcome to Jumarald Pharmacy Staff Portal",
+        html: `
+          <div style="font-family: sans-serif; padding: 20px;">
+            <h2 style="color: #059669;">Welcome to Jumarald Pharmacy</h2>
+            <p>Hello <strong>${user.name}</strong>,</p>
+            <p>An account has been created for you with the role <strong>${user.role}</strong>.</p>
+            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <p style="margin: 0;"><strong>Email:</strong> ${user.email}</p>
+              <p style="margin: 5px 0 0 0;"><strong>Temporary Password:</strong> ${data.password}</p>
+            </div>
+            <p>Please log in and update your password immediately.</p>
+          </div>
+        `,
+      }).catch((e) => console.error("Staff welcome email failed:", e));
+    }
+
     return res.status(201).json(user);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -147,6 +180,17 @@ export async function updateUserRole(req: AuthenticatedRequest, res: Response) {
         updatedAt: true,
       },
     });
+
+    if (req.user?.id) {
+      await createAuditLog(
+        req.user.id,
+        "ROLE_UPDATED",
+        "User",
+        user.id,
+        { previousRole: user.role, newRole: role, userEmail: user.email },
+        req.ip
+      );
+    }
 
     return res.json(updated);
   } catch (error: any) {
@@ -181,6 +225,17 @@ export async function toggleUserStatus(req: AuthenticatedRequest, res: Response)
       },
     });
 
+    if (req.user?.id) {
+      await createAuditLog(
+        req.user.id,
+        "USER_STATUS_TOGGLED",
+        "User",
+        user.id,
+        { isActive: updated.isActive, userEmail: user.email },
+        req.ip
+      );
+    }
+
     return res.json(updated);
   } catch {
     return res.status(500).json({ message: "Failed to update user status" });
@@ -210,6 +265,18 @@ export async function deleteUser(req: AuthenticatedRequest, res: Response) {
     }
 
     await prisma.user.delete({ where: { id } });
+
+    if (req.user?.id) {
+      await createAuditLog(
+        req.user.id,
+        "USER_DELETED",
+        "User",
+        id,
+        { deletedUserEmail: targetUser.email, role: targetUser.role },
+        req.ip
+      );
+    }
+
     return res.json({ message: "User deleted successfully" });
   } catch {
     return res.status(500).json({ message: "Failed to delete user" });

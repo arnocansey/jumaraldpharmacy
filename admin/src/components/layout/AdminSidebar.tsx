@@ -48,6 +48,7 @@ const sections: NavSection[] = [
     label: "System",
     items: [
       { name: "Staff & Users", href: "/users", icon: Users },
+      { name: "Audit Logs", href: "/audit-logs", icon: ShieldCheck },
       { name: "Notifications", href: "/notifications", icon: Bell },
       { name: "Backups", href: "/backups", icon: Database },
       { name: "Settings", href: "/settings", icon: Settings },

@@ -14,87 +14,36 @@ import { useCartStore } from "@/store/useCartStore";
 import { toast } from "sonner";
 import { API_URL } from "@/lib/api";
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  _count?: { products: number };
-}
-
-interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  sku?: string;
-  price: number;
-  compareAtPrice?: number;
-  stockQuantity: number;
-  requiresPrescription: boolean;
-  isFeatured?: boolean;
-  images: string[];
-  description?: string;
-  category: Category;
-  brand?: { id: string; name: string; slug: string };
-  rating?: number;
-  reviewCount?: number;
-}
+import { useCategoriesQuery, useProductsQuery, Category, Product } from "@/hooks/useShopQueries";
 
 export default function ShopPage() {
   const { addToCart } = useCartStore();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [rxOnly, setRxOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("featured");
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
   const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({ min: "", max: "" });
   const [inStockOnly, setInStockOnly] = useState(false);
 
-  useEffect(() => {
-    fetch(`${API_URL}/products/categories`)
-      .then((r) => r.json())
-      .then((data) => setCategories(Array.isArray(data) ? data : []))
-      .catch(() => {});
-  }, []);
+  const { data: categoriesData } = useCategoriesQuery();
+  const categories = categoriesData || [];
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ page: String(page), limit: "12", sortBy });
-      if (search) params.set("search", search);
-      if (selectedCategory !== "all") params.set("category", selectedCategory);
-      if (rxOnly) params.set("requiresPrescription", "true");
-      if (inStockOnly) params.set("inStockOnly", "true");
-      if (priceRange.min) params.set("minPrice", priceRange.min);
-      if (priceRange.max) params.set("maxPrice", priceRange.max);
+  const { data: productsData, isLoading: loading } = useProductsQuery({
+    category: selectedCategory !== "all" ? selectedCategory : undefined,
+    search: search || undefined,
+    sort: sortBy,
+    prescriptionOnly: rxOnly,
+    inStockOnly: inStockOnly,
+  });
 
-      const res = await fetch(`${API_URL}/products?${params}`);
-      const data = await res.json();
-      const filteredProducts = data.products || [];
-
-      setProducts(filteredProducts);
-      setTotalPages(data.pagination?.pages || 1);
-      setTotalCount(data.pagination?.total || filteredProducts.length);
-    } catch {
-      toast.error("Could not load products");
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, sortBy, search, selectedCategory, rxOnly, priceRange, inStockOnly]);
+  const products = productsData?.products || [];
+  const totalPages = productsData?.pagination?.pages || 1;
+  const totalCount = productsData?.pagination?.total || products.length;
 
   useEffect(() => {
     setPage(1);
   }, [search, selectedCategory, rxOnly, sortBy, priceRange, inStockOnly]);
-
-  useEffect(() => {
-    const t = setTimeout(fetchProducts, 300);
-    return () => clearTimeout(t);
-  }, [fetchProducts]);
 
   const getStockStatus = (qty: number) => {
     if (qty === 0) return { label: "Out of Stock", color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-950/30" };
