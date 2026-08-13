@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { Response } from "express";
 import { z } from "zod";
+import { emitInventoryUpdate } from "../lib/socket";
 
 const productQuerySchema = z.object({
   search: z.string().optional(),
@@ -293,6 +294,8 @@ export async function createProduct(req: any, res: Response) {
       include: { category: true, brand: true },
     });
 
+    emitInventoryUpdate(product);
+
     return res.status(201).json(product);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -319,6 +322,9 @@ export async function updateProduct(req: any, res: Response) {
       },
       include: { category: true, brand: true },
     });
+
+    emitInventoryUpdate(updated);
+
     return res.json(updated);
   } catch (error: any) {
     if (error instanceof z.ZodError) {

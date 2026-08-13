@@ -10,8 +10,12 @@ export function initSocketServer(httpServer: HttpServer): Server {
       origin: process.env.ALLOWED_ORIGINS?.split(",") || ["http://localhost:3000", "http://localhost:3001"],
       credentials: true,
     },
-    pingTimeout: 60000,
-    pingInterval: 25000,
+    transports: ["websocket", "polling"],
+    pingTimeout: 5000,
+    pingInterval: 10000,
+    perMessageDeflate: {
+      threshold: 1024,
+    },
   });
 
   io.use((socket, next) => {
@@ -98,4 +102,24 @@ export function emitToAdmins(event: string, data: any) {
 
 export function emitToDrivers(event: string, data: any) {
   io?.to("drivers").emit(event, data);
+}
+
+export function emitOrderUpdate(userId: string, order: any) {
+  io?.to(`user:${userId}`).emit("order_updated", order);
+  io?.to("admins").emit("order_updated", order);
+  if (order.id) io?.to(`order:${order.id}`).emit("order_updated", order);
+}
+
+export function emitPrescriptionUpdate(userId: string, prescription: any) {
+  io?.to(`user:${userId}`).emit("prescription_updated", prescription);
+  io?.to("admins").emit("prescription_updated", prescription);
+}
+
+export function emitInventoryUpdate(product: any) {
+  io?.emit("inventory_updated", product);
+  io?.to("admins").emit("inventory_updated", product);
+}
+
+export function emitAuditLogUpdate(auditLog: any) {
+  io?.to("admins").emit("audit_log_created", auditLog);
 }

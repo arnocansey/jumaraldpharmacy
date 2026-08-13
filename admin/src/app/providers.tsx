@@ -6,6 +6,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useSocket } from "@/hooks/useSocket";
+import { useAdminSocketAutoInvalidate } from "@/hooks/useAdminSocketAutoInvalidate";
 
 const SocketContext = createContext<ReturnType<typeof useSocket> | null>(null);
 
@@ -15,9 +16,19 @@ export function useSocketContext() {
   return ctx;
 }
 
+function AdminSocketAutoInvalidateListener() {
+  useAdminSocketAutoInvalidate();
+  return null;
+}
+
 function SocketProvider({ children }: { children: React.ReactNode }) {
   const socket = useSocket();
-  return <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>;
+  return (
+    <SocketContext.Provider value={socket}>
+      <AdminSocketAutoInvalidateListener />
+      {children}
+    </SocketContext.Provider>
+  );
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {

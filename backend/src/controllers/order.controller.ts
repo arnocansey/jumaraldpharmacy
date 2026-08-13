@@ -4,7 +4,7 @@ import { Response } from "express";
 import { z } from "zod";
 import { OrderStatus } from "@prisma/client";
 import { sendEmail, buildOrderConfirmationEmail, buildLowStockAlertEmail } from "../lib/notifications";
-import { emitToAdmins, emitToUser } from "../lib/socket";
+import { emitToAdmins, emitToUser, emitOrderUpdate } from "../lib/socket";
 import { sendOrderConfirmationSms } from "../lib/sms";
 import { createAuditLog } from "../lib/audit";
 
@@ -98,6 +98,7 @@ export async function createOrder(req: AuthenticatedRequest, res: Response) {
     }
 
     emitToAdmins("order:created", { orderId: result.id, orderNumber: result.orderNumber, totalAmount: result.totalAmount });
+    emitOrderUpdate(req.user!.id, result);
     createAuditLog(req.user!.id, "ORDER_CREATED", "order", result.id, { orderNumber, totalAmount: data.totalAmount });
 
     const userWithPhone = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { phone: true } });
@@ -149,6 +150,7 @@ export async function updateOrderStatus(req: any, res: Response) {
 
     emitToUser(order.userId, "order:status", { orderId: order.id, orderNumber: order.orderNumber, status: data.status });
     emitToAdmins("order:status-update", { orderId: order.id, orderNumber: order.orderNumber, status: data.status });
+    emitOrderUpdate(order.userId, order);
     createAuditLog(req.user!.id, "ORDER_STATUS_UPDATED", "order", order.id, { status: data.status });
 
     return res.json(order);

@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { WhatsAppWidget } from "@/components/ui/WhatsAppWidget";
 import { useSocket } from "@/hooks/useSocket";
+import { useSocketAutoInvalidate } from "@/hooks/useSocketAutoInvalidate";
 import { I18nProvider } from "@/hooks/useI18n";
 
 const SocketContext = createContext<ReturnType<typeof useSocket> | null>(null);
@@ -26,9 +27,19 @@ function ServiceWorkerRegistration() {
   return null;
 }
 
+function SocketAutoInvalidateListener() {
+  useSocketAutoInvalidate();
+  return null;
+}
+
 function SocketProvider({ children }: { children: React.ReactNode }) {
   const socket = useSocket();
-  return <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>;
+  return (
+    <SocketContext.Provider value={socket}>
+      <SocketAutoInvalidateListener />
+      {children}
+    </SocketContext.Provider>
+  );
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
