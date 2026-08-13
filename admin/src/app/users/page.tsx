@@ -41,14 +41,110 @@ interface UserAccount {
   };
 }
 
-const ROLES = [
-  { value: "SUPER_ADMIN", label: "Super Admin", icon: ShieldAlert, color: "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border-amber-300" },
-  { value: "ADMIN", label: "System Admin", icon: Shield, color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300" },
-  { value: "PHARMACIST", label: "Pharmacist", icon: Pill, color: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border-blue-300" },
-  { value: "DOCTOR", label: "Medical Doctor", icon: Stethoscope, color: "bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border-purple-300" },
-  { value: "BRANCH_MANAGER", label: "Branch Manager", icon: Building, color: "bg-teal-100 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300 border-teal-300" },
-  { value: "DELIVERY_DRIVER", label: "Delivery Courier", icon: Truck, color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-300" },
-  { value: "CUSTOMER", label: "Customer / Patient", icon: UserIcon, color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300" },
+interface RoleDefinition {
+  value: string;
+  label: string;
+  icon: any;
+  color: string;
+  description: string;
+  permissions: string[];
+}
+
+const ROLES: RoleDefinition[] = [
+  {
+    value: "SUPER_ADMIN",
+    label: "Super Admin",
+    icon: ShieldAlert,
+    color: "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border-amber-300",
+    description: "Unrestricted root permissions across all platform modules, system settings, financial reports, and audit logs.",
+    permissions: [
+      "Manage System & Payment Settings",
+      "Create, Modify & Delete Admin Accounts",
+      "Export Financial & Sales Reports",
+      "Manage All Pharmacy Branches & Multi-Location Stock",
+      "Full Database Operations & System Audit Logs",
+      "Manage Newsletter & SMS Broadcasts",
+    ],
+  },
+  {
+    value: "ADMIN",
+    label: "System Admin",
+    icon: Shield,
+    color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300",
+    description: "Operational administrator managing staff, customer accounts, orders, inventory, and pharmacy operations.",
+    permissions: [
+      "Manage Staff Accounts & Customer Roles",
+      "Manage Product Catalog & Inventory Batches",
+      "Update Order Fulfillment & Statuses",
+      "Access Analytics Dashboards & CSV Exports",
+      "Manage Branch Operations & Staff Assignees",
+    ],
+  },
+  {
+    value: "PHARMACIST",
+    label: "Pharmacist",
+    icon: Pill,
+    color: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border-blue-300",
+    description: "Licensed medical professional responsible for prescription verification, drug cataloging, and stock management.",
+    permissions: [
+      "Review & Approve Digital Prescriptions",
+      "Manage Drug Dosage, Ingredients & Side Effects",
+      "Execute Branch Stock Transfers & Expiry Alerts",
+      "Log Clinical Consultation Notes",
+      "View Prescription Analytics & Patient Summaries",
+    ],
+  },
+  {
+    value: "DOCTOR",
+    label: "Medical Doctor",
+    icon: Stethoscope,
+    color: "bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border-purple-300",
+    description: "Medical practitioner providing telehealth consultations and issuing digital prescriptions.",
+    permissions: [
+      "Issue Official Digital Prescriptions",
+      "Review Patient Clinical History & Uploads",
+      "Verify Drug Interactions & Health Warnings",
+      "Log Telehealth Patient Consultation Notes",
+    ],
+  },
+  {
+    value: "BRANCH_MANAGER",
+    label: "Branch Manager",
+    icon: Building,
+    color: "bg-teal-100 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300 border-teal-300",
+    description: "Location manager overseeing branch-specific sales, staff schedules, and local stock level control.",
+    permissions: [
+      "View Branch Sales & Local Analytics",
+      "Manage Branch Staff Schedules & Rosters",
+      "Audit Branch Inventory & Low Stock Thresholds",
+      "Request Inter-Branch Stock Transfers",
+    ],
+  },
+  {
+    value: "DELIVERY_DRIVER",
+    label: "Delivery Courier",
+    icon: Truck,
+    color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-300",
+    description: "Logistics courier handling prescription and medicine order deliveries.",
+    permissions: [
+      "View Assigned Delivery Routes & Dispatch Queue",
+      "Update Order Status (Out for Delivery / Delivered)",
+      "Capture Proof of Delivery Signatures",
+    ],
+  },
+  {
+    value: "CUSTOMER",
+    label: "Customer / Patient",
+    icon: UserIcon,
+    color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300",
+    description: "Standard end-user patient purchasing prescription and OTC health products.",
+    permissions: [
+      "Browse Medicine Catalog & Place Orders",
+      "Upload Prescriptions for Verification",
+      "Track Orders Real-Time",
+      "Manage Profile & Earn Loyalty Points",
+    ],
+  },
 ];
 
 export default function UserManagementPage() {
@@ -62,6 +158,7 @@ export default function UserManagementPage() {
 
   // Modal State
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showMatrixModal, setShowMatrixModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newUser, setNewUser] = useState({
     name: "",
@@ -74,6 +171,9 @@ export default function UserManagementPage() {
   // Edit Role Modal State
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
   const [selectedRole, setSelectedRole] = useState("");
+
+  const activeNewRoleDef = ROLES.find((r) => r.value === newUser.role) || ROLES[1];
+  const activeEditRoleDef = ROLES.find((r) => r.value === selectedRole) || ROLES[1];
 
   useEffect(() => {
     loadUsers();
@@ -188,15 +288,23 @@ export default function UserManagementPage() {
             <h1 className="text-2xl font-bold">Staff & User Management</h1>
           </div>
           <p className="text-xs text-slate-300">
-            Create administrators, assign staff roles, manage clinical permissions, and control user access.
+            Create administrators, assign staff titles, inspect role permissions, and control user access.
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-sm transition-all shadow-lg hover:shadow-emerald-900/40"
-        >
-          <UserPlus className="h-4 w-4" /> Add Staff / Admin
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setShowMatrixModal(true)}
+            className="bg-white/10 hover:bg-white/20 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 text-xs transition-all border border-white/20"
+          >
+            <Shield className="h-4 w-4 text-emerald-400" /> Roles & Permissions Matrix
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-sm transition-all shadow-lg hover:shadow-emerald-900/40"
+          >
+            <UserPlus className="h-4 w-4" /> Add Staff / Admin
+          </button>
+        </div>
       </div>
 
       {/* Stats Quick Cards */}
@@ -296,7 +404,7 @@ export default function UserManagementPage() {
               <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-400 font-semibold text-xs border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th className="p-4">User</th>
-                  <th className="p-4">Role</th>
+                  <th className="p-4">Role / Title</th>
                   <th className="p-4">Contact</th>
                   <th className="p-4">Status</th>
                   <th className="p-4">Joined</th>
@@ -408,7 +516,7 @@ export default function UserManagementPage() {
               initial={{ scale: 0.95, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              className="relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg p-6 z-10 space-y-5"
+              className="relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-xl p-6 z-10 space-y-5 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-4">
                 <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100 font-bold text-lg">
@@ -469,7 +577,7 @@ export default function UserManagementPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Assign Role / Account Type *</label>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Assign Role / Title *</label>
                   <select
                     value={newUser.role}
                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
@@ -480,6 +588,25 @@ export default function UserManagementPage() {
                     ))}
                   </select>
                 </div>
+
+                {/* Permissions Preview Card */}
+                {activeNewRoleDef && (
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Associated Permissions Preview</span>
+                      {getRoleBadge(activeNewRoleDef.value)}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{activeNewRoleDef.description}</p>
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                      {activeNewRoleDef.permissions.map((perm, idx) => (
+                        <li key={idx} className="text-xs flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                          <CheckCircle className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <span>{perm}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
                   <button
@@ -518,10 +645,10 @@ export default function UserManagementPage() {
               initial={{ scale: 0.95, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              className="relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md p-6 z-10 space-y-4"
+              className="relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg p-6 z-10 space-y-4 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">Change User Role</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">Change Account Role & Title</h3>
                 <button onClick={() => setEditingUser(null)} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
                   <X className="h-5 w-5 text-slate-400" />
                 </button>
@@ -533,7 +660,7 @@ export default function UserManagementPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Select New Role</label>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Select New Title / Role</label>
                 <select
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
@@ -544,6 +671,25 @@ export default function UserManagementPage() {
                   ))}
                 </select>
               </div>
+
+              {/* Permissions Preview Card */}
+              {activeEditRoleDef && (
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Granted Permissions</span>
+                    {getRoleBadge(activeEditRoleDef.value)}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{activeEditRoleDef.description}</p>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                    {activeEditRoleDef.permissions.map((perm, idx) => (
+                      <li key={idx} className="text-xs flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                        <CheckCircle className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                        <span>{perm}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
                 <button
@@ -559,6 +705,83 @@ export default function UserManagementPage() {
                   className="px-4 py-2 rounded-xl font-bold text-xs bg-emerald-600 text-white hover:bg-emerald-700"
                 >
                   Update Role
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ========== ROLES & PERMISSIONS MATRIX MODAL ========== */}
+      <AnimatePresence>
+        {showMatrixModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+              onClick={() => setShowMatrixModal(false)}
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-4xl p-6 z-10 space-y-5 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-4">
+                <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100 font-bold text-lg">
+                  <Shield className="h-5 w-5 text-emerald-600" /> Platform Titles & Associated Permissions Matrix
+                </div>
+                <button onClick={() => setShowMatrixModal(false)} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                  <X className="h-5 w-5 text-slate-400" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {ROLES.map((role) => {
+                  const Icon = role.icon;
+                  return (
+                    <div
+                      key={role.value}
+                      className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40 space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`p-1.5 rounded-lg border ${role.color}`}>
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">{role.label}</h4>
+                        </div>
+                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                          {role.value}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{role.description}</p>
+
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Associated Capabilities:</p>
+                        <ul className="space-y-1">
+                          {role.permissions.map((perm, idx) => (
+                            <li key={idx} className="text-xs flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                              <CheckCircle className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                              <span>{perm}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+                <button
+                  onClick={() => setShowMatrixModal(false)}
+                  className="px-5 py-2 rounded-xl font-bold text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200"
+                >
+                  Close Matrix
                 </button>
               </div>
             </motion.div>
