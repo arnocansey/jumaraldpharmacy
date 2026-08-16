@@ -20,6 +20,20 @@ export const metadata: Metadata = {
     "Order certified prescription medications, OTC remedies, immunity supplements, and book online doctor consultations with delivery across Greater Accra, Ghana.",
   keywords: ["Pharmacy", "Prescription medicines", "Telehealth", "Ghana", "Jumarald Pharmacy", "Doctor consultation"],
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/jumaraldlogo.png", type: "image/png" },
+      { url: "/logo.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/icons/icon-192.png",
+    apple: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -30,7 +44,21 @@ export const metadata: Metadata = {
     description: "Enterprise healthcare & pharmaceutical ordering platform.",
     url: "https://jumaraldpharmacy.com",
     siteName: "Jumarald Pharmacy",
+    images: [
+      {
+        url: "https://jumaraldpharmacy.com/jumaraldlogo.png",
+        width: 1200,
+        height: 630,
+        alt: "Jumarald Pharmacy & Wellness Logo",
+      },
+    ],
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Jumarald Pharmacy & Wellness",
+    description: "Certified online pharmacy & telehealth platform.",
+    images: ["https://jumaraldpharmacy.com/jumaraldlogo.png"],
   },
 };
 
@@ -43,7 +71,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     "@type": "Pharmacy",
     name: "Jumarald Pharmacy & Wellness",
     url: "https://jumaraldpharmacy.com",
-    logo: "https://jumaraldpharmacy.com/logo.png",
+    logo: "https://jumaraldpharmacy.com/jumaraldlogo.png",
+    image: "https://jumaraldpharmacy.com/jumaraldlogo.png",
     telephone: "+233 054-477-2483",
     address: {
       "@type": "PostalAddress",
@@ -61,6 +90,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192" />
+        <link rel="icon" href="/jumaraldlogo.png" type="image/png" />
+        <link rel="icon" href="/logo.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
         <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
