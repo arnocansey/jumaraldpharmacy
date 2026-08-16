@@ -38,6 +38,8 @@ import { configureWebPush } from "./lib/push";
 import { setupSwagger } from "./config/swagger";
 import * as Sentry from "@sentry/node";
 
+import { isOriginAllowed } from "./lib/cors";
+
 const app = express();
 const httpServer = createServer(app);
 
@@ -47,17 +49,14 @@ configureWebPush();
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
-const allowedOrigins = env.ALLOWED_ORIGINS
-  ? env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-  : ["http://localhost:3000", "http://localhost:3001"];
-
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        console.warn(`[CORS Blocked] Origin not allowed: ${origin}`);
+        callback(new Error(`Not allowed by CORS: ${origin}`));
       }
     },
     credentials: true,
