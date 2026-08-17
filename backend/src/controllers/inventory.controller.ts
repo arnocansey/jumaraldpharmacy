@@ -23,27 +23,56 @@ export async function getInventoryReport(req: any, res: Response) {
     const branchId = req.query.branchId as string | undefined;
     const lowStock = req.query.lowStock === "true";
 
-    const where: any = {};
-    if (branchId) where.branchId = branchId;
+    if (branchId) {
+      const inventory = await prisma.branchInventory.findMany({
+        where: { branchId },
+        include: {
+          product: { select: { id: true, name: true, sku: true, price: true, images: true, minStockAlert: true } },
+          branch: { select: { id: true, name: true } },
+        },
+        orderBy: { quantity: "asc" },
+      });
 
-    const inventory = await prisma.branchInventory.findMany({
-      where,
+      const filtered = lowStock ? inventory.filter((i) => i.quantity <= (i.product?.minStockAlert || 10)) : inventory;
+
+      const totalProducts = inventory.length;
+      const totalStock = inventory.reduce((sum, i) => sum + i.quantity, 0);
+      const lowStockCount = inventory.filter((i) => i.quantity <= (i.product?.minStockAlert || 10)).length;
+      const totalValue = inventory.reduce((sum, i) => sum + i.quantity * (i.product?.price || 0), 0);
+
+      return res.json({ inventory: filtered, summary: { totalProducts, totalStock, lowStockCount, totalValue } });
+    }
+
+    // Global Inventory view across master product catalog
+    const products = await prisma.product.findMany({
+      where: { isActive: true },
       include: {
-        product: { select: { id: true, name: true, sku: true, price: true, images: true, minStockAlert: true } },
-        branch: { select: { id: true, name: true } },
+        category: { select: { id: true, name: true } },
+        brand: { select: { id: true, name: true } },
       },
-      orderBy: { quantity: "asc" },
+      orderBy: { stockQuantity: "asc" },
     });
 
-    const filtered = lowStock ? inventory.filter((i) => i.quantity <= i.product.minStockAlert) : inventory;
+    const mappedInventory = products.map((p) => ({
+      id: p.id,
+      productId: p.id,
+      quantity: p.stockQuantity,
+      product: p,
+      branch: { id: "main", name: "Main Warehouse / Online Store" },
+    }));
 
-    const totalProducts = inventory.length;
-    const totalStock = inventory.reduce((sum, i) => sum + i.quantity, 0);
-    const lowStockCount = inventory.filter((i) => i.quantity <= i.product.minStockAlert).length;
-    const totalValue = inventory.reduce((sum, i) => sum + i.quantity * i.product.price, 0);
+    const filtered = lowStock ? mappedInventory.filter((i) => i.quantity <= (i.product.minStockAlert || 10)) : mappedInventory;
 
-    return res.json({ inventory: filtered, summary: { totalProducts, totalStock, lowStockCount, totalValue } });
-  } catch {
+    const totalProducts = products.length;
+    const totalStock = products.reduce((sum, p) => sum + (p.stockQuantity || 0), 0);
+    const lowStockCount = products.filter((p) => (p.stockQuantity || 0) <= (p.minStockAlert || 10)).length;
+    const totalValue = products.reduce((sum, p) => sum + (p.stockQuantity || 0) * (p.price || 0), 0);
+
+    return res.json({
+      inventory: filtered,
+      summary: { totalProducts, totalStock, lowStockCount, totalValue }
+    });
+  } catch (err: any) {
     return res.status(500).json({ message: "Failed to fetch inventory report" });
   }
 }
