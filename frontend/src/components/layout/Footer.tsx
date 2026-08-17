@@ -58,7 +58,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="h-4 w-4 text-emerald-400 shrink-0" />
-                <span>0 (303) 983-047 (Call)</span>
+                <span>+233 54 477 2483 / +233 30 200 4800 (Call)</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <MessageCircle className="h-4 w-4 text-emerald-400 shrink-0" />
@@ -66,11 +66,11 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="h-4 w-4 text-emerald-400 shrink-0" />
-                <span>Jumaraldpharmacy.com</span>
+                <span>care@jumaraldpharmacy.com</span>
               </li>
               <li className="flex items-center gap-2.5 text-xs text-emerald-400 font-semibold pt-1">
                 <Clock className="h-4 w-4 shrink-0" />
-                <span>24/7 Pharmacist Hotline Available</span>
+                <span>Pharmacist Support (Mon-Sun: 8:00 AM - 8:00 PM GMT)</span>
               </li>
             </ul>
           </div>

@@ -58,46 +58,12 @@ export const PHARMACY_CREDENTIALS = {
   email: "care@jumaraldpharmacy.com",
 };
 
-export const MOCK_DOCTORS: Doctor[] = [
-  {
-    id: "doc-1",
-    name: "Pharm. Philip Bruce-Tagoe",
-    specialty: "Superintendent Pharmacist & Medication Therapy Manager",
-    qualification: "PharmD, GPHC Reg. No. 2050984",
-    experience: "15 Years Clinical & Retail Pharmacy",
-    rating: 4.98,
-    consultFee: 150.00,
-    avatarUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80",
-    nextAvailable: "Today at 2:00 PM",
-  },
-  {
-    id: "doc-2",
-    name: "Dr. Kwabena Mensah, MD",
-    specialty: "Senior Clinical Pharmacologist & General Physician",
-    qualification: "MBChB (UGMS Accra), FWACP, MSc Clinical Therapeutics",
-    experience: "14 Years Clinical Practice",
-    rating: 4.9,
-    consultFee: 180.00,
-    avatarUrl: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=400&q=80",
-    nextAvailable: "Today at 3:30 PM",
-  },
-  {
-    id: "doc-3",
-    name: "Dr. Akosua Osei-Tutu, PharmD",
-    specialty: "Consultant Clinical Pharmacist & Diabetes Care Advisor",
-    qualification: "PharmD (KNUST Kumasi), Ghana College of Pharmacists",
-    experience: "10 Years Specialty Care",
-    rating: 4.95,
-    consultFee: 140.00,
-    avatarUrl: "https://images.unsplash.com/photo-1594824813566-78853479014a?w=400&q=80",
-    nextAvailable: "Tomorrow at 10:00 AM",
-  },
-];
+export const MOCK_DOCTORS: Doctor[] = [];
 
 export const MOCK_FAQS = [
   {
     question: "How do I upload and verify my doctor's prescription?",
-    answer: "You can easily upload your prescription by clicking 'Upload Prescription' in our header navigation. Snap a clear photo or upload a PDF. Superintendent Pharmacist Pharm. Philip Bruce-Tagoe and our team verify the prescription within 15–30 minutes.",
+    answer: "You can easily upload your prescription by clicking 'Upload Prescription' in our header navigation. Snap a clear photo or upload a PDF. Superintendent Pharmacist Pharm. Philip Bruce-Tagoe and our clinical team verify the prescription promptly during operating hours (typically within 1–2 hours).",
   },
   {
     question: "Is delivery fast and temperature-controlled across Ghana?",
@@ -105,7 +71,7 @@ export const MOCK_FAQS = [
   },
   {
     question: "Can I consult a qualified pharmacist or physician online?",
-    answer: "Absolutely. Our Telehealth Portal lets you book private video or chat consultations with registered Ghanaian physicians and pharmacists for dosage guidance and disease management.",
+    answer: "Absolutely. Our Telehealth Portal lets you connect directly with our Superintendent Pharmacist and licensed medical practitioners for medication guidance and disease management.",
   },
   {
     question: "Are all products certified by FDA Ghana?",

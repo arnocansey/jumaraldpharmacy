@@ -303,36 +303,58 @@ export default function HomePage() {
             <p className="text-slate-300 text-sm font-medium">Get virtual consultations, medical advice, and instant prescription issuance from your home.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {MOCK_DOCTORS.map((doctor) => (
-              <Card key={doctor.id} className="bg-slate-900/90 backdrop-blur-md border-slate-800 p-6 space-y-4 shadow-xl">
-                <div className="flex items-center gap-4">
-                  <Image src={doctor.avatarUrl} alt={doctor.name} width={64} height={64} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="h-16 w-16 rounded-full object-cover border-2 border-emerald-500" />
-                  <div>
-                    <h3 className="font-bold text-white text-base">{doctor.name}</h3>
-                    <p className="text-xs text-emerald-400 font-semibold">{doctor.specialty}</p>
-                    <p className="text-[11px] text-slate-400">{doctor.experience}</p>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
+            <Card className="bg-slate-900/90 backdrop-blur-md border-slate-800 p-6 space-y-4 shadow-xl">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xl border border-emerald-500/40">
+                  <Stethoscope className="h-7 w-7" />
                 </div>
-
-                <div className="pt-2 text-xs space-y-1.5 text-slate-300 border-t border-slate-800">
-                  <div className="flex justify-between">
-                    <span>Consultation Fee:</span>
-                    <span className="font-bold text-white">{formatCurrency(doctor.consultFee)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Next Slot:</span>
-                    <span className="text-emerald-400 font-medium">{doctor.nextAvailable}</span>
-                  </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">Pharm. Philip Bruce-Tagoe</h3>
+                  <p className="text-xs text-emerald-400 font-semibold">Superintendent Pharmacist & Clinical Manager</p>
+                  <p className="text-[11px] text-slate-400">GPHC Reg. No. 2050984 • 15+ Yrs Experience</p>
                 </div>
+              </div>
 
-                <Link href="/telehealth" className="block pt-2">
-                  <Button variant="primary" size="md" className="w-full bg-emerald-600 hover:bg-emerald-700 font-bold">
-                    <Stethoscope className="h-4 w-4" /> Book Appointment
-                  </Button>
-                </Link>
-              </Card>
-            ))}
+              <div className="pt-2 text-xs space-y-1.5 text-slate-300 border-t border-slate-800">
+                <div className="flex justify-between">
+                  <span>Consultation Channel:</span>
+                  <span className="font-bold text-emerald-400">WhatsApp & Phone Hotline</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Operating Hours:</span>
+                  <span className="text-slate-200 font-medium">Mon–Sun 8:00 AM – 8:00 PM</span>
+                </div>
+              </div>
+
+              <a
+                href="https://wa.me/233544772483?text=Hello%20Pharm.%20Philip%20Bruce-Tagoe,%20I%20have%20a%20medication%20question"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block pt-1"
+              >
+                <Button variant="primary" size="md" className="w-full bg-emerald-600 hover:bg-emerald-700 font-bold">
+                  <Stethoscope className="h-4 w-4" /> Consult Superintendent Pharmacist
+                </Button>
+              </a>
+            </Card>
+
+            <Card className="bg-slate-900/90 backdrop-blur-md border-slate-800 p-6 space-y-4 shadow-xl flex flex-col justify-between">
+              <div className="space-y-3">
+                <Badge variant="blue" className="bg-blue-600 text-white font-bold">Doctor Booking Portal</Badge>
+                <h3 className="font-bold text-white text-lg">Onboarding Specialist Physicians</h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  We are expanding our telehealth network with licensed Ghanaian general physicians and specialists. Access online prescription renewals and virtual appointments.
+                </p>
+              </div>
+
+              <Link href="/telehealth" className="block pt-2">
+                <Button variant="outline" size="md" className="w-full border-slate-700 text-slate-200 hover:bg-slate-800 font-bold">
+                  <span>Explore Telehealth Portal</span>
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              </Link>
+            </Card>
           </div>
         </div>
       </section>

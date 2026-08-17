@@ -305,6 +305,41 @@ export default function TelehealthPage() {
               <Loader2 className="h-7 w-7 text-emerald-600 animate-spin" />
               <p className="text-sm font-semibold text-slate-500">Loading available doctors...</p>
             </div>
+          ) : doctors.length === 0 ? (
+            <Card className="p-8 sm:p-12 text-center space-y-5 max-w-2xl mx-auto border-emerald-200 dark:border-emerald-900 bg-emerald-50/40 dark:bg-emerald-950/20">
+              <div className="h-16 w-16 mx-auto rounded-2xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 flex items-center justify-center">
+                <Stethoscope className="h-8 w-8" />
+              </div>
+              <div className="space-y-2">
+                <Badge variant="emerald" className="bg-emerald-600 text-white font-bold">
+                  Onboarding Licensed Practitioners
+                </Badge>
+                <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">
+                  Telehealth Doctor Booking Launching Soon
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-lg mx-auto">
+                  Our Telehealth portal is currently onboarding licensed Ghanaian physicians and specialist clinical pharmacologists. In the meantime, you can reach out directly to our Superintendent Pharmacist for immediate clinical advice and prescription consultation.
+                </p>
+              </div>
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a
+                  href="https://wa.me/233544772483?text=Hello%20Pharm.%20Philip%20Bruce-Tagoe,%20I%20need%20a%20clinical%20consultation"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-colors"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Contact Superintendent Pharmacist (WhatsApp)</span>
+                </a>
+                <a
+                  href="tel:+233544772483"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 font-bold text-sm transition-colors"
+                >
+                  <Phone className="h-4 w-4 text-emerald-600" />
+                  <span>Call +233 54 477 2483</span>
+                </a>
+              </div>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {doctors.map((doctor) => (

@@ -11,7 +11,7 @@ export default function FAQPage() {
   const faqs = [
     {
       q: "How does prescription upload and verification work?",
-      a: "Upload a clear photo or PDF of your doctor's prescription. Our licensed clinical pharmacists verify the authenticity, dosage, and drug interactions within 15–30 minutes before dispatching your order.",
+      a: "Upload a clear photo or PDF of your doctor's prescription. Our licensed clinical pharmacists verify the authenticity, dosage, and drug interactions promptly during operating hours (typically within 1–2 hours) before dispatching your order.",
     },
     {
       q: "How does Jumarald guarantee cold-chain storage for temperature-sensitive drugs?",
@@ -19,15 +19,15 @@ export default function FAQPage() {
     },
     {
       q: "Can I consult a doctor or pharmacist online?",
-      a: "Yes! You can book video consultations with our board-certified clinical pharmacologists and physicians under the Telehealth section.",
+      a: "Yes! You can connect with our superintendent pharmacist or licensed physicians under the Telehealth section.",
     },
     {
       q: "What payment methods are supported?",
-      a: "We support instant online payments via Paystack and Stripe (Debit/Credit Cards, Bank Transfer, Apple Pay) as well as Pay on Delivery for verified accounts.",
+      a: "We support instant online payments via Paystack (MTN MoMo, Vodafone Cash, AirtelTigo, Credit/Debit Cards) as well as Pay on Delivery for verified orders.",
     },
     {
-      q: "Are all medications NAFDAC certified?",
-      a: "100% yes. We source directly from licensed pharmaceutical manufacturers and authorized distributors with verifiable batch serial numbers.",
+      q: "Are all medications FDA Ghana certified?",
+      a: "100% yes. All pharmaceuticals and health products are sourced directly from licensed manufacturers registered with Food and Drugs Authority (FDA) Ghana.",
     },
   ];
 
