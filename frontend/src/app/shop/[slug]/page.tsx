@@ -133,6 +133,27 @@ export default function ProductDetailPage() {
   const [reviewsPage, setReviewsPage] = useState(1);
   const [reviewsHasMore, setReviewsHasMore] = useState(false);
 
+  // Write Review State
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [newRating, setNewRating] = useState(5);
+  const [newTitle, setNewTitle] = useState("");
+  const [newComment, setNewComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const fetchReviews = () => {
+    if (!product) return;
+    setReviewsLoading(true);
+    apiFetch<{ reviews: Review[]; hasMore: boolean }>(`/reviews/product/${product.id}?page=${reviewsPage}&limit=10`)
+      .then((data) => {
+        setReviews(data.reviews || []);
+        setReviewsHasMore(data.hasMore || false);
+        setReviewsLoading(false);
+      })
+      .catch(() => {
+        setReviewsLoading(false);
+      });
+  };
+
   useEffect(() => {
     if (!slug) return;
 
@@ -167,17 +188,39 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (!product || activeTab !== "reviews") return;
-    setReviewsLoading(true);
-    apiFetch<{ reviews: Review[]; hasMore: boolean }>(`/products/${product.id}/reviews?page=${reviewsPage}&limit=10`)
-      .then((data) => {
-        setReviews(data.reviews || []);
-        setReviewsHasMore(data.hasMore);
-        setReviewsLoading(false);
-      })
-      .catch(() => {
-        setReviewsLoading(false);
-      });
+    fetchReviews();
   }, [product, activeTab, reviewsPage]);
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!product) return;
+    if (!newComment.trim()) {
+      toast.error("Please enter a review comment.");
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      await apiFetch<any>("/reviews", {
+        method: "POST",
+        body: JSON.stringify({
+          productId: product.id,
+          rating: newRating,
+          title: newTitle,
+          comment: newComment,
+        }),
+      });
+      toast.success("Thank you! Your review has been published.");
+      setNewTitle("");
+      setNewComment("");
+      setShowReviewForm(false);
+      fetchReviews();
+      apiFetch<Product>(`/products/${slug}`).then(setProduct);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit review. Please ensure you are logged in.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   if (loading) return <ProductDetailSkeleton />;
   if (error || !product) return <ProductDetailError />;
@@ -444,11 +487,77 @@ export default function ProductDetailPage() {
 
           {activeTab === "reviews" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 text-sm font-semibold">
                   ⭐ {product.rating.toFixed(1)} out of 5 based on {product.reviewCount} verified reviews
                 </div>
+                <Button
+                  variant={showReviewForm ? "secondary" : "primary"}
+                  size="sm"
+                  onClick={() => setShowReviewForm(!showReviewForm)}
+                >
+                  {showReviewForm ? "Cancel Review" : "Write a Patient Review"}
+                </Button>
               </div>
+
+              {showReviewForm && (
+                <form
+                  onSubmit={handleSubmitReview}
+                  className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-4"
+                >
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-white">Share Your Experience</h4>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Your Rating</label>
+                    <div className="flex items-center gap-1 cursor-pointer">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setNewRating(s)}
+                          className="p-1 hover:scale-110 transition-transform"
+                        >
+                          <Star
+                            className={`h-6 w-6 ${
+                              s <= newRating ? "fill-amber-400 text-amber-400" : "text-slate-300"
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Review Title (Optional)</label>
+                    <input
+                      type="text"
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      placeholder="e.g. Effective relief & fast delivery"
+                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Review Comment *</label>
+                    <textarea
+                      rows={3}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Share details about effectiveness, dosage form, or customer experience..."
+                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    disabled={submittingReview || !newComment.trim()}
+                  >
+                    {submittingReview ? "Submitting Review..." : "Submit Review"}
+                  </Button>
+                </form>
+              )}
 
               {reviewsLoading ? (
                 <div className="space-y-3">

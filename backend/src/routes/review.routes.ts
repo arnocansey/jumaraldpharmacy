@@ -6,7 +6,7 @@ import { createAuditLog } from "../lib/audit";
 
 const router = Router();
 
-router.get("/product/:productId", async (req, res) => {
+const getProductReviews = async (req: any, res: any) => {
   try {
     const { productId } = req.params;
     const { page = "1", limit = "10" } = req.query;
@@ -15,15 +15,15 @@ router.get("/product/:productId", async (req, res) => {
 
     const [reviews, total, stats] = await Promise.all([
       prisma.review.findMany({
-        where: { productId, isVerified: true },
+        where: { productId },
         include: { user: { select: { id: true, name: true, avatarUrl: true } } },
         orderBy: { createdAt: "desc" },
         skip: (pageNum - 1) * limitNum,
         take: limitNum,
       }),
-      prisma.review.count({ where: { productId, isVerified: true } }),
+      prisma.review.count({ where: { productId } }),
       prisma.review.aggregate({
-        where: { productId, isVerified: true },
+        where: { productId },
         _avg: { rating: true },
         _count: { rating: true },
       }),
@@ -31,13 +31,14 @@ router.get("/product/:productId", async (req, res) => {
 
     const distribution = await prisma.review.groupBy({
       by: ["rating"],
-      where: { productId, isVerified: true },
+      where: { productId },
       _count: { rating: true },
       orderBy: { rating: "desc" },
     });
 
     res.json({
       reviews,
+      hasMore: pageNum * limitNum < total,
       pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
       stats: { averageRating: stats._avg.rating || 0, totalReviews: stats._count.rating },
       distribution: distribution.map((d) => ({ rating: d.rating, count: d._count.rating })),
@@ -45,7 +46,10 @@ router.get("/product/:productId", async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
-});
+};
+
+router.get("/product/:productId", getProductReviews);
+router.get("/:productId", getProductReviews);
 
 router.post("/", authenticateToken, async (req: any, res) => {
   try {
@@ -65,12 +69,12 @@ router.post("/", authenticateToken, async (req: any, res) => {
     }
 
     const review = await prisma.review.create({
-      data: { productId, userId: req.user.id, rating, title, comment },
+      data: { productId, userId: req.user.id, rating, title, comment, isVerified: true },
       include: { user: { select: { id: true, name: true, avatarUrl: true } } },
     });
 
     const agg = await prisma.review.aggregate({
-      where: { productId, isVerified: true },
+      where: { productId },
       _avg: { rating: true },
       _count: { rating: true },
     });
