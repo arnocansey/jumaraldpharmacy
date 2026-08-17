@@ -76,7 +76,16 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-slate-800 text-center text-xs text-slate-500 space-y-1">
+        <div className="mt-12 pt-8 border-t border-slate-800 text-center text-xs text-slate-500 space-y-3">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-slate-400">
+            <Link href="/acceptable-use" className="hover:text-emerald-400 transition-colors">Acceptable Use Policy</Link>
+            <span>•</span>
+            <Link href="/terms" className="hover:text-emerald-400 transition-colors">Terms of Service</Link>
+            <span>•</span>
+            <Link href="/privacy" className="hover:text-emerald-400 transition-colors">Privacy Policy</Link>
+            <span>•</span>
+            <Link href="/faq" className="hover:text-emerald-400 transition-colors">Help & FAQ</Link>
+          </div>
           <p>© {new Date().getFullYear()} Jumarald Pharmacy & Wellness Ltd. All rights reserved.</p>
           <p className="text-slate-600">Superintendent Pharmacist: Pharm. Philip Bruce-Tagoe (RC Pharm | GPHC Reg. No. 2050984)</p>
         </div>

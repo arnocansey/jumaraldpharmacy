@@ -436,6 +436,10 @@ export function AIAssistantWidget() {
                     <Send className="h-4 w-4" />
                   </button>
                 </div>
+                <div className="px-3 py-1 bg-slate-50 dark:bg-slate-950 border-t border-slate-200/60 dark:border-slate-800 text-[10px] text-slate-400 text-center flex items-center justify-between">
+                  <span>Dr. Jumarald AI provides clinical guidance, not ER diagnosis.</span>
+                  <Link href="/acceptable-use" className="underline hover:text-emerald-500">AUP & Terms</Link>
+                </div>
               </div>
             )}
 

@@ -630,6 +630,25 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
+                <div className="flex items-start gap-2.5 py-2 text-xs text-slate-600 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    id="termsAgreement"
+                    defaultChecked
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="termsAgreement">
+                    I agree to the{" "}
+                    <Link href="/terms" target="_blank" className="text-emerald-600 dark:text-emerald-400 font-semibold underline">
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link href="/acceptable-use" target="_blank" className="text-emerald-600 dark:text-emerald-400 font-semibold underline">
+                      Acceptable Use Policy
+                    </Link>.
+                  </label>
+                </div>
+
                 <div className="flex gap-3">
                   <Button variant="outline" size="md" onClick={() => setStep("address")}>
                     ← Back
