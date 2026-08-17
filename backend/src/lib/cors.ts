@@ -34,10 +34,10 @@ export function isOriginAllowed(origin: string | undefined): boolean {
     return true;
   }
 
-  // Match Vercel preview/production deployments, Render subdomains, and custom domains
+  // Match Jumarald specific Vercel preview/production deployments and custom domains
   if (
-    /\.vercel\.app$/.test(cleanOrigin) ||
-    /\.onrender\.com$/.test(cleanOrigin) ||
+    /^https:\/\/(www\.)?jumarald.*\.vercel\.app$/.test(cleanOrigin) ||
+    /^https:\/\/jumarald.*\.onrender\.com$/.test(cleanOrigin) ||
     /\.jumaraldpharmacy\.com$/.test(cleanOrigin)
   ) {
     return true;

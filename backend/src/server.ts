@@ -88,6 +88,22 @@ const searchLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const aiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 20,
+  message: { message: "AI assistant rate limit reached. Please wait a moment." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const prescriptionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { message: "Prescription upload rate limit reached." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 120,
@@ -102,7 +118,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/v1/auth", authLimiter, authRoutes);
 app.use("/api/v1/products", productRoutes);
-app.use("/api/v1/prescriptions", prescriptionRoutes);
+app.use("/api/v1/prescriptions", prescriptionLimiter, prescriptionRoutes);
 app.use("/api/v1/orders", apiLimiter, orderRoutes);
 app.use("/api/v1/consultations", consultationRoutes);
 app.use("/api/v1/analytics", analyticsRoutes);
@@ -126,15 +142,17 @@ app.use("/api/v1/newsletter", newsletterRoutes);
 app.use("/api/v1/settings", settingRoutes);
 app.use("/api/v1/backups", backupRoutes);
 app.use("/api/v1/users", userRoutes);
-app.use("/api/v1/ai", aiRoutes);
+app.use("/api/v1/ai", aiLimiter, aiRoutes);
 
 setupSwagger(app);
 
-app.get("/debug-sentry", (_req, res) => {
-  Sentry.logger.info("User triggered test error", { action: "test_error_endpoint" });
-  Sentry.metrics.count("test_counter", 1);
-  throw new Error("Sentry test error!");
-});
+if (process.env.NODE_ENV !== "production") {
+  app.get("/debug-sentry", (_req, res) => {
+    Sentry.logger.info("User triggered test error", { action: "test_error_endpoint" });
+    Sentry.metrics.count("test_counter", 1);
+    throw new Error("Sentry test error!");
+  });
+}
 
 Sentry.setupExpressErrorHandler(app);
 
