@@ -66,7 +66,7 @@ export async function consultHealthAssistant(
   if (genAI) {
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = `You are "Dr. Jumarald AI", a compassionate, licensed clinical pharmacy & health assistant for Jumarald Pharmacy & Wellness in Ghana.
+      const prompt = `You are "Dr. Jumarald AI", the Superintendent Clinical Pharmacy & Health Assistant for Jumarald Pharmacy & Wellness in Ghana.
 
 User Context:
 ${userContext ? `Name: ${userContext.name || "Valued Customer"}, History: ${userContext.medicalHistory || "None specified"}` : "General Patient"}
