@@ -73,14 +73,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     url: "https://jumaraldpharmacy.com",
     logo: "https://jumaraldpharmacy.com/jumaraldlogo.png",
     image: "https://jumaraldpharmacy.com/jumaraldlogo.png",
-    telephone: "+233 054-477-2483",
+    telephone: "+233 54 477 2483",
     address: {
       "@type": "PostalAddress",
-      streetAddress: "Prampram",
-      addressLocality: "Greater Accra",
+      streetAddress: "Boundary Road, East Legon / Prampram",
+      addressLocality: "Accra",
       addressCountry: "GH",
     },
-    openingHours: "Mo-Su 09:00-17:00",
+    openingHours: "Mo-Su 08:00-20:00",
   };
 
   return (
