@@ -41,7 +41,7 @@ interface CouponData {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotalAmount, clearCart } = useCartStore();
+  const { items, subtotalAmount, clearCart, requiresPrescription } = useCartStore();
   const [step, setStep] = useState<"address" | "payment" | "confirmed">("address");
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"momo" | "card">("momo");
@@ -642,12 +642,31 @@ export default function CheckoutPage() {
               <Package className="h-4 w-4 text-emerald-600" /> Order Summary ({items.length} item{items.length !== 1 ? "s" : ""})
             </h3>
 
+            {requiresPrescription && (
+              <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-1">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-200">
+                  <ShieldCheck className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Prescription Verification Notice</span>
+                </div>
+                <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                  Your cart contains prescription-only medication. Our Superintendent Pharmacist (Pharm. Philip Bruce-Tagoe, GPHC Reg. No. 2050984) will review your prescription prior to delivery dispatch.
+                </p>
+              </div>
+            )}
+
             {/* Line items */}
             <div className="space-y-2.5 max-h-60 overflow-y-auto">
               {items.map(({ product, quantity }) => (
                 <div key={product.id} className="flex justify-between items-start gap-3 text-xs">
                   <div className="flex-1 min-w-0">
-                    <p className="text-slate-700 dark:text-slate-300 font-medium truncate">{product.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-slate-700 dark:text-slate-300 font-medium truncate">{product.name}</p>
+                      {product.requiresPrescription && (
+                        <Badge variant="amber" className="text-[9px] px-1 py-0 font-bold shrink-0">
+                          Rx Required
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-slate-400 text-[11px]">{formatCurrency(product.price)} × {quantity}</p>
                   </div>
                   <span className="font-bold text-slate-900 dark:text-white whitespace-nowrap">{formatCurrency(product.price * quantity)}</span>
