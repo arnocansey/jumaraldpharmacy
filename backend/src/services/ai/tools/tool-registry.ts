@@ -10,30 +10,52 @@ export interface AIToolDefinition<TInput = any, TOutput = any> {
 
 export const searchProductsTool: AIToolDefinition = {
   name: "searchProducts",
-  description: "Search for in-stock medications, OTC remedies, vitamins, and personal care products at Jumarald Pharmacy.",
+  description: "Search for medications, OTC remedies, health products, and supplements at Jumarald Pharmacy.",
   inputSchema: z.object({
-    query: z.string().min(1),
+    query: z.string().optional(),
     maxPrice: z.number().optional(),
     category: z.string().optional(),
   }),
-  execute: async ({ query, maxPrice, category }) => {
-    const where: any = { isActive: true, stockQuantity: { gt: 0 } };
-    if (query) {
-      where.OR = [
-        { name: { contains: query, mode: "insensitive" } },
-        { description: { contains: query, mode: "insensitive" } },
-        { activeIngredients: { contains: query, mode: "insensitive" } },
-      ];
-    }
-    if (maxPrice) {
-      where.price = { lte: maxPrice };
-    }
-    if (category) {
-      where.category = { name: { contains: category, mode: "insensitive" } };
-    }
+  execute: async ({ query = "", maxPrice, category }) => {
+    const cleanedQuery = query
+      .replace(/^(do you have|can i get|i want|i need|looking for|buy|search for|show me|is there|any)\s+/i, "")
+      .replace(/\s+(available|in stock|here|please)\??$/i, "")
+      .trim();
 
-    const products = await prisma.product.findMany({
-      where,
+    const buildWhereClause = (catFilter?: string) => {
+      const where: any = { isActive: true };
+
+      if (cleanedQuery) {
+        const terms = cleanedQuery.split(/\s+/).filter((t: string) => t.length > 2);
+        const searchOR: any[] = [
+          { name: { contains: cleanedQuery, mode: "insensitive" } },
+          { description: { contains: cleanedQuery, mode: "insensitive" } },
+          { activeIngredients: { contains: cleanedQuery, mode: "insensitive" } },
+          { category: { name: { contains: cleanedQuery, mode: "insensitive" } } },
+          { brand: { name: { contains: cleanedQuery, mode: "insensitive" } } },
+        ];
+
+        terms.forEach((term: string) => {
+          searchOR.push({ name: { contains: term, mode: "insensitive" } });
+          searchOR.push({ activeIngredients: { contains: term, mode: "insensitive" } });
+        });
+
+        where.OR = searchOR;
+      }
+
+      if (maxPrice) {
+        where.price = { lte: maxPrice };
+      }
+
+      if (catFilter) {
+        where.category = { name: { contains: catFilter, mode: "insensitive" } };
+      }
+
+      return where;
+    };
+
+    let products = await prisma.product.findMany({
+      where: buildWhereClause(category),
       select: {
         id: true,
         name: true,
@@ -44,8 +66,51 @@ export const searchProductsTool: AIToolDefinition = {
         category: { select: { name: true } },
         description: true,
       },
-      take: 6,
+      take: 8,
     });
+
+    if (products.length === 0 && category) {
+      products = await prisma.product.findMany({
+        where: buildWhereClause(undefined),
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          price: true,
+          stockQuantity: true,
+          requiresPrescription: true,
+          category: { select: { name: true } },
+          description: true,
+        },
+        take: 8,
+      });
+    }
+
+    if (products.length === 0 && cleanedQuery) {
+      const firstWord = cleanedQuery.split(/\s+/)[0];
+      if (firstWord && firstWord.length > 2 && firstWord !== cleanedQuery) {
+        products = await prisma.product.findMany({
+          where: {
+            isActive: true,
+            OR: [
+              { name: { contains: firstWord, mode: "insensitive" } },
+              { activeIngredients: { contains: firstWord, mode: "insensitive" } },
+            ],
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            price: true,
+            stockQuantity: true,
+            requiresPrescription: true,
+            category: { select: { name: true } },
+            description: true,
+          },
+          take: 8,
+        });
+      }
+    }
 
     return {
       count: products.length,
@@ -55,8 +120,9 @@ export const searchProductsTool: AIToolDefinition = {
         slug: p.slug,
         price: p.price,
         inStock: p.stockQuantity > 0,
+        stockQuantity: p.stockQuantity,
         requiresPrescription: p.requiresPrescription,
-        category: p.category?.name || "General Pharmacy",
+        category: p.category?.name || "Uncategorized",
         summary: p.description?.slice(0, 100) || "",
       })),
     };

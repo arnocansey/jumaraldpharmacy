@@ -184,7 +184,11 @@ export class AIOrchestrator {
           let toolInput: any = {};
 
           if (tool.name === "searchProducts") {
-            toolInput = { query: userMessage };
+            const cleaned = userMessage
+              .replace(/^(do you have|can i get|i want|i need|looking for|buy|search for|show me|is there|any)\s+/i, "")
+              .replace(/\s+(available|in stock|here|please)\??$/i, "")
+              .trim();
+            toolInput = { query: cleaned || userMessage };
           } else if (tool.name === "checkDrugInteraction") {
             const words = userMessage.split(/[, and&]+/).filter((w) => w.length > 2);
             toolInput = { drugs: words.length >= 2 ? words : ["Paracetamol", "Ibuprofen"] };
