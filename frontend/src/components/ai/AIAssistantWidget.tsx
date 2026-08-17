@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { toast } from "sonner";
 import { usePathname } from "next/navigation";
+import { cleanAIMessageText } from "@/lib/utils";
 
 interface Message {
   id: string;
@@ -337,7 +338,7 @@ export function AIAssistantWidget() {
                             : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-xs border border-slate-200 dark:border-slate-700 shadow-xs"
                         }`}
                       >
-                        <p className="whitespace-pre-line leading-relaxed">{m.text}</p>
+                        <p className="whitespace-pre-line leading-relaxed">{cleanAIMessageText(m.text)}</p>
 
                         {/* Emergency Warning Badge */}
                         {m.triage?.emergencyWarning && (

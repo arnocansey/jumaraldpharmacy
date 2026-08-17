@@ -237,9 +237,10 @@ ${executedTools.length > 0 ? JSON.stringify(executedTools, null, 2) : "No tool e
 
 Guidelines:
 1. Be helpful, clear, empathetic, and professional.
-2. If tool data returned products, mention them with prices in GHS.
-3. Include brief safety precautions where appropriate.
-4. Keep responses concise and structured with bullet points.`;
+2. Format output cleanly in plain readable text. DO NOT use markdown headers (such as ## or ###), hash characters, or raw markdown syntax.
+3. Use simple bullet points (•) or numbered lists for recommendations.
+4. If tool data returned products, mention them with prices in GHS.
+5. Include brief safety precautions where appropriate.`;
 
     const response = await this.provider.generateText(formattedHistory, {
       systemPrompt,

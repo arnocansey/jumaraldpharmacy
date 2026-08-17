@@ -17,6 +17,7 @@ import { API_URL } from "@/lib/api";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useCartStore } from "@/store/useCartStore";
+import { cleanAIMessageText } from "@/lib/utils";
 
 interface ToolResult {
   name: string;
@@ -264,7 +265,7 @@ export default function AIAssistantPage() {
                   </div>
                 )}
 
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                <div className="whitespace-pre-wrap">{cleanAIMessageText(msg.content)}</div>
 
                 {/* Executed Tools Cards (e.g. Products / Orders) */}
                 {msg.executedTools && msg.executedTools.length > 0 && (

@@ -14,3 +14,14 @@ export function formatCurrency(amount: number | string | undefined | null): stri
     minimumFractionDigits: 2,
   }).format(safeVal);
 }
+
+export function cleanAIMessageText(text: string | undefined | null): string {
+  if (!text) return "";
+  return text
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/^[\*-]\s+/gm, "• ")
+    .replace(/```[\s\S]*?```/g, "")
+    .trim();
+}
