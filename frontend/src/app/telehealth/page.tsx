@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
-import { MOCK_DOCTORS } from "@/lib/mockData";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
@@ -96,9 +95,9 @@ export default function TelehealthPage() {
         nextAvailable: "Available",
         email: d.user.email,
       }));
-      setDoctors(mapped.length > 0 ? mapped : MOCK_DOCTORS);
+      setDoctors(mapped);
     } catch {
-      setDoctors(MOCK_DOCTORS);
+      setDoctors([]);
     } finally {
       setLoadingDoctors(false);
     }

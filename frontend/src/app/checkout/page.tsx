@@ -46,7 +46,7 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"momo" | "card">("momo");
   const [momoNetwork, setMomoNetwork] = useState<"mtn" | "telecel" | "at">("mtn");
-  const [momoNumber, setMomoNumber] = useState("+233 24 123 4567");
+  const [momoNumber, setMomoNumber] = useState("");
   const [deliveryOption, setDeliveryOption] = useState<"delivery" | "pickup">("delivery");
   const [confirmedOrderNumber, setConfirmedOrderNumber] = useState<string>("");
 
@@ -54,12 +54,27 @@ export default function CheckoutPage() {
 
   // Address state
   const [address, setAddress] = useState({
-    fullName: "Kofi Owusu",
-    phone: "+233 24 123 4567",
-    street: "24 Boundary Road, East Legon",
-    city: "Accra",
+    fullName: "",
+    phone: "",
+    street: "",
+    city: "",
     region: "Greater Accra Region",
   });
+
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem("jumarald_user");
+      if (stored) {
+        const u = JSON.parse(stored);
+        setAddress((prev) => ({
+          ...prev,
+          fullName: u.name || prev.fullName,
+          phone: u.phone || prev.phone,
+        }));
+        if (u.phone) setMomoNumber(u.phone);
+      }
+    } catch {}
+  }, []);
 
   // Coupon state
   const [couponCode, setCouponCode] = useState("");

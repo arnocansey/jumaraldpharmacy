@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-import { MOCK_DOCTORS, MOCK_FAQS } from "@/lib/mockData";
+import { MOCK_FAQS } from "@/lib/mockData";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore, CartProduct } from "@/store/useCartStore";
 import { toast } from "sonner";

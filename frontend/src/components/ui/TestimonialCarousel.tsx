@@ -4,32 +4,41 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, ChevronLeft, ChevronRight, Quote } from "lucide-react";
 
-const TESTIMONIALS = [
-  { id: 1, name: "Ama Mensah", role: "Loyal Customer", content: "Jumarald Pharmacy has been my go-to for all health needs. Their delivery is fast and the pharmacists are always helpful and professional.", rating: 5 },
-  { id: 2, name: "Kofi Asante", role: "Business Owner", content: "The online ordering system is incredibly convenient. I can order my monthly prescriptions and they arrive within hours. Highly recommend!", rating: 5 },
-  { id: 3, name: "Efua Boateng", role: "Mother of Three", content: "Having a reliable pharmacy that delivers to my doorstep is a lifesaver. The telehealth consultation feature is amazing for my family's needs.", rating: 5 },
-  { id: 4, name: "Dr. Kwame Nkrumah", role: "Healthcare Professional", content: "As a doctor, I appreciate the quality of medications and the professional service Jumarald provides to my patients.", rating: 5 },
-  { id: 5, name: "Abena Osei", role: "Student", content: "Affordable prices and genuine products. The loyalty program rewards are fantastic - I've saved so much on my health purchases.", rating: 4 },
-];
+interface TestimonialItem {
+  id: number | string;
+  name: string;
+  role: string;
+  content: string;
+  rating: number;
+}
+
+const TESTIMONIALS: TestimonialItem[] = [];
 
 export function TestimonialCarousel() {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(0);
 
   const next = useCallback(() => {
+    if (TESTIMONIALS.length === 0) return;
     setDirection(1);
     setCurrent((c) => (c + 1) % TESTIMONIALS.length);
   }, []);
 
   const prev = useCallback(() => {
+    if (TESTIMONIALS.length === 0) return;
     setDirection(-1);
     setCurrent((c) => (c - 1 + TESTIMONIALS.length) % TESTIMONIALS.length);
   }, []);
 
   useEffect(() => {
+    if (TESTIMONIALS.length === 0) return;
     const timer = setInterval(next, 5000);
     return () => clearInterval(timer);
   }, [next]);
+
+  if (TESTIMONIALS.length === 0) {
+    return null;
+  }
 
   const t = TESTIMONIALS[current];
 

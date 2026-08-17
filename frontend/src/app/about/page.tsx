@@ -19,7 +19,7 @@ export default function AboutPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6 text-center space-y-3">
           <ShieldCheck className="h-10 w-10 text-brand-600 mx-auto" />
-          <h3 className="font-bold text-slate-900 dark:text-white">100% NAFDAC Verification</h3>
+          <h3 className="font-bold text-slate-900 dark:text-white">100% FDA Ghana Verification</h3>
           <p className="text-xs text-slate-500">Every drug is sourced directly from licensed global manufacturers with batch serial numbers.</p>
         </Card>
         <Card className="p-6 text-center space-y-3">
@@ -30,7 +30,7 @@ export default function AboutPage() {
         <Card className="p-6 text-center space-y-3">
           <Award className="h-10 w-10 text-brand-600 mx-auto" />
           <h3 className="font-bold text-slate-900 dark:text-white">Licensed Pharmacists</h3>
-          <p className="text-xs text-slate-500">Board-certified clinical pharmacists review all prescription uploads around the clock.</p>
+          <p className="text-xs text-slate-500">Board-certified clinical pharmacists review all prescription uploads promptly during operating hours.</p>
         </Card>
       </div>
     </div>
