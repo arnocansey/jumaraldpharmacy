@@ -30,7 +30,7 @@ md_content = """# Jumarald Pharmacy & Wellness — Comprehensive Technical & Ope
 
 ## 1. Executive Summary
 
-**Jumarald Pharmacy & Wellness** is a premier digital health and pharmaceutical web application designed for Greater Accra and nationwide Ghana. The platform integrates e-commerce medicine ordering, prescription submission and verification workflows, telehealth doctor consultations, multi-branch inventory tracking, and an intelligent **Superintendent Clinical AI Assistant ("Dr. Jumarald AI")**.
+**Jumarald Pharmacy & Wellness** is a premier digital health and pharmaceutical enterprise application designed for Greater Accra and nationwide Ghana. The platform integrates e-commerce medicine ordering, prescription submission and verification workflows, telehealth doctor consultations, multi-branch inventory tracking, and an intelligent **Superintendent Clinical AI Assistant ("Dr. Jumarald AI")**.
 
 The platform is engineered with modern web standards, prioritizing high visual aesthetics, strict data confidentiality, transaction integrity, automated safety fallbacks, and compliance with Ghanaian healthcare regulations.
 
@@ -52,54 +52,85 @@ The solution is architected as a high-performance monorepo workspace:
 
 ---
 
-## 3. Core Subsystems & Capabilities
+## 3. Superintendent AI Assistant Architecture ("Dr. Jumarald AI")
 
-### 3.1 Superintendent AI Assistant ("Dr. Jumarald AI")
-* **Orchestration Layer (`AIOrchestrator`)**: Classifies patient intent into distinct operational states (`PRODUCT_SEARCH`, `DRUG_INTERACTION`, `PRESCRIPTION_ANALYSIS`, `BRANCH_INQUIRY`, `SYMPTOM_TRIAGE`, `GENERAL_CONSULTATION`).
-* **Tool Execution Registry**:
-  * `searchProducts`: Multi-keyword search across master catalog returning live pricing in GH₵ and stock availability.
-  * `getProductDetails`: Detailed dosage, active ingredients, and indications.
-  * `checkDrugInteraction`: Multi-medication pharmacological safety contraindication analysis.
-  * `findNearbyBranches`: Operating hours, contact numbers, and pickup location details.
-  * `getUserOrders`: Authenticated patient order status tracking.
-  * `createPharmacistConsultation`: Escalates high-risk cases directly to the human Superintendent Pharmacist queue (`AIEscalation`).
-* **Rule-Based Fallback Engine (`fallbackClinicalEngine`)**: Ensures zero downtime if AI model APIs experience latency or rate limiting. Automatically flags emergency symptoms (chest pain, dyspnea) with immediate Ghana emergency warnings (112 / 193).
+The **Dr. Jumarald AI** subsystem functions as a virtual clinical pharmacy assistant operating under the core guiding principle: *"AI assists. Licensed Pharmacists decide."*
 
-### 3.2 Review & Rating Verification System
-* **Auto-Verification Flow**: Authenticated patient reviews auto-verify upon submission, recalculating the target product's average rating score and review count in real time.
-* **Interactive UI**: Modal interface on product detail pages (`/shop/[slug]`) allowing patients to submit star ratings and detailed feedback.
+### 3.1 Dual-Provider Orchestration Engine
+* **Provider Factory (`getAIProvider`)**: Dynamically selects between **OpenAI GPT-4o-mini** and **Google Gemini 1.5 Flash** based on configured API keys, providing automatic failover.
+* **Intent Classification Pipeline (`AIOrchestrator`)**:
+  1. `PRODUCT_SEARCH`: Multi-keyword search across master catalog with live pricing in GH₵ and stock validation.
+  2. `DRUG_INTERACTION`: Pharmacological contraindication analysis across active ingredients.
+  3. `PRESCRIPTION_ANALYSIS`: Decodes prescription shorthand (`TDS`, `BD`, `PRN`), dosage, frequency, and precautions.
+  4. `BRANCH_INQUIRY`: Returns operating hours, contact numbers, and branch pickup availability.
+  5. `SYMPTOM_TRIAGE`: Evaluates severity (`LOW`, `MODERATE`, `HIGH`, `URGENT`) and suggests doctor consultation.
+  6. `GENERAL_CONSULTATION`: Plain-text empathetic clinical guidance sanitized of raw markdown headers (`##`/`###`).
 
-### 3.3 Inventory & Multi-Branch Management
-* **Global Product Catalog vs Branch Inventories**: Resolved global reporting by querying the master `Product` database when no specific branch filter is selected, preventing 0-count KPI errors.
-* **Audit Logging**: All stock adjustments, branch transfers, bulk updates, and review approvals are recorded in the `AuditLog` table with timestamped user attribution.
+### 3.2 Tool Execution Registry (`tool-registry.ts`)
+* `searchProducts`: Multi-keyword catalog query returning live prices in GH₵ and availability.
+* `getProductDetails`: Retrieves active ingredients, dosage guidance, and therapeutic indications.
+* `checkDrugInteraction`: Multi-medication pharmacological contraindication analysis.
+* `findNearbyBranches`: Returns branch physical addresses, phone numbers, and operating hours.
+* `getUserOrders`: Authenticated patient order status tracking.
+* `createPharmacistConsultation`: Escalates high-risk cases directly to the Superintendent Pharmacist queue (`AIEscalation`).
 
----
-
-## 4. Security & Compliance Architecture (CIA Triad)
-
-### 4.1 Confidentiality
-* **Authentication & RBAC**: Session security via JWT tokens. Access to sensitive routes (`/api/v1/admin/*`, `/api/v1/inventory/*`) restricted by `requireRole([SUPER_ADMIN, ADMIN, PHARMACIST])`.
-* **Database User Verification**: `authenticateToken` validates `isActive` user status directly against PostgreSQL, revoking access immediately upon account deactivation.
-* **Prescription Privacy**: Encrypted uploads and secure memory buffers prevent unauthorized file exposure.
-
-### 4.2 Integrity
-* **ACID Transactions**: Financial operations and inventory decrements use `prisma.$transaction`.
-* **Paystack Webhook Verification**: HMAC SHA-512 signature validation ensures incoming payment events originate from Paystack servers.
-* **Strict Input Validation**: All incoming requests sanitized using `Zod` schemas.
-
-### 4.3 Availability & Resilience
-* **Rate Limiting Protection**: Dedicated rate limiters applied across sensitive endpoints:
-  * `authLimiter`: 20 attempts / 15 minutes
-  * `aiLimiter`: 20 requests / minute
-  * `prescriptionLimiter`: 30 requests / 15 minutes
-  * `apiLimiter`: 120 requests / minute
-* **Strict CORS Whitelisting**: Restricted explicitly to Jumarald production domains (`jumarald*.vercel.app`, `jumaraldpharmacy.com`).
+### 3.3 High-Reliability Clinical Fallback Engine (`fallbackClinicalEngine`)
+* Zero-downtime protection ensuring that if third-party AI APIs experience latency or rate-limiting, the system automatically switches to an internal rule-based triage engine.
+* Flags emergency symptoms (chest pain, acute shortness of breath) with immediate Ghana emergency warnings (**112 / 193**).
 
 ---
 
-## 5. Regulatory & Legal Policies
+## 4. Comprehensive Security & CIA Triad Audit
 
-The application incorporates dedicated compliance pages accessible via the global site footer and checkout flow:
+### 4.1 Confidentiality Audit
+* **Role-Based Access Control (RBAC)**: Enforced via `requireRole` middleware across sensitive routes (`SUPER_ADMIN`, `ADMIN`, `PHARMACIST`, `DOCTOR`, `PATIENT`).
+* **Active User Database Verification**: `authenticateToken` middleware queries `prisma.user` on every request. Deactivated accounts return `403 Account disabled or session revoked`, invalidating active JWTs instantly.
+* **Password Encryption**: Hashed using `bcrypt` (10-12 salt rounds). Raw passwords are never persisted or logged.
+* **Prescription Data Privacy**: Prescriptions uploaded via memory buffers and encrypted Cloudinary streams with randomized public IDs.
+
+### 4.2 Integrity Audit
+* **ACID Transactions**: Multi-step inventory adjustments, order fulfillment, and loyalty point redemptions use `prisma.$transaction`.
+* **Paystack HMAC SHA-512 Verification**: Paystack webhooks validate `x-paystack-signature` using HMAC SHA-512 before updating order statuses to `PAID`.
+* **Strict Input Validation**: Endpoints process incoming data strictly validated against Zod schemas.
+* **Audit Trail**: Administrative actions (stock transfers, bulk product edits, review approvals) recorded in the `AuditLog` table with user attribution and timestamps.
+
+### 4.3 Availability Audit
+* **Resource Rate Limiting**:
+  * `authLimiter`: 20 login/register attempts per 15 minutes
+  * `aiLimiter`: 20 requests per minute
+  * `prescriptionLimiter`: 30 uploads per 15 minutes
+  * `apiLimiter`: 120 general requests per minute
+* **Strict Domain CORS**: Allowed origins restricted to Jumarald production subdomains (`jumarald*.vercel.app`, `jumaraldpharmacy.com`).
+* **WebSocket Real-time Updates**: Real-time inventory sync and order status updates via Socket.io with auto-reconnection (`useSocketAutoInvalidate`).
+
+---
+
+## 5. Integrated External APIs & Services
+
+| Provider / API | Purpose / Integration Point | Auth / Protocol |
+| :--- | :--- | :--- |
+| **Paystack Payment API** | Ghana Mobile Money (MTN MoMo, Telecel Cash, AT Money) & Card checkout in GH₵ | Bearer API Key & Webhook HMAC SHA-512 |
+| **OpenAI API (GPT-4o-mini)** | Primary LLM engine for structured JSON tool execution & interaction analysis | Bearer API Key (`OPENAI_API_KEY`) |
+| **Google Gemini API (1.5 Flash)** | Secondary LLM engine for clinical consultation & RAG knowledge search | API Key (`GEMINI_API_KEY`) |
+| **Cloudinary Cloud CDN** | Encrypted prescription upload storage & product image optimization CDN | Cloud API Secret & Signed SDK Streams |
+| **Nodemailer / SMTP API** | Transactional emails for order receipts, prescription verification, & password resets | TLS/SSL Authenticated SMTP |
+| **WebPush API / VAPID Keys** | Real-time browser push notifications for rider tracking & restocking alerts | VAPID Key Pair Protocol |
+| **Sentry Telemetry API** | Backend exception logging, performance monitoring, & error tracing | Sentry DSN & Node SDK |
+
+---
+
+## 6. Strategic Future Upgrades & Planned Purchases
+
+1. **Twilio / Hubtel SMS Gateway API (Paid Enterprise Service)**: Direct SMS notifications for Ghanaian mobile numbers (instant OTP login codes, prescription status alerts, rider ETA updates).
+2. **Upstash Redis / Dedicated Redis Cluster (Paid Subscription)**: Distributed in-memory session caching, high-performance rate limiting, and real-time Socket.io pub/sub state synchronization.
+3. **AWS S3 / Cloudflare R2 Encrypted Health Vault (Paid Cloud Storage)**: Long-term HIPAA and Ghana Data Protection Act (Act 843) compliant encrypted prescription archiving.
+4. **RxNorm / NLM Clinical Drug Interaction API (Enterprise License)**: Integration with international standardized pharmaceutical registries for automated contraindication scanning.
+5. **IdentityPass / Ghana Card National ID Verification API (Paid Service)**: Automated identity validation for patient onboarding and doctor medical license validation.
+6. **Google Maps Platform API (Paid Geocoding & Route Optimization)**: Exact delivery distance calculation, rider geolocation tracking, and dynamic delivery fee computation.
+
+---
+
+## 7. Regulatory & Legal Policies
 
 1. **Acceptable Use Policy (`/acceptable-use`)**: Covers prescription fraud prevention, AI interaction rules, prohibited scraping, and account revocation rules.
 2. **Terms of Service (`/terms`)**: Details Prescription-Only Medicine (POM) verification protocols, cold-chain transport regulations, non-returnable drug rules, and emergency medical disclaimers.
@@ -107,7 +138,7 @@ The application incorporates dedicated compliance pages accessible via the globa
 
 ---
 
-## 6. Deployment & Maintenance
+## 8. Deployment & Maintenance
 
 ### Environment Variables (.env)
 ```env
@@ -154,7 +185,6 @@ print("Generated docs/DOCUMENTATION.md successfully.")
 def create_docx():
     doc = Document()
     
-    # Page setup - 1 inch margins
     sections = doc.sections
     for s in sections:
         s.top_margin = Inches(1)
@@ -162,18 +192,15 @@ def create_docx():
         s.left_margin = Inches(1)
         s.right_margin = Inches(1)
 
-    # Styling Palette
     EMERALD = RGBColor(16, 185, 129)
     DARK_SLATE = RGBColor(15, 23, 42)
     GRAY = RGBColor(71, 85, 105)
 
-    # Styles
     style_normal = doc.styles['Normal']
     style_normal.font.name = 'Calibri'
     style_normal.font.size = Pt(11)
     style_normal.font.color.rgb = DARK_SLATE
 
-    # Title
     p_title = doc.add_paragraph()
     p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run_title = p_title.add_run("Jumarald Pharmacy & Wellness")
@@ -184,7 +211,7 @@ def create_docx():
 
     p_sub = doc.add_paragraph()
     p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run_sub = p_sub.add_run("Full Technical Architecture, Security & Operational Documentation\nVersion 3.0.0")
+    run_sub = p_sub.add_run("Full Technical Architecture, AI Engine & Security CIA Audit Documentation\nVersion 3.0.0")
     run_sub.font.size = Pt(13)
     run_sub.font.italic = True
     run_sub.font.color.rgb = GRAY
@@ -211,67 +238,34 @@ def create_docx():
         r.font.color.rgb = DARK_SLATE
         return h
 
-    # Section 1
     add_heading_1("1. Executive Summary")
     doc.add_paragraph(
         "Jumarald Pharmacy & Wellness is a full-stack digital health and pharmaceutical enterprise application operating in Ghana. "
         "The platform unifies e-commerce medicine retail, prescription validation, telehealth physician appointments, real-time multi-branch inventory tracking, "
         "and an AI-powered Superintendent Clinical Assistant ('Dr. Jumarald AI')."
     )
+
+    add_heading_1("2. Superintendent AI Assistant Architecture ('Dr. Jumarald AI')")
     doc.add_paragraph(
-        "The solution is compliant with Ghana Food & Drugs Authority (FDA) standards, Pharmacy Council regulations, and the Data Protection Act 2012 (Act 843). "
-        "Superintendent Pharmacist: Pharm. Philip Bruce-Tagoe (GPHC Reg. No. 2050984)."
+        "Dr. Jumarald AI operates under the clinical rule: 'AI assists. Licensed Pharmacists decide.' "
+        "It features a Dual-Provider Factory (OpenAI GPT-4o-mini / Gemini 1.5 Flash), an autonomous Intent Classifier, Tool Registry, and Rule-Based Fallback Engine."
     )
+    
+    add_heading_2("2.1 Intent Classifier Pipeline")
+    doc.add_paragraph("• PRODUCT_SEARCH: Multi-keyword search across master catalog with live GH₵ prices and stock validation.")
+    doc.add_paragraph("• DRUG_INTERACTION: Pharmacological contraindication analysis across active ingredients.")
+    doc.add_paragraph("• PRESCRIPTION_ANALYSIS: Decodes prescription shorthand (TDS, BD, PRN), dosage, and precautions.")
+    doc.add_paragraph("• BRANCH_INQUIRY: Returns branch physical addresses, phone numbers, and operating hours.")
+    doc.add_paragraph("• SYMPTOM_TRIAGE: Evaluates severity (LOW, MODERATE, HIGH, URGENT) and suggests doctor consultation.")
 
-    # Section 2
-    add_heading_1("2. System Architecture & Monorepo Structure")
-    doc.add_paragraph("The application is built using a monorepo workspace architecture:")
-
-    table = doc.add_table(rows=1, cols=3)
-    table.alignment = WD_TABLE_ALIGNMENT.CENTER
-    table.autofit = False
-
-    hdr_cells = table.rows[0].cells
-    headers = ["Layer", "Technology Stack", "Key Responsibilities"]
-    for i, h_text in enumerate(headers):
-        hdr_cells[i].text = h_text
-        shading = parse_xml(r'<w:shd {} w:fill="0F172A"/>'.format(nsdecls('w')))
-        hdr_cells[i]._tc.get_or_add_tcPr().append(shading)
-        p = hdr_cells[i].paragraphs[0]
-        for r in p.runs:
-            r.font.bold = True
-            r.font.color.rgb = RGBColor(255, 255, 255)
-
-    data = [
-        ("Frontend Storefront", "Next.js 15, React 19, Tailwind CSS", "Patient portal, product catalog, review submission, AI chat widget"),
-        ("Admin Console", "Next.js 15, Recharts, Lucide Icons", "Operational management, order processing, global inventory reports"),
-        ("Backend API", "Express.js 4, TypeScript, Socket.io", "RESTful endpoints, real-time WebSocket events, payment webhooks"),
-        ("Database & ORM", "Neon PostgreSQL (Serverless), Prisma ORM", "Relational persistence, schema safety, ACID transaction handling"),
-        ("Clinical AI Engine", "OpenAI GPT-4o-mini / Gemini 1.5 Flash", "Autonomous intent classification, multi-tool execution, RAG knowledge"),
-        ("Security & Auth", "JWT, bcrypt, Zod, Helmet, Rate Limiters", "Role-Based Access Control, request sanitization, anti-scraping"),
-    ]
-
-    for row_data in data:
-        row_cells = table.add_row().cells
-        for i, text in enumerate(row_data):
-            row_cells[i].text = text
-
-    doc.add_paragraph().paragraph_format.space_after = Pt(12)
-
-    # Section 3
-    add_heading_1("3. Superintendent AI Assistant Architecture")
-    doc.add_paragraph(
-        "The AI assistant ('Dr. Jumarald AI') acts as a virtual clinical pharmacy assistant. "
-        "It features an autonomous Orchestrator, Tool Registry, and Rule-Based Fallback Engine:"
-    )
-    add_heading_2("3.1 Registered AI Tools")
+    add_heading_2("2.2 Registered AI Tools")
     tools = [
-        ("searchProducts", "Executes multi-keyword search across master catalog with live GH₵ prices and stock status."),
-        ("getProductDetails", "Fetches active ingredients, dosage guidance, and therapeutic indications."),
-        ("checkDrugInteraction", "Performs pharmacological contraindication analysis across multiple active medications."),
-        ("findNearbyBranches", "Returns branch addresses, phone numbers, opening hours, and pickup options."),
+        ("searchProducts", "Multi-keyword catalog query returning live prices in GH₵ and availability."),
+        ("getProductDetails", "Retrieves active ingredients, dosage guidance, and indications."),
+        ("checkDrugInteraction", "Multi-medication contraindication analysis."),
+        ("findNearbyBranches", "Returns branch addresses, phone numbers, and operating hours."),
         ("getUserOrders", "Retrieves patient order tracking status for authenticated accounts."),
-        ("createPharmacistConsultation", "Escalates high-risk symptoms directly to the Superintendent Pharmacist queue."),
+        ("createPharmacistConsultation", "Escalates high-risk cases directly to the Superintendent Pharmacist queue."),
     ]
     for name, desc in tools:
         p = doc.add_paragraph(style='List Bullet')
@@ -279,23 +273,47 @@ def create_docx():
         r_name.bold = True
         p.add_run(desc)
 
-    # Section 4
-    add_heading_1("4. Security & CIA Triad Audit")
-    add_heading_2("4.1 Confidentiality")
-    doc.add_paragraph("Stateless JWT access tokens with RBAC middleware (requireRole). Database active-user validation on every token request revokes access immediately upon account deactivation.")
+    add_heading_1("3. Comprehensive Security & CIA Triad Audit")
+    add_heading_2("3.1 Confidentiality Audit")
+    doc.add_paragraph("Stateless JWT access tokens with RBAC middleware (requireRole). Database active-user validation on every token request revokes access immediately upon account deactivation. Passwords hashed using bcrypt (10-12 salt rounds). Encrypted Cloudinary streams for prescription documents.")
     
-    add_heading_2("4.2 Integrity")
-    doc.add_paragraph("All stock operations and financial payments use Prisma ACID transactions. Paystack payments are verified via HMAC SHA-512 signatures. All incoming API payloads are validated using Zod schemas.")
+    add_heading_2("3.2 Integrity Audit")
+    doc.add_paragraph("Prisma ACID transactions (prisma.$transaction) for inventory adjustments. Paystack webhooks validate x-paystack-signature using HMAC SHA-512. Input payloads sanitized using Zod schemas. Administrative actions recorded in AuditLog table.")
 
-    add_heading_2("4.3 Availability & Rate Limiting")
-    doc.add_paragraph("Strict rate limiters protect system resources:")
-    doc.add_paragraph("• authLimiter: 20 login/register attempts per 15 minutes\n• aiLimiter: 20 requests per minute\n• prescriptionLimiter: 30 uploads per 15 minutes\n• apiLimiter: 120 general requests per minute")
+    add_heading_2("3.3 Availability Audit")
+    doc.add_paragraph("Rate limiters protect system resources:")
+    doc.add_paragraph("• authLimiter: 20 login attempts / 15 mins\n• aiLimiter: 20 requests / min\n• prescriptionLimiter: 30 uploads / 15 mins\n• apiLimiter: 120 general requests / min")
+    doc.add_paragraph("Allowed origins restricted to Jumarald production subdomains. WebSocket real-time sync via Socket.io with auto-reconnection.")
 
-    # Section 5
-    add_heading_1("5. Legal & Regulatory Compliance Suite")
-    doc.add_paragraph("1. Acceptable Use Policy (/acceptable-use): Strict rules against prescription forgery, identity theft, and prompt-injection.")
-    doc.add_paragraph("2. Terms of Service (/terms): FDA Ghana rules for prescription verification, cold-chain transport, and pharmaceutical returns.")
-    doc.add_paragraph("3. Privacy Policy (/privacy): Data protection compliance under the Ghana Data Protection Act 2012 (Act 843).")
+    add_heading_1("4. Integrated External APIs")
+    apis = [
+        ("Paystack Payment API", "Ghana Mobile Money (MTN MoMo, Telecel, AT Money) & Card checkout in GH₵."),
+        ("OpenAI GPT-4o-mini API", "Primary LLM for structured JSON tool execution and drug interaction analysis."),
+        ("Google Gemini 1.5 Flash API", "Secondary LLM engine for clinical consultation and RAG knowledge search."),
+        ("Cloudinary Cloud CDN API", "Encrypted prescription document storage and product image CDN."),
+        ("Nodemailer / SMTP Mail Server", "Transactional emails for order receipts and password reset OTPs."),
+        ("WebPush / VAPID Protocol", "Real-time browser notifications for rider tracking and inventory alerts."),
+    ]
+    for name, desc in apis:
+        p = doc.add_paragraph(style='List Bullet')
+        r_name = p.add_run(f"{name}: ")
+        r_name.bold = True
+        p.add_run(desc)
+
+    add_heading_1("5. Future Software Procurement Roadmap")
+    upgrades = [
+        ("Twilio / Hubtel SMS Gateway (Paid API)", "Direct SMS alerts (OTP verification, prescription refill alerts, rider ETA)."),
+        ("Upstash Redis Cluster (Paid Subscription)", "High-speed distributed in-memory caching and Socket.io pub/sub synchronization."),
+        ("AWS S3 / Cloudflare R2 Vault (Paid Cloud)", "HIPAA and Ghana DPC compliant long-term encrypted prescription archiving."),
+        ("RxNorm / NLM Drug Interaction API (License)", "Global pharmaceutical API integration for automated contraindication scanning."),
+        ("IdentityPass Ghana Card Verification (Paid API)", "Automated identity validation for patients and doctors."),
+        ("Google Maps Platform API (Paid License)", "Precise distance calculation, rider geolocation tracking, & dynamic delivery fees."),
+    ]
+    for name, desc in upgrades:
+        p = doc.add_paragraph(style='List Bullet')
+        r_name = p.add_run(f"{name}: ")
+        r_name.bold = True
+        p.add_run(desc)
 
     doc.save("docs/JUMARALD_PHARMACY_DOCUMENTATION.docx")
     print("Generated docs/JUMARALD_PHARMACY_DOCUMENTATION.docx successfully.")
@@ -328,14 +346,12 @@ class NumberedCanvas(canvas.Canvas):
         self.setFont("Helvetica", 9)
         self.setFillColor(colors.HexColor("#64748B"))
         
-        # Header (Pages 2+)
         if self._pageNumber > 1:
             self.drawString(54, 750, "Jumarald Pharmacy & Wellness — Technical Documentation")
             self.setStrokeColor(colors.HexColor("#E2E8F0"))
             self.setLineWidth(0.5)
             self.line(54, 742, 558, 742)
 
-        # Footer (All pages)
         self.setStrokeColor(colors.HexColor("#E2E8F0"))
         self.setLineWidth(0.5)
         self.line(54, 50, 558, 50)
@@ -359,10 +375,9 @@ def create_pdf():
 
     styles = getSampleStyleSheet()
     
-    # Custom Palette
-    COLOR_PRIMARY = colors.HexColor("#10B981") # Emerald
-    COLOR_DARK = colors.HexColor("#0F172A")    # Slate 900
-    COLOR_MUTED = colors.HexColor("#475569")   # Slate 600
+    COLOR_PRIMARY = colors.HexColor("#10B981")
+    COLOR_DARK = colors.HexColor("#0F172A")
+    COLOR_MUTED = colors.HexColor("#475569")
 
     title_style = ParagraphStyle(
         'DocTitle',
@@ -371,7 +386,7 @@ def create_pdf():
         fontSize=24,
         leading=28,
         textColor=COLOR_PRIMARY,
-        alignment=1, # Center
+        alignment=1,
         spaceAfter=6
     )
 
@@ -383,30 +398,18 @@ def create_pdf():
         leading=15,
         textColor=COLOR_MUTED,
         alignment=1,
-        spaceAfter=20
+        spaceAfter=18
     )
 
     h1_style = ParagraphStyle(
         'Heading1_Custom',
         parent=styles['Heading1'],
         fontName='Helvetica-Bold',
-        fontSize=15,
-        leading=18,
+        fontSize=14,
+        leading=17,
         textColor=COLOR_PRIMARY,
-        spaceBefore=14,
-        spaceAfter=6,
-        keepWithNext=True
-    )
-
-    h2_style = ParagraphStyle(
-        'Heading2_Custom',
-        parent=styles['Heading2'],
-        fontName='Helvetica-Bold',
-        fontSize=12,
-        leading=15,
-        textColor=COLOR_DARK,
-        spaceBefore=10,
-        spaceAfter=4,
+        spaceBefore=12,
+        spaceAfter=5,
         keepWithNext=True
     )
 
@@ -414,10 +417,10 @@ def create_pdf():
         'Body_Custom',
         parent=styles['BodyText'],
         fontName='Helvetica',
-        fontSize=9.5,
-        leading=13.5,
+        fontSize=9,
+        leading=13,
         textColor=COLOR_DARK,
-        spaceAfter=6
+        spaceAfter=5
     )
 
     bullet_style = ParagraphStyle(
@@ -425,89 +428,62 @@ def create_pdf():
         parent=body_style,
         leftIndent=12,
         firstLineIndent=-8,
-        spaceAfter=4
+        spaceAfter=3
     )
 
     story = []
 
-    # Title & Header Block
     story.append(Spacer(1, 10))
     story.append(Paragraph("Jumarald Pharmacy & Wellness", title_style))
-    story.append(Paragraph("Full Technical Architecture, Security & Operational Documentation — v3.0.0", subtitle_style))
-    story.append(HRFlowable(width="100%", thickness=1, color=COLOR_PRIMARY, spaceBefore=0, spaceAfter=15))
+    story.append(Paragraph("Full AI Architecture & Security CIA Audit Documentation — v3.0.0", subtitle_style))
+    story.append(HRFlowable(width="100%", thickness=1, color=COLOR_PRIMARY, spaceBefore=0, spaceAfter=12))
 
-    # Executive Summary
     story.append(Paragraph("1. Executive Summary", h1_style))
     story.append(Paragraph(
-        "<b>Jumarald Pharmacy & Wellness</b> is a state-of-the-art digital healthcare platform operating in Ghana. "
+        "<b>Jumarald Pharmacy & Wellness</b> is a digital healthcare platform operating in Ghana. "
         "The system unifies e-commerce pharmaceutical sales, certified prescription validation, telehealth physician appointments, "
-        "real-time multi-branch inventory tracking, and an intelligent <b>Superintendent Clinical AI Assistant ('Dr. Jumarald AI')</b>.",
-        body_style
-    ))
-    story.append(Paragraph(
-        "The platform complies strictly with the Food and Drugs Authority (FDA Ghana), Pharmacy Council regulations, and the "
-        "Ghana Data Protection Act 2012 (Act 843).<br/>"
+        "real-time multi-branch inventory tracking, and an intelligent <b>Superintendent Clinical AI Assistant ('Dr. Jumarald AI')</b>.<br/>"
         "<b>Superintendent Pharmacist:</b> Pharm. Philip Bruce-Tagoe (GPHC Reg. No. 2050984).",
         body_style
     ))
 
-    # System Architecture
-    story.append(Paragraph("2. System Architecture & Tech Stack", h1_style))
-    story.append(Paragraph("The solution is deployed as a modular, high-performance monorepo:", body_style))
-
-    table_data = [
-        [Paragraph("<b>Layer</b>", body_style), Paragraph("<b>Technology Stack</b>", body_style), Paragraph("<b>Role / Function</b>", body_style)],
-        [Paragraph("Frontend Storefront", body_style), Paragraph("Next.js 15, React 19, Tailwind CSS", body_style), Paragraph("Patient portal, catalog, AI chat widget, reviews", body_style)],
-        [Paragraph("Admin Console", body_style), Paragraph("Next.js 15, Recharts, Lucide Icons", body_style), Paragraph("Operational management, global inventory reports", body_style)],
-        [Paragraph("Backend API", body_style), Paragraph("Express.js 4, TypeScript, Socket.io", body_style), Paragraph("REST API endpoints, WebSockets, Paystack webhooks", body_style)],
-        [Paragraph("Database & ORM", body_style), Paragraph("Neon PostgreSQL, Prisma ORM", body_style), Paragraph("Relational data, schema safety, ACID transactions", body_style)],
-        [Paragraph("Clinical AI Engine", body_style), Paragraph("OpenAI GPT-4o-mini / Gemini 1.5", body_style), Paragraph("Autonomous intent classification & multi-tool execution", body_style)],
-        [Paragraph("Security & Auth", body_style), Paragraph("JWT, bcrypt, Zod, Rate Limiters", body_style), Paragraph("RBAC, token validation, resource rate limits", body_style)],
-    ]
-
-    t = Table(table_data, colWidths=[110, 160, 234])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#0F172A")),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-    ]))
-    story.append(t)
-    story.append(Spacer(1, 10))
-
-    # Superintendent AI Assistant
-    story.append(Paragraph("3. Superintendent AI Assistant ('Dr. Jumarald AI')", h1_style))
+    story.append(Paragraph("2. Superintendent AI Assistant Architecture ('Dr. Jumarald AI')", h1_style))
     story.append(Paragraph(
-        "Dr. Jumarald AI provides clinical triage and product recommendations. It incorporates autonomous intent classification, "
-        "structured tool execution, and a high-reliability rule-based fallback engine:",
+        "Dr. Jumarald AI features a Dual-Provider Factory (OpenAI GPT-4o-mini / Gemini 1.5 Flash), an autonomous Intent Classifier, Tool Registry, and Rule-Based Fallback Engine:",
         body_style
     ))
-    
-    ai_tools = [
-        "<b>searchProducts:</b> Multi-keyword catalog query returning live prices in GH₵ and availability.",
-        "<b>getProductDetails:</b> Retrieves dosages, indications, and active ingredients.",
-        "<b>checkDrugInteraction:</b> Pharmacological contraindication analysis across multiple active medications.",
-        "<b>findNearbyBranches:</b> Locates physical branches, operating hours, and pickup details.",
-        "<b>getUserOrders:</b> Fetches patient order tracking status for authenticated sessions.",
-        "<b>createPharmacistConsultation:</b> Escalates complex cases to the Superintendent Pharmacist queue."
+    story.append(Paragraph("• <b>Intent Classifier Pipeline:</b> PRODUCT_SEARCH, DRUG_INTERACTION, PRESCRIPTION_ANALYSIS, BRANCH_INQUIRY, SYMPTOM_TRIAGE, GENERAL_CONSULTATION.", bullet_style))
+    story.append(Paragraph("• <b>Registered AI Tools:</b> searchProducts, getProductDetails, checkDrugInteraction, findNearbyBranches, getUserOrders, createPharmacistConsultation.", bullet_style))
+    story.append(Paragraph("• <b>Clinical Fallback Engine:</b> Zero-downtime safety net triggering emergency warnings (Ghana 112 / 193).", bullet_style))
+
+    story.append(Paragraph("3. Comprehensive Security & CIA Triad Audit", h1_style))
+    story.append(Paragraph("<b>3.1 Confidentiality Audit:</b> Stateless JWT sessions, bcrypt password hashing, active user DB checks in <code>authenticateToken</code> middleware, encrypted Cloudinary streams.", body_style))
+    story.append(Paragraph("<b>3.2 Integrity Audit:</b> Prisma ACID transactions for inventory updates, Zod input validation, Paystack HMAC SHA-512 webhook verification, AuditLog tracking.", body_style))
+    story.append(Paragraph("<b>3.3 Availability Audit:</b> Dedicated rate limiters (<code>authLimiter</code>: 20/15m, <code>aiLimiter</code>: 20/m, <code>prescriptionLimiter</code>: 30/15m), domain-restricted CORS, Socket.io auto-invalidation.", body_style))
+
+    story.append(Paragraph("4. Integrated External APIs & Services", h1_style))
+    apis = [
+        "<b>Paystack Payment API:</b> Ghana Mobile Money (MoMo) & Card checkout in GH₵ with HMAC SHA-512 webhooks.",
+        "<b>OpenAI GPT-4o-mini & Gemini 1.5 Flash APIs:</b> Core LLM engines powering Dr. Jumarald AI.",
+        "<b>Cloudinary Cloud CDN API:</b> Encrypted prescription uploads & optimized product images.",
+        "<b>Nodemailer / SMTP API:</b> Transactional emails for receipts, prescription verification, & password resets.",
+        "<b>WebPush / VAPID API:</b> Real-time browser notifications for rider tracking.",
+        "<b>Sentry Telemetry API:</b> Application performance monitoring and backend error tracking."
     ]
-    for tool in ai_tools:
-        story.append(Paragraph(f"• {tool}", bullet_style))
+    for api in apis:
+        story.append(Paragraph(f"• {api}", bullet_style))
 
-    # Security & CIA Triad
-    story.append(Paragraph("4. Security Architecture (CIA Triad)", h1_style))
-    story.append(Paragraph("<b>4.1 Confidentiality:</b> Stateless JWT sessions, bcrypt password hashing, and active user verification in <code>authenticateToken</code> middleware.", body_style))
-    story.append(Paragraph("<b>4.2 Integrity:</b> Prisma ACID transactions for inventory updates, Zod input validation, and Paystack HMAC SHA-512 signature verification.", body_style))
-    story.append(Paragraph("<b>4.3 Availability:</b> Rate limiters applied to <code>/api/v1/auth</code> (20/15m), <code>/api/v1/ai</code> (20/m), <code>/api/v1/prescriptions</code> (30/15m), and <code>/api/v1/orders</code> (120/m).", body_style))
-
-    # Legal Suite
-    story.append(Paragraph("5. Regulatory Compliance Suite", h1_style))
-    story.append(Paragraph("• <b>Acceptable Use Policy (<code>/acceptable-use</code>):</b> Rules against prescription forgery, identity theft, and prompt-injection.", bullet_style))
-    story.append(Paragraph("• <b>Terms of Service (<code>/terms</code>):</b> Prescription verification guidelines, cold-chain transport, and non-returnable drug rules.", bullet_style))
-    story.append(Paragraph("• <b>Privacy Policy (<code>/privacy</code>):</b> Patient rights and data protection standards under the <b>Ghana Data Protection Act 2012 (Act 843)</b>.", bullet_style))
+    story.append(Paragraph("5. Strategic Future Software Procurement Roadmap", h1_style))
+    upgrades = [
+        "<b>Twilio / Hubtel SMS Gateway API (Paid Service):</b> Direct SMS notifications for Ghanaian mobile numbers (OTP logins, instant prescription refill alerts, rider ETA).",
+        "<b>Upstash Redis Cluster (Paid Subscription):</b> High-speed distributed in-memory session caching & Socket.io pub/sub synchronization.",
+        "<b>AWS S3 / Cloudflare R2 Vault (Paid Cloud):</b> HIPAA & Ghana DPC compliant long-term encrypted prescription archiving.",
+        "<b>RxNorm / NLM Drug Interaction API (License):</b> Global pharmaceutical API integration for automated contraindication scanning.",
+        "<b>IdentityPass Ghana Card Verification API (Paid Service):</b> Automated identity validation for patients and doctors.",
+        "<b>Google Maps Platform API (Paid License):</b> Precise distance calculation, rider geolocation tracking, & dynamic delivery fees."
+    ]
+    for u in upgrades:
+        story.append(Paragraph(f"• {u}", bullet_style))
 
     doc.build(story, canvasmaker=NumberedCanvas)
     print("Generated docs/JUMARALD_PHARMACY_DOCUMENTATION.pdf successfully.")

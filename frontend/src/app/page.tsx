@@ -63,12 +63,21 @@ export default function HomePage() {
       setLoading(true);
       try {
         const [catRes, prodRes] = await Promise.all([
-          fetch(`${API_URL}/products/categories`).then((r) => r.json()),
-          fetch(`${API_URL}/products?limit=6&inStockOnly=true`).then((r) => r.json()),
+          fetch(`${API_URL}/products/categories`).then((r) => r.json()).catch((e) => {
+            console.error("Categories fetch error:", e);
+            return [];
+          }),
+          fetch(`${API_URL}/products?limit=6&inStockOnly=true`).then((r) => r.json()).catch((e) => {
+            console.error("Products fetch error:", e);
+            return { products: [] };
+          }),
         ]);
 
-        setCategories(Array.isArray(catRes) ? catRes : []);
-        setProducts(prodRes.products || []);
+        const loadedCats = Array.isArray(catRes) ? catRes : (catRes?.data || []);
+        const loadedProds = prodRes.products || prodRes.data?.products || (Array.isArray(prodRes) ? prodRes : []);
+
+        setCategories(loadedCats);
+        setProducts(loadedProds);
       } catch (err) {
         console.error("Failed to load landing page data:", err);
       } finally {
