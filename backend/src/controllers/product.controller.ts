@@ -59,6 +59,7 @@ const updateProductSchema = z.object({
   manufacturer: z.string().nullable().optional(),
   images: z.array(z.string()).optional(),
   categoryId: z.string().optional(),
+  newCategoryName: z.string().optional(),
   brandId: z.string().nullable().optional(),
 });
 
@@ -312,14 +313,86 @@ export async function updateProduct(req: any, res: Response) {
     if (!existing) return res.status(404).json({ message: "Product not found" });
 
     const data = updateProductSchema.parse(req.body);
+
+    // 1. Check for duplicate SKU if SKU is changing
+    if (data.sku && data.sku !== existing.sku) {
+      const duplicateSku = await prisma.product.findFirst({
+        where: { sku: data.sku, id: { not: id } },
+      });
+      if (duplicateSku) {
+        return res.status(400).json({ message: `SKU "${data.sku}" is already assigned to another product.` });
+      }
+    }
+
+    // 2. Category resolution
+    let finalCategoryId: string | undefined = undefined;
+    if (data.newCategoryName && data.newCategoryName.trim()) {
+      const catName = data.newCategoryName.trim();
+      const catSlug = catName.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
+      let category = await prisma.category.findFirst({
+        where: { OR: [{ name: { equals: catName, mode: "insensitive" } }, { slug: catSlug }] },
+      });
+      if (!category) {
+        category = await prisma.category.create({
+          data: { name: catName, slug: catSlug, description: `Category for ${catName}` },
+        });
+      }
+      finalCategoryId = category.id;
+    } else if (data.categoryId && data.categoryId.trim()) {
+      let category = await prisma.category.findUnique({ where: { id: data.categoryId } });
+      if (!category) {
+        const catSlug = data.categoryId.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
+        category = await prisma.category.findFirst({
+          where: { OR: [{ name: { equals: data.categoryId, mode: "insensitive" } }, { slug: catSlug }] },
+        });
+        if (!category) {
+          category = await prisma.category.create({
+            data: { name: data.categoryId, slug: catSlug, description: `Category for ${data.categoryId}` },
+          });
+        }
+      }
+      if (category) {
+        finalCategoryId = category.id;
+      }
+    }
+
+    // 3. Regenerate slug if product name changed
+    let slug: string | undefined = undefined;
+    if (data.name && data.name !== existing.name) {
+      const baseSlug = data.name.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
+      slug = baseSlug;
+      let counter = 1;
+      while (await prisma.product.findFirst({ where: { slug, id: { not: id } } })) {
+        slug = `${baseSlug}-${counter++}`;
+      }
+    }
+
+    // 4. Clean update payload (excluding non-model fields like newCategoryName)
+    const updatePayload: any = {};
+    if (data.name !== undefined) updatePayload.name = data.name;
+    if (slug !== undefined) updatePayload.slug = slug;
+    if (data.sku !== undefined) updatePayload.sku = data.sku;
+    if (data.description !== undefined) updatePayload.description = data.description;
+    if (data.price !== undefined) updatePayload.price = Number(data.price);
+    if (data.compareAtPrice !== undefined) updatePayload.compareAtPrice = data.compareAtPrice !== null ? Number(data.compareAtPrice) : null;
+    if (data.stockQuantity !== undefined) updatePayload.stockQuantity = Number(data.stockQuantity);
+    if (data.minStockAlert !== undefined) updatePayload.minStockAlert = Number(data.minStockAlert);
+    if (data.requiresPrescription !== undefined) updatePayload.requiresPrescription = data.requiresPrescription;
+    if (data.isFeatured !== undefined) updatePayload.isFeatured = data.isFeatured;
+    if (data.dosageForm !== undefined) updatePayload.dosageForm = data.dosageForm;
+    if (data.strength !== undefined) updatePayload.strength = data.strength;
+    if (data.activeIngredients !== undefined) updatePayload.activeIngredients = data.activeIngredients;
+    if (data.usageInstructions !== undefined) updatePayload.usageInstructions = data.usageInstructions;
+    if (data.sideEffects !== undefined) updatePayload.sideEffects = data.sideEffects;
+    if (data.warnings !== undefined) updatePayload.warnings = data.warnings;
+    if (data.manufacturer !== undefined) updatePayload.manufacturer = data.manufacturer;
+    if (data.images !== undefined) updatePayload.images = data.images;
+    if (finalCategoryId !== undefined) updatePayload.categoryId = finalCategoryId;
+    if (data.brandId !== undefined) updatePayload.brandId = data.brandId;
+
     const updated = await prisma.product.update({
       where: { id },
-      data: {
-        ...data,
-        price: data.price !== undefined ? Number(data.price) : undefined,
-        compareAtPrice: data.compareAtPrice !== undefined ? Number(data.compareAtPrice) : undefined,
-        stockQuantity: data.stockQuantity !== undefined ? Number(data.stockQuantity) : undefined,
-      },
+      data: updatePayload,
       include: { category: true, brand: true },
     });
 
@@ -327,10 +400,11 @@ export async function updateProduct(req: any, res: Response) {
 
     return res.json(updated);
   } catch (error: any) {
+    console.error("updateProduct error:", error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: "Invalid input", errors: error.errors });
     }
-    return res.status(400).json({ message: "Update failed" });
+    return res.status(400).json({ message: error.message || "Failed to update product" });
   }
 }
 
