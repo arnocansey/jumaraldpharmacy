@@ -57,6 +57,120 @@ interface HistoryEntry {
 
 type Tab = "overview" | "adjustments" | "history" | "alerts";
 
+// ── Product Combobox Component ─────────────────────────────────────────────
+
+function ProductCombobox({
+  products,
+  value,
+  onChange,
+  placeholder = "Type to search drug or SKU...",
+}: {
+  products: ProductSummary[];
+  value: string;
+  onChange: (productId: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const selectedProduct = products.find((p) => p.id === value);
+
+  const filtered = products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.sku.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="relative w-full">
+      {selectedProduct ? (
+        <div className="flex items-center justify-between border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <Package className="h-4 w-4 text-emerald-500 shrink-0" />
+            <span className="font-semibold truncate">{selectedProduct.name}</span>
+            <span className="text-xs text-slate-400 font-mono">({selectedProduct.sku})</span>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded shrink-0 ${
+              selectedProduct.stockQuantity === 0
+                ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400"
+                : selectedProduct.stockQuantity <= 10
+                ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400"
+                : "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400"
+            }`}>
+              Stock: {selectedProduct.stockQuantity}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              setSearch("");
+              setOpen(true);
+            }}
+            className="p-1 text-slate-400 hover:text-red-500 rounded-lg transition-colors ml-2"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            value={search}
+            placeholder={placeholder}
+            onFocus={() => setOpen(true)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setOpen(true);
+            }}
+            className="w-full pl-9 pr-4 py-2.5 text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
+          />
+          {open && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+              <div className="absolute left-0 right-0 top-full mt-1.5 max-h-60 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-20 divide-y divide-slate-100 dark:divide-slate-700">
+                {filtered.length === 0 ? (
+                  <div className="p-3 text-xs text-slate-400 text-center">No matching products found</div>
+                ) : (
+                  filtered.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        onChange(p.id);
+                        setOpen(false);
+                      }}
+                      className="w-full text-left p-3 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex items-center justify-between gap-2"
+                    >
+                      <div>
+                        <p className="font-semibold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{p.name}</p>
+                        <p className="text-[11px] text-slate-400 font-mono">
+                          SKU: {p.sku} &middot; GHS {p.price.toFixed(2)}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          p.stockQuantity === 0
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                            : p.stockQuantity <= 10
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+                        }`}
+                      >
+                        {p.stockQuantity} in stock
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function InventoryPage() {
@@ -520,20 +634,13 @@ export default function InventoryPage() {
             <form onSubmit={handleAdjust} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className={labelClass}>Select Product *</label>
-                  <select
+                  <label className={labelClass}>Search & Select Product *</label>
+                  <ProductCombobox
+                    products={report?.products || []}
                     value={adjustForm.productId}
-                    onChange={(e) => setAdjustForm({ ...adjustForm, productId: e.target.value })}
-                    className={inputClass}
-                    required
-                  >
-                    <option value="">-- Choose Product --</option>
-                    {(report?.products || []).map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.sku}) — Current Stock: {p.stockQuantity}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(id) => setAdjustForm({ ...adjustForm, productId: id })}
+                    placeholder="Type drug name or SKU..."
+                  />
                 </div>
                 <div>
                   <label className={labelClass}>Adjustment Quantity (+/-) *</label>
@@ -583,22 +690,16 @@ export default function InventoryPage() {
                   <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                     <div>
                       {idx === 0 && <label className={labelClass}>Product</label>}
-                      <select
+                      <ProductCombobox
+                        products={report?.products || []}
                         value={item.productId}
-                        onChange={(e) => {
+                        onChange={(id) => {
                           const next = [...bulkItems];
-                          next[idx].productId = e.target.value;
+                          next[idx].productId = id;
                           setBulkItems(next);
                         }}
-                        className={inputClass}
-                      >
-                        <option value="">-- Choose Product --</option>
-                        {(report?.products || []).map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({p.sku})
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Search product..."
+                      />
                     </div>
                     <div>
                       {idx === 0 && <label className={labelClass}>New Stock Count</label>}
@@ -668,22 +769,16 @@ export default function InventoryPage() {
                   <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                     <div>
                       {idx === 0 && <label className={labelClass}>Product</label>}
-                      <select
+                      <ProductCombobox
+                        products={report?.products || []}
                         value={item.productId}
-                        onChange={(e) => {
+                        onChange={(id) => {
                           const next = [...cycleItems];
-                          next[idx].productId = e.target.value;
+                          next[idx].productId = id;
                           setCycleItems(next);
                         }}
-                        className={inputClass}
-                      >
-                        <option value="">-- Choose Product --</option>
-                        {(report?.products || []).map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({p.sku})
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Search product..."
+                      />
                     </div>
                     <div>
                       {idx === 0 && <label className={labelClass}>Physically Counted Qty</label>}
