@@ -69,7 +69,17 @@ export function Navbar() {
         <div className="flex h-20 items-center justify-between gap-4">
           {/* Brand Logo */}
           <Link href="/" className="flex items-center group shrink-0">
-            <Image src="/jumaraldlogo.png" alt="Jumarald Pharmacy and Wellness Center" width={44} height={44} priority className="h-11 w-auto object-contain group-hover:scale-105 transition-transform" />
+            <div className="bg-white p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-md group-hover:scale-105 transition-transform flex items-center justify-center">
+              <Image
+                src="/jumaraldlogo.png"
+                alt="Jumarald Pharmacy and Wellness Center"
+                width={160}
+                height={40}
+                priority
+                unoptimized
+                className="h-9 sm:h-10 w-auto object-contain"
+              />
+            </div>
           </Link>
 
           {/* Search Bar — visible md+ */}
@@ -176,11 +186,10 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`transition-colors py-1 ${
-                  isActive
+                className={`transition-colors py-1 ${isActive
                     ? "text-emerald-700 dark:text-emerald-400 font-bold border-b-2 border-emerald-700 dark:border-emerald-400"
                     : "text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400"
-                }`}
+                  }`}
                 aria-current={isActive ? "page" : undefined}
               >
                 {link.name}
@@ -210,11 +219,10 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block py-2 text-base font-medium transition-colors ${
-                  pathname === link.href
+                className={`block py-2 text-base font-medium transition-colors ${pathname === link.href
                     ? "text-emerald-700 dark:text-emerald-400 font-bold"
                     : "text-slate-700 dark:text-slate-200 hover:text-emerald-700"
-                }`}
+                  }`}
                 aria-current={pathname === link.href ? "page" : undefined}
               >
                 {link.name}

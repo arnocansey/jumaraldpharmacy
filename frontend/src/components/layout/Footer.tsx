@@ -11,8 +11,15 @@ export function Footer() {
           {/* Col 1: Brand Info */}
           <div className="lg:col-span-2 space-y-4">
             <Link href="/" className="flex items-center">
-              <div className="bg-white p-2.5 rounded-xl inline-block shadow-md">
-                <Image src="/jumaraldlogo.png" alt="Jumarald Pharmacy and Wellness Center" width={40} height={40} className="h-10 w-auto object-contain" />
+              <div className="bg-white/95 p-3 rounded-2xl inline-block shadow-lg border border-white/20">
+                <Image
+                  src="/jumaraldlogo.png"
+                  alt="Jumarald Pharmacy and Wellness Center"
+                  width={160}
+                  height={40}
+                  unoptimized
+                  className="h-10 w-auto object-contain"
+                />
               </div>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
