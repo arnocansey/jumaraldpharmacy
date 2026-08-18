@@ -66,6 +66,7 @@ const updateProductSchema = z.object({
 const createCategorySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
+  imageUrl: z.string().optional(),
 });
 
 const DEFAULT_CATEGORIES = [
