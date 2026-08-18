@@ -208,12 +208,12 @@ export default function ProductsPage() {
     try {
       if (editCatId) {
         await apiFetch(`/products/categories/${editCatId}`, {
-          method: "PUT", body: JSON.stringify({ name: catName.trim(), description: catDesc.trim() || undefined, imageUrl: catImageUrl || undefined }),
+          method: "PUT", body: JSON.stringify({ name: catName.trim(), description: catDesc.trim() || undefined, imageUrl: catImageUrl || "" }),
         });
         toast.success("Category updated");
       } else {
         await apiFetch("/products/categories", {
-          method: "POST", body: JSON.stringify({ name: catName.trim(), description: catDesc.trim() || undefined, imageUrl: catImageUrl || undefined }),
+          method: "POST", body: JSON.stringify({ name: catName.trim(), description: catDesc.trim() || undefined, imageUrl: catImageUrl || "" }),
         });
         toast.success("Category created");
       }

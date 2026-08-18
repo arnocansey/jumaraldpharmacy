@@ -157,7 +157,9 @@ export async function createCategory(req: any, res: Response) {
       where: { OR: [{ name: { equals: data.name, mode: "insensitive" } }, { slug }] },
     });
     if (existing) return res.json(existing);
-    const category = await prisma.category.create({ data: { name: data.name, slug, description: data.description } });
+    const category = await prisma.category.create({
+      data: { name: data.name, slug, description: data.description, imageUrl: data.imageUrl },
+    });
     return res.status(201).json(category);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -170,7 +172,7 @@ export async function createCategory(req: any, res: Response) {
 export async function updateCategory(req: any, res: Response) {
   try {
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, description, imageUrl } = req.body;
 
     const existing = await prisma.category.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ message: "Category not found" });
@@ -185,6 +187,7 @@ export async function updateCategory(req: any, res: Response) {
       if (duplicate) return res.status(400).json({ message: "Category name already exists" });
     }
     if (description !== undefined) updateData.description = description;
+    if (imageUrl !== undefined) updateData.imageUrl = imageUrl ? imageUrl : null;
 
     const category = await prisma.category.update({ where: { id }, data: updateData });
     return res.json(category);
