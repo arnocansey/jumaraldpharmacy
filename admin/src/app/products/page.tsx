@@ -170,7 +170,7 @@ export default function ProductsPage() {
       if (form.sideEffects) body.sideEffects = form.sideEffects;
       if (form.warnings) body.warnings = form.warnings;
       if (form.manufacturer) body.manufacturer = form.manufacturer;
-      if (form.images) body.images = form.images.split(",").map((s: string) => s.trim()).filter(Boolean);
+      body.images = form.images ? form.images.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
       if (form.categoryId) body.categoryId = form.categoryId;
       else if (form.newCategoryName) body.newCategoryName = form.newCategoryName;
 
