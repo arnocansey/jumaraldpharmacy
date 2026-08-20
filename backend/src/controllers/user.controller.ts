@@ -16,7 +16,7 @@ const userQuerySchema = z.object({
 
 const createUserSchema = z.object({
   name: z.string().min(2),
-  email: z.string().email(),
+  email: z.string().email().or(z.literal("")).optional(),
   password: z.string().min(6),
   phone: z.string().optional(),
   role: z.nativeEnum(RoleName).optional().default(RoleName.CUSTOMER),
@@ -92,18 +92,24 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
   try {
     const data = createUserSchema.parse(req.body);
 
-    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    const cleanName = data.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const uniqueSuffix = Math.floor(1000 + Math.random() * 9000);
+    const finalEmail = data.email && data.email.trim()
+      ? data.email.trim()
+      : `${cleanName || "staff"}${uniqueSuffix}@staff.jumaraldpharmacy.com`;
+
+    const existing = await prisma.user.findUnique({ where: { email: finalEmail } });
     if (existing) {
-      return res.status(400).json({ message: "A user with this email already exists" });
+      return res.status(400).json({ message: "A user with this email address already exists" });
     }
 
     const passwordHash = await bcrypt.hash(data.password, 10);
     const user = await prisma.user.create({
       data: {
         name: data.name,
-        email: data.email,
+        email: finalEmail,
         passwordHash,
-        phone: data.phone,
+        phone: data.phone || null,
         role: data.role,
       },
       select: {

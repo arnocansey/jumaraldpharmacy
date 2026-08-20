@@ -66,13 +66,35 @@ const sections: NavSection[] = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const [role, setRole] = React.useState<string>("ADMIN");
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>(
     Object.fromEntries(sections.map((s) => [s.label, true]))
   );
 
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem("jumarald_admin_user");
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u.role) setRole(u.role);
+      }
+    } catch {}
+  }, []);
+
   const toggleSection = (label: string) => {
     setOpenSections((prev) => ({ ...prev, [label]: !prev[label] }));
   };
+
+  const filteredSections = sections.map((sec) => {
+    if (role === "INVENTORY_CLERK") {
+      const allowedHrefs = ["/", "/products", "/inventory"];
+      return {
+        ...sec,
+        items: sec.items.filter((item) => allowedHrefs.includes(item.href)),
+      };
+    }
+    return sec;
+  }).filter((sec) => sec.items.length > 0);
 
   return (
     <aside className="w-64 shrink-0 glass-sidebar flex flex-col h-screen sticky top-0 p-4 z-20">
@@ -87,7 +109,7 @@ export function AdminSidebar() {
         </Link>
 
         <nav className="flex-1 overflow-y-auto space-y-4 text-sm font-medium mt-6 scrollbar-thin" aria-label="Admin navigation">
-          {sections.map((section) => (
+          {filteredSections.map((section) => (
             <div key={section.label}>
               <button
                 onClick={() => toggleSection(section.label)}
@@ -125,7 +147,7 @@ export function AdminSidebar() {
 
         <div className="pt-4 border-t border-emerald-900 text-xs text-emerald-300/70 space-y-2 shrink-0 mt-auto">
           <div className="flex items-center gap-2 text-emerald-300 font-semibold">
-            <ShieldCheck className="h-4 w-4 text-emerald-400" /> Chief Pharmacist Mode
+            <ShieldCheck className="h-4 w-4 text-emerald-400" /> {role === "INVENTORY_CLERK" ? "Inventory Clerk Mode" : "Chief Pharmacist Mode"}
           </div>
           <p>&copy; 2026 Jumarald Pharmacy</p>
         </div>

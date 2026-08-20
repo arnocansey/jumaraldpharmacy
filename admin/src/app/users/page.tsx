@@ -108,6 +108,19 @@ const ROLES: RoleDefinition[] = [
     ],
   },
   {
+    value: "INVENTORY_CLERK",
+    label: "Inventory Clerk / Junior Staff",
+    icon: Pill,
+    color: "bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300 border-orange-300",
+    description: "Junior staff member restricted strictly to managing product catalog entries, categories, and inventory stock batches.",
+    permissions: [
+      "Create & Edit Pharmaceutical Products",
+      "Manage Product Categories & Manufacturers",
+      "Record Stock Additions & Batch Restocks",
+      "View Low Stock & Inventory Expiry Alerts",
+    ],
+  },
+  {
     value: "BRANCH_MANAGER",
     label: "Branch Manager",
     icon: Building,
@@ -165,7 +178,7 @@ export default function UserManagementPage() {
     email: "",
     password: "",
     phone: "",
-    role: "ADMIN",
+    role: "INVENTORY_CLERK",
   });
 
   // Edit Role Modal State
@@ -202,8 +215,8 @@ export default function UserManagementPage() {
 
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
-    if (!newUser.name || !newUser.email || !newUser.password) {
-      toast.error("Name, email, and password are required");
+    if (!newUser.name.trim() || !newUser.password) {
+      toast.error("Name and password are required");
       return;
     }
 
@@ -215,7 +228,7 @@ export default function UserManagementPage() {
       });
       toast.success(`User ${newUser.name} created successfully as ${newUser.role}`);
       setShowAddModal(false);
-      setNewUser({ name: "", email: "", password: "", phone: "", role: "ADMIN" });
+      setNewUser({ name: "", email: "", password: "", phone: "", role: "INVENTORY_CLERK" });
       loadUsers();
     } catch (err: any) {
       toast.error(err.message || "Failed to create user");
@@ -541,14 +554,13 @@ export default function UserManagementPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Email Address *</label>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Email Address (Optional — Auto-generated if left blank)</label>
                   <input
                     type="email"
-                    placeholder="e.g. kwame.mensah@jumarald.com"
+                    placeholder="e.g. kwame.mensah@jumarald.com (optional)"
                     value={newUser.email}
                     onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                     className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    required
                   />
                 </div>
 

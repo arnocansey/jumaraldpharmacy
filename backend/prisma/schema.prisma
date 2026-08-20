@@ -21,6 +21,7 @@ enum RoleName {
   CUSTOMER
   BRANCH_MANAGER
   DELIVERY_DRIVER
+  INVENTORY_CLERK
 }
 
 enum OrderStatus {
