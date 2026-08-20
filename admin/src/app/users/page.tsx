@@ -21,6 +21,8 @@ import {
   Truck,
   Building,
   User as UserIcon,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/api";
@@ -172,6 +174,7 @@ export default function UserManagementPage() {
   // Modal State
   const [showAddModal, setShowAddModal] = useState(false);
   const [showMatrixModal, setShowMatrixModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newUser, setNewUser] = useState({
     name: "",
@@ -577,14 +580,24 @@ export default function UserManagementPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Password *</label>
-                    <input
-                      type="password"
-                      placeholder="At least 6 characters"
-                      value={newUser.password}
-                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                      className="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="At least 6 characters"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        className="w-full h-10 pl-3 pr-10 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                        title={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
