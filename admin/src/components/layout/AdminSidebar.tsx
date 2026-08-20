@@ -85,9 +85,27 @@ export function AdminSidebar() {
     setOpenSections((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
+  const roleAllowedHrefs: Record<string, string[]> = {
+    INVENTORY_CLERK: ["/", "/products", "/inventory"],
+    PHARMACIST: ["/", "/products", "/inventory", "/prescriptions", "/copilot", "/ai-knowledge"],
+    DOCTOR: ["/", "/prescriptions", "/telehealth", "/copilot", "/ai-knowledge"],
+    BRANCH_MANAGER: ["/", "/products", "/inventory", "/orders", "/branches", "/reports"],
+    DELIVERY_DRIVER: ["/", "/orders", "/deliveries", "/notifications"],
+  };
+
+  const roleModeLabels: Record<string, string> = {
+    SUPER_ADMIN: "Super Admin Mode",
+    ADMIN: "System Admin Mode",
+    PHARMACIST: "Chief Pharmacist Mode",
+    INVENTORY_CLERK: "Inventory Clerk Mode",
+    DOCTOR: "Medical Doctor Mode",
+    BRANCH_MANAGER: "Branch Manager Mode",
+    DELIVERY_DRIVER: "Delivery Courier Mode",
+  };
+
   const filteredSections = sections.map((sec) => {
-    if (role === "INVENTORY_CLERK") {
-      const allowedHrefs = ["/", "/products", "/inventory"];
+    const allowedHrefs = roleAllowedHrefs[role];
+    if (allowedHrefs) {
       return {
         ...sec,
         items: sec.items.filter((item) => allowedHrefs.includes(item.href)),
@@ -147,7 +165,7 @@ export function AdminSidebar() {
 
         <div className="pt-4 border-t border-emerald-900 text-xs text-emerald-300/70 space-y-2 shrink-0 mt-auto">
           <div className="flex items-center gap-2 text-emerald-300 font-semibold">
-            <ShieldCheck className="h-4 w-4 text-emerald-400" /> {role === "INVENTORY_CLERK" ? "Inventory Clerk Mode" : "Chief Pharmacist Mode"}
+            <ShieldCheck className="h-4 w-4 text-emerald-400" /> {roleModeLabels[role] || "Staff Portal Mode"}
           </div>
           <p>&copy; 2026 Jumarald Pharmacy</p>
         </div>

@@ -38,9 +38,9 @@ export default function AdminLoginPage() {
         throw new Error(data.message || "Invalid login credentials");
       }
 
-      const allowedRoles = ["SUPER_ADMIN", "ADMIN", "PHARMACIST"];
+      const allowedRoles = ["SUPER_ADMIN", "ADMIN", "PHARMACIST", "INVENTORY_CLERK", "BRANCH_MANAGER", "DOCTOR", "DELIVERY_DRIVER"];
       if (!allowedRoles.includes(data.user.role)) {
-        throw new Error("Access denied. Admin privileges required.");
+        throw new Error("Access denied. Admin or Staff privileges required.");
       }
 
       localStorage.setItem("jumarald_admin_token", data.token);
