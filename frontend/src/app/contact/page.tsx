@@ -34,7 +34,7 @@ export default function ContactPage() {
               </p>
               <p className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-emerald-600 shrink-0" />
-                <span>+233 54 477 2483 / +233 30 200 4800</span>
+                <span>030 398 3047 / 054 477 2483</span>
               </p>
               <p className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-emerald-600 shrink-0" />

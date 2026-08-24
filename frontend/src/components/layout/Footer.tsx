@@ -65,7 +65,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="h-4 w-4 text-emerald-400 shrink-0" />
-                <span>+233 54 477 2483 / +233 30 200 4800 (Call)</span>
+                <span>030 398 3047 / 054 477 2483 (Call)</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <MessageCircle className="h-4 w-4 text-emerald-400 shrink-0" />

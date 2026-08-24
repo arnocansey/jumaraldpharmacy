@@ -90,7 +90,7 @@ export default function TermsPage() {
 
           {/* Section Footer */}
           <section className="pt-6 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-            <span>Facility Contact: +233 54 477 2483 · care@jumaraldpharmacy.com</span>
+            <span>Facility Contact: 030 398 3047 / 054 477 2483 · care@jumaraldpharmacy.com</span>
             <Link
               href="/privacy"
               className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"

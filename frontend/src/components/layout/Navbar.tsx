@@ -98,10 +98,14 @@ export function Navbar() {
           {/* Right Action Icons & Auth Buttons */}
           <div className="flex items-center gap-2">
             {/* Phone — visible lg+ */}
-            <a href="tel:+233544772483" className="hidden lg:flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors px-2 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30" aria-label="Call pharmacy">
-              <Phone className="h-3.5 w-3.5" />
-              <span>+233 54 477 2483</span>
-            </a>
+            <div className="hidden lg:flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 px-2 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors" aria-label="Call pharmacy">
+              <Phone className="h-3.5 w-3.5 shrink-0" />
+              <div className="flex items-center gap-1">
+                <a href="tel:+233303983047" className="hover:underline">030 398 3047</a>
+                <span className="text-slate-300 dark:text-slate-600">/</span>
+                <a href="tel:+233544772483" className="hover:underline">054 477 2483</a>
+              </div>
+            </div>
 
             {/* Theme Toggle */}
             <button

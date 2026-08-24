@@ -73,7 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     url: "https://jumaraldpharmacy.com",
     logo: "https://jumaraldpharmacy.com/jumaraldlogo.png",
     image: "https://jumaraldpharmacy.com/jumaraldlogo.png",
-    telephone: "+233 54 477 2483",
+    telephone: ["+233 30 398 3047", "+233 54 477 2483"],
     address: {
       "@type": "PostalAddress",
       streetAddress: "Boundary Road, East Legon / Prampram",
