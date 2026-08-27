@@ -1,13 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload, Download, Loader2, Image as ImageIcon } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload, Download, Loader2, Image as ImageIcon, Scan, Barcode, Sparkles, Mic, BookOpen, Layers, Zap, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { apiFetch, apiUpload } from "@/lib/api";
 import { toast } from "sonner";
 import ProductImportModal from "@/components/ProductImportModal";
+import ProductScannerModal, { ScannedProductData } from "@/components/ProductScannerModal";
+import ProductUploadHubModal, { UploadPreferenceMode } from "@/components/ProductUploadHubModal";
+import ContinuousScannerModal from "@/components/ContinuousScannerModal";
+import InvoiceOcrModal from "@/components/InvoiceOcrModal";
+import StandardFormularyModal from "@/components/StandardFormularyModal";
 
 interface Product {
-  id: string; name: string; slug: string; sku: string; price: number; compareAtPrice?: number;
+  id: string; name: string; slug: string; sku: string; barcode?: string; price: number; compareAtPrice?: number;
   stockQuantity: number; minStockAlert: number; requiresPrescription: boolean; isActive: boolean;
   isFeatured: boolean; images: string[]; description: string; dosageForm?: string; strength?: string;
   activeIngredients?: string; usageInstructions?: string; sideEffects?: string; warnings?: string;
@@ -18,7 +23,7 @@ interface Product {
 interface Category { id: string; name: string; slug: string; description?: string; imageUrl?: string; _count?: { products: number } }
 
 const EMPTY_FORM = {
-  name: "", sku: "", description: "", price: "", compareAtPrice: "", stockQuantity: "0",
+  name: "", sku: "", barcode: "", description: "", price: "", compareAtPrice: "", stockQuantity: "0",
   minStockAlert: "10", requiresPrescription: false, isFeatured: false, dosageForm: "",
   strength: "", activeIngredients: "", usageInstructions: "", sideEffects: "", warnings: "",
   manufacturer: "", categoryId: "", newCategoryName: "", brandName: "", images: "" as string,
@@ -45,6 +50,16 @@ export default function ProductsPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+
+  // Multi-Preference Upload Hub States
+  const [showHub, setShowHub] = useState(false);
+  const [showContinuousScan, setShowContinuousScan] = useState(false);
+  const [showInvoiceOcr, setShowInvoiceOcr] = useState(false);
+  const [showFormulary, setShowFormulary] = useState(false);
+  const [formMode, setFormMode] = useState<"quick" | "detailed">("quick");
+  const [showClinicalAccordion, setShowClinicalAccordion] = useState(false);
+  const [isListeningVoice, setIsListeningVoice] = useState(false);
 
   async function handleImageFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -137,7 +152,7 @@ export default function ProductsPage() {
 
   function startEdit(p: Product) {
     setForm({
-      name: p.name, sku: p.sku, description: p.description, price: p.price.toString(),
+      name: p.name, sku: p.sku, barcode: p.barcode || "", description: p.description, price: p.price.toString(),
       compareAtPrice: p.compareAtPrice?.toString() || "", stockQuantity: p.stockQuantity.toString(),
       minStockAlert: p.minStockAlert.toString(), requiresPrescription: p.requiresPrescription,
       isFeatured: p.isFeatured, dosageForm: p.dosageForm || "", strength: p.strength || "",
@@ -150,18 +165,175 @@ export default function ProductsPage() {
     setShowForm(true);
   }
 
+  function handleScannedDataApplied(data: ScannedProductData, photoUrl?: string) {
+    let matchedCatId = "";
+    let suggestedCatName = "";
+    if (data.categoryName) {
+      const found = categories.find(
+        (c) => c.name.toLowerCase() === data.categoryName!.toLowerCase()
+      );
+      if (found) {
+        matchedCatId = found.id;
+      } else {
+        suggestedCatName = data.categoryName;
+      }
+    }
+
+    setForm((prev) => {
+      let combinedImages = prev.images;
+      if (photoUrl) {
+        const currentList = prev.images
+          ? prev.images.split(",").map((s) => s.trim()).filter(Boolean)
+          : [];
+        if (!currentList.includes(photoUrl)) {
+          combinedImages = [photoUrl, ...currentList].join(", ");
+        }
+      } else if (data.images && data.images.length > 0) {
+        const currentList = prev.images
+          ? prev.images.split(",").map((s) => s.trim()).filter(Boolean)
+          : [];
+        const toAdd = data.images.filter((img) => !currentList.includes(img));
+        combinedImages = [...currentList, ...toAdd].join(", ");
+      }
+
+      return {
+        ...prev,
+        name: data.name || prev.name,
+        sku: data.sku || prev.sku,
+        barcode: data.barcode || prev.barcode,
+        description: data.description || prev.description,
+        price: data.price ? String(data.price) : prev.price,
+        compareAtPrice: data.compareAtPrice ? String(data.compareAtPrice) : prev.compareAtPrice,
+        stockQuantity: data.stockQuantity ? String(data.stockQuantity) : prev.stockQuantity,
+        minStockAlert: data.minStockAlert ? String(data.minStockAlert) : prev.minStockAlert,
+        dosageForm: data.dosageForm || prev.dosageForm,
+        strength: data.strength || prev.strength,
+        activeIngredients: data.activeIngredients || prev.activeIngredients,
+        usageInstructions: data.usageInstructions || prev.usageInstructions,
+        sideEffects: data.sideEffects || prev.sideEffects,
+        warnings: data.warnings || prev.warnings,
+        manufacturer: data.manufacturer || prev.manufacturer,
+        requiresPrescription: data.requiresPrescription ?? prev.requiresPrescription,
+        categoryId: matchedCatId || prev.categoryId,
+        newCategoryName: !matchedCatId && suggestedCatName ? suggestedCatName : prev.newCategoryName,
+        images: combinedImages,
+      };
+    });
+
+    setShowForm(true);
+  }
+
+  function startVoiceDictation() {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      toast.error("Speech recognition is not supported in this browser. You can type or scan instead.");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      setIsListeningVoice(true);
+      toast.info("Listening... Speak medicine name, strength, quantity, or price.");
+
+      recognition.onresult = async (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        toast.loading(`Processing voice: "${transcript}"...`);
+        try {
+          const res = await apiFetch<{ status: string; data: any }>("/products/scan/voice", {
+            method: "POST",
+            body: JSON.stringify({ transcript }),
+          });
+          if (res.data) {
+            handleScannedDataApplied(res.data);
+            toast.success(`Voice parsed: ${res.data.name || transcript}`);
+          }
+        } catch {
+          setForm((prev) => ({ ...prev, name: transcript }));
+          toast.success(`Set product name: "${transcript}"`);
+        } finally {
+          setIsListeningVoice(false);
+          toast.dismiss();
+        }
+      };
+
+      recognition.onerror = () => {
+        setIsListeningVoice(false);
+      };
+
+      recognition.onend = () => {
+        setIsListeningVoice(false);
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.warn("Speech recognition failed to start:", err);
+      setIsListeningVoice(false);
+    }
+  }
+
+  function handleSelectUploadMode(selectedMode: UploadPreferenceMode) {
+    if (selectedMode === "quick_form") {
+      setFormMode("quick");
+      resetForm();
+      setShowForm(true);
+    } else if (selectedMode === "detailed_form") {
+      setFormMode("detailed");
+      resetForm();
+      setShowForm(true);
+    } else if (selectedMode === "continuous_scan") {
+      setShowContinuousScan(true);
+    } else if (selectedMode === "invoice_ocr") {
+      setShowInvoiceOcr(true);
+    } else if (selectedMode === "voice_dictation") {
+      setFormMode("quick");
+      resetForm();
+      setShowForm(true);
+      setTimeout(() => startVoiceDictation(), 300);
+    } else if (selectedMode === "formulary") {
+      setShowFormulary(true);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name || !form.sku || !form.description || !form.price) {
-      toast.error("Name, SKU, description, and price are required"); return;
+    const name = form.name.trim();
+    const price = Number(form.price);
+    if (!name || isNaN(price) || price <= 0) {
+      toast.error("Product Name and a valid Price are required");
+      return;
     }
+
     setSaving(true);
     try {
+      let sku = form.sku.trim();
+      if (!sku) {
+        const cleanName = name.replace(/[^a-zA-Z0-9\s]/g, "").trim().split(/\s+/);
+        const prefix = cleanName.slice(0, 2).map((w) => w.slice(0, 3).toUpperCase()).join("-");
+        sku = `${prefix || "MED"}-${Math.floor(1000 + Math.random() * 9000)}`;
+      }
+
+      let description = form.description.trim();
+      if (!description) {
+        description = `${name}${form.strength ? ` (${form.strength})` : ""}${form.dosageForm ? ` ${form.dosageForm}` : ""}. Quality pharmaceutical formulation.`;
+      }
+
       const body: any = {
-        name: form.name, sku: form.sku, description: form.description, price: Number(form.price),
-        stockQuantity: Number(form.stockQuantity), minStockAlert: Number(form.minStockAlert),
-        requiresPrescription: form.requiresPrescription, isFeatured: form.isFeatured,
+        name,
+        sku,
+        description,
+        price,
+        stockQuantity: Number(form.stockQuantity) || 0,
+        minStockAlert: Number(form.minStockAlert) || 10,
+        requiresPrescription: form.requiresPrescription,
+        isFeatured: form.isFeatured,
       };
+      if (form.barcode) body.barcode = form.barcode;
       if (form.compareAtPrice) body.compareAtPrice = Number(form.compareAtPrice);
       if (form.dosageForm) body.dosageForm = form.dosageForm;
       if (form.strength) body.strength = form.strength;
@@ -247,12 +419,40 @@ export default function ProductsPage() {
           {tab === "products" && (
             <>
               <button
+                onClick={() => setShowHub(true)}
+                className="px-3.5 py-2 rounded-xl font-semibold border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 flex items-center gap-1.5 shadow-sm transition-all"
+                title="Choose from 5 smart product upload preferences"
+              >
+                <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" /> Upload Hub
+              </button>
+              <button
+                onClick={() => setShowScanner(true)}
+                className="px-3.5 py-2 rounded-xl font-semibold border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 flex items-center gap-1.5 shadow-sm transition-all"
+              >
+                <Scan className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Scan Barcode
+              </button>
+              <button
+                onClick={() => setShowContinuousScan(true)}
+                className="hidden sm:flex px-3 py-2 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 items-center gap-1.5 shadow-sm text-xs"
+                title="Rapid continuous box intake"
+              >
+                <Zap className="h-3.5 w-3.5 text-amber-500" /> Rapid Scan
+              </button>
+              <button
+                onClick={() => setShowInvoiceOcr(true)}
+                className="hidden sm:flex px-3 py-2 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 items-center gap-1.5 shadow-sm text-xs"
+                title="Distributor invoice / packing slip OCR"
+              >
+                <FileText className="h-3.5 w-3.5 text-blue-500" /> Invoice OCR
+              </button>
+              <button
                 onClick={() => {
                   if (products.length === 0) { toast.error("No products to export"); return; }
-                  const headers = ["ID", "SKU", "Name", "Category", "Price", "StockQuantity", "RequiresPrescription"];
+                  const headers = ["ID", "SKU", "Barcode", "Name", "Category", "Price", "StockQuantity", "RequiresPrescription"];
                   const rows = products.map(p => [
                     p.id,
                     `"${p.sku}"`,
+                    `"${p.barcode || ''}"`,
                     `"${p.name.replace(/"/g, '""')}"`,
                     `"${p.category?.name || ''}"`,
                     p.price,
@@ -269,20 +469,20 @@ export default function ProductsPage() {
                   document.body.removeChild(link);
                   toast.success("Products CSV exported!");
                 }}
-                className="px-4 py-2 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                className="px-3 py-2 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 text-xs"
               >
-                <Download className="h-4 w-4" /> Export CSV
+                <Download className="h-3.5 w-3.5" /> CSV
               </button>
               <button
                 onClick={() => setShowImport(true)}
-                className="px-4 py-2 rounded-xl font-semibold border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-2"
+                className="px-3 py-2 rounded-xl font-semibold border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-1.5 text-xs"
               >
-                <Upload className="h-4 w-4" /> Import CSV
+                <Upload className="h-3.5 w-3.5" /> Import
               </button>
             </>
           )}
-          <button onClick={() => tab === "products" ? (resetForm(), setShowForm(true)) : (resetCatForm(), setShowCatForm(true))}
-            className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-emerald-700 flex items-center gap-2">
+          <button onClick={() => tab === "products" ? (setFormMode("quick"), resetForm(), setShowForm(true)) : (resetCatForm(), setShowCatForm(true))}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-emerald-700 flex items-center gap-1.5 shadow-sm text-xs sm:text-sm">
             <Plus className="h-4 w-4" /> {tab === "products" ? "Add Product" : "Add Category"}
           </button>
         </div>
@@ -306,51 +506,126 @@ export default function ProductsPage() {
           <div className="fixed inset-0 bg-black/50" onClick={resetForm} />
           <div className="relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-3xl mx-4">
             <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-700">
-              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">{editingId ? "Edit Product" : "Add New Product"}</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">{editingId ? "Edit Product" : "Add New Product"}</h2>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowScanner(true)}
+                    className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 flex items-center gap-1 shadow-sm transition-colors"
+                    title="Scan barcode or capture packaging box"
+                  >
+                    <Scan className="h-3.5 w-3.5" /> Scan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowFormulary(true)}
+                    className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 hover:bg-teal-200 flex items-center gap-1 shadow-sm transition-colors"
+                    title="Clone from standard Ghanaian medicines library"
+                  >
+                    <BookOpen className="h-3.5 w-3.5" /> Formulary
+                  </button>
+                </div>
+              </div>
               <button onClick={resetForm} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700"><X className="h-5 w-5 text-slate-400" /></button>
             </div>
+
+            {/* Mode Switcher Banner: Quick Mode (Simple) vs Detailed Clinical Mode */}
+            <div className="px-6 pt-4">
+              <div className="flex items-center justify-between p-1.5 bg-slate-100 dark:bg-slate-900/60 rounded-2xl">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setFormMode("quick")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      formMode === "quick"
+                        ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    <Zap className="h-3.5 w-3.5" /> ⚡ Quick Mode (Simple)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormMode("detailed")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      formMode === "detailed"
+                        ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    <Layers className="h-3.5 w-3.5" /> 📋 Detailed Clinical Mode
+                  </button>
+                </div>
+                <span className="text-[11px] text-slate-400 hidden sm:inline pr-2">
+                  {formMode === "quick" ? "Only 3 fields needed" : "All 15+ fields visible"}
+                </span>
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className={labelClass}>Product Name *</label>
-                  <input placeholder="e.g. Amoxicillin 500mg Capsules" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} required />
-                </div>
-                <div>
-                  <label className={labelClass}>SKU *</label>
-                  <input placeholder="e.g. AMX-500-CAP" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className={`${inputClass} font-mono`} required />
-                </div>
-                <div>
-                  <label className={labelClass}>Manufacturer</label>
-                  <input placeholder="e.g. GSK Pharmaceuticals" value={form.manufacturer} onChange={(e) => setForm({ ...form, manufacturer: e.target.value })} className={inputClass} />
-                </div>
-              </div>
+              {/* Product Name with Voice & Barcode buttons built right in */}
               <div>
-                <label className={labelClass}>Description *</label>
-                <textarea rows={3} placeholder="Full product description..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={`${inputClass} resize-none`} required />
+                <label className={labelClass}>Product Name *</label>
+                <div className="relative">
+                  <input
+                    placeholder="e.g. Amoxicillin 500mg Capsules or Paracetamol"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className={`${inputClass} pr-20`}
+                    required
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={startVoiceDictation}
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        isListeningVoice
+                          ? "bg-red-500 text-white animate-pulse"
+                          : "text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+                      }`}
+                      title="Speak medicine name & price (Hands-free voice dictation)"
+                    >
+                      <Mic className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowScanner(true)}
+                      className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-colors"
+                      title="Scan barcode or camera photo"
+                    >
+                      <Scan className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
+
+              {/* Price & Stock Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className={labelClass}>Price (GHS) *</label>
-                  <input type="number" min="0" step="0.01" placeholder="0.00" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className={inputClass} required />
+                  <input type="number" min="0" step="0.01" placeholder="0.00" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className={`${inputClass} font-bold text-emerald-700 dark:text-emerald-300`} required />
                 </div>
                 <div>
-                  <label className={labelClass}>Compare At Price (GHS)</label>
+                  <label className={labelClass}>Stock Quantity *</label>
+                  <input type="number" min="0" value={form.stockQuantity} onChange={(e) => setForm({ ...form, stockQuantity: e.target.value })} className={`${inputClass} font-bold`} />
+                </div>
+                <div>
+                  <label className={labelClass}>Compare At (GHS)</label>
                   <input type="number" min="0" step="0.01" placeholder="Original price" value={form.compareAtPrice} onChange={(e) => setForm({ ...form, compareAtPrice: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Stock Quantity</label>
-                  <input type="number" min="0" value={form.stockQuantity} onChange={(e) => setForm({ ...form, stockQuantity: e.target.value })} className={inputClass} />
                 </div>
                 <div>
                   <label className={labelClass}>Min Stock Alert</label>
                   <input type="number" min="0" value={form.minStockAlert} onChange={(e) => setForm({ ...form, minStockAlert: e.target.value })} className={inputClass} />
                 </div>
               </div>
+
+              {/* Category selector */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Category</label>
                   <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value, newCategoryName: "" })} className={inputClass}>
-                    <option value="">Select category</option>
+                    <option value="">Select category (or auto-assigned)</option>
                     {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
@@ -359,37 +634,135 @@ export default function ProductsPage() {
                   <input placeholder="New category name" value={form.newCategoryName} onChange={(e) => setForm({ ...form, newCategoryName: e.target.value, categoryId: "" })} className={inputClass} disabled={!!form.categoryId} />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className={labelClass}>Dosage Form</label>
-                  <select value={form.dosageForm} onChange={(e) => setForm({ ...form, dosageForm: e.target.value })} className={inputClass}>
-                    <option value="">Select form</option>
-                    {["Tablet","Capsule","Syrup","Suspension","Injection","Cream","Ointment","Drops","Inhaler","Suppository","Patch","Gel","Solution","Powder","Other"].map(f => <option key={f} value={f}>{f}</option>)}
-                  </select>
+
+              {/* In QUICK MODE: Collapsible Clinical Accordion */}
+              {formMode === "quick" && (
+                <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setShowClinicalAccordion(!showClinicalAccordion)}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                      Clinical & Regulatory Details (Auto-filled by AI / Optional)
+                    </span>
+                    {showClinicalAccordion ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                  </button>
+
+                  {showClinicalAccordion && (
+                    <div className="p-4 space-y-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className={labelClass}>SKU (Auto-Generated if blank)</label>
+                          <input placeholder="e.g. AMX-500-CAP" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className={`${inputClass} font-mono`} />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Barcode (UPC / EAN)</label>
+                          <input placeholder="e.g. 5012345678900" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} className={`${inputClass} font-mono`} />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Manufacturer</label>
+                          <input placeholder="e.g. Ernest Chemists Ltd" value={form.manufacturer} onChange={(e) => setForm({ ...form, manufacturer: e.target.value })} className={inputClass} />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className={labelClass}>Dosage Form</label>
+                          <select value={form.dosageForm} onChange={(e) => setForm({ ...form, dosageForm: e.target.value })} className={inputClass}>
+                            <option value="">Select form</option>
+                            {["Tablet","Capsule","Syrup","Suspension","Injection","Cream","Ointment","Drops","Inhaler","Suppository","Patch","Gel","Solution","Powder","Other"].map(f => <option key={f} value={f}>{f}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className={labelClass}>Strength</label>
+                          <input placeholder="e.g. 500mg" value={form.strength} onChange={(e) => setForm({ ...form, strength: e.target.value })} className={inputClass} />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Active Ingredients</label>
+                          <input placeholder="e.g. Amoxicillin Trihydrate" value={form.activeIngredients} onChange={(e) => setForm({ ...form, activeIngredients: e.target.value })} className={inputClass} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>Product Description</label>
+                        <textarea rows={2} placeholder="Optional — AI will auto-generate if left blank" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={`${inputClass} resize-none`} />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className={labelClass}>Strength</label>
-                  <input placeholder="e.g. 500mg" value={form.strength} onChange={(e) => setForm({ ...form, strength: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Active Ingredients</label>
-                  <input placeholder="e.g. Amoxicillin trihydrate" value={form.activeIngredients} onChange={(e) => setForm({ ...form, activeIngredients: e.target.value })} className={inputClass} />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className={labelClass}>Usage Instructions</label>
-                  <textarea rows={2} placeholder="Dosage and administration..." value={form.usageInstructions} onChange={(e) => setForm({ ...form, usageInstructions: e.target.value })} className={`${inputClass} resize-none`} />
-                </div>
-                <div>
-                  <label className={labelClass}>Side Effects</label>
-                  <textarea rows={2} placeholder="Known side effects..." value={form.sideEffects} onChange={(e) => setForm({ ...form, sideEffects: e.target.value })} className={`${inputClass} resize-none`} />
-                </div>
-              </div>
-              <div>
-                <label className={labelClass}>Warnings & Contraindications</label>
-                <textarea rows={2} placeholder="Important warnings..." value={form.warnings} onChange={(e) => setForm({ ...form, warnings: e.target.value })} className={`${inputClass} resize-none`} />
-              </div>
+              )}
+
+              {/* In DETAILED MODE: Expand All Fields Directly */}
+              {formMode === "detailed" && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className={labelClass}>SKU *</label>
+                      <input placeholder="e.g. AMX-500-CAP" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className={`${inputClass} font-mono`} />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Barcode (UPC / EAN)</label>
+                      <div className="relative">
+                        <input placeholder="e.g. 5012345678900" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} className={`${inputClass} font-mono pr-9`} />
+                        <button
+                          type="button"
+                          onClick={() => setShowScanner(true)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-emerald-600 rounded-lg"
+                          title="Scan Barcode"
+                        >
+                          <Scan className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Manufacturer</label>
+                      <input placeholder="e.g. GSK Pharmaceuticals" value={form.manufacturer} onChange={(e) => setForm({ ...form, manufacturer: e.target.value })} className={inputClass} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Description</label>
+                    <textarea rows={3} placeholder="Full product description..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={`${inputClass} resize-none`} />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className={labelClass}>Dosage Form</label>
+                      <select value={form.dosageForm} onChange={(e) => setForm({ ...form, dosageForm: e.target.value })} className={inputClass}>
+                        <option value="">Select form</option>
+                        {["Tablet","Capsule","Syrup","Suspension","Injection","Cream","Ointment","Drops","Inhaler","Suppository","Patch","Gel","Solution","Powder","Other"].map(f => <option key={f} value={f}>{f}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Strength</label>
+                      <input placeholder="e.g. 500mg" value={form.strength} onChange={(e) => setForm({ ...form, strength: e.target.value })} className={inputClass} />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Active Ingredients</label>
+                      <input placeholder="e.g. Amoxicillin trihydrate" value={form.activeIngredients} onChange={(e) => setForm({ ...form, activeIngredients: e.target.value })} className={inputClass} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Usage Instructions</label>
+                      <textarea rows={2} placeholder="Dosage and administration..." value={form.usageInstructions} onChange={(e) => setForm({ ...form, usageInstructions: e.target.value })} className={`${inputClass} resize-none`} />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Side Effects</label>
+                      <textarea rows={2} placeholder="Known side effects..." value={form.sideEffects} onChange={(e) => setForm({ ...form, sideEffects: e.target.value })} className={`${inputClass} resize-none`} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Warnings & Contraindications</label>
+                    <textarea rows={2} placeholder="Important warnings..." value={form.warnings} onChange={(e) => setForm({ ...form, warnings: e.target.value })} className={`${inputClass} resize-none`} />
+                  </div>
+                </>
+              )}
+
               <div className="space-y-3">
                 <label className={labelClass}>Product Images</label>
                 
@@ -486,7 +859,15 @@ export default function ProductsPage() {
             </div>
             <div className="space-y-3 text-sm">
               {viewProduct.images[0] && <img src={viewProduct.images[0]} alt={viewProduct.name} className="w-full h-48 object-cover rounded-xl" />}
-              <div className="flex items-center gap-2"><span className="font-mono text-xs text-slate-400">{viewProduct.sku}</span>{viewProduct.requiresPrescription && <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-semibold">Rx</span>}</div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs text-slate-400">{viewProduct.sku}</span>
+                {viewProduct.barcode && (
+                  <span className="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                    <Barcode className="h-3 w-3" /> {viewProduct.barcode}
+                  </span>
+                )}
+                {viewProduct.requiresPrescription && <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-semibold">Rx</span>}
+              </div>
               <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">{viewProduct.name}</h3>
               {viewProduct.brand && <p className="text-emerald-600 dark:text-emerald-400 font-semibold">{viewProduct.brand.name}</p>}
               <p className="text-slate-500 dark:text-slate-400">{viewProduct.description}</p>
@@ -607,7 +988,15 @@ export default function ProductsPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 font-mono">{product.sku}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 font-mono">
+                        <div>{product.sku}</div>
+                        {product.barcode && (
+                          <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
+                            <Barcode className="h-3 w-3 text-slate-400" />
+                            {product.barcode}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{product.category?.name}</td>
                       <td className="px-4 py-3">
                         <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">GHS {product.price.toFixed(2)}</p>
@@ -699,6 +1088,41 @@ export default function ProductsPage() {
         onClose={() => setShowImport(false)}
         onImported={() => { loadProducts(); loadCategories(); }}
       />
+      {/* ========== SCANNER MODAL ========== */}
+      <ProductScannerModal
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+        onApply={handleScannedDataApplied}
+        categories={categories}
+      />
+      {/* ========== UPLOAD HUB MODAL ========== */}
+      <ProductUploadHubModal
+        isOpen={showHub}
+        onClose={() => setShowHub(false)}
+        onSelectMode={handleSelectUploadMode}
+      />
+      {/* ========== CONTINUOUS RAPID SCANNER MODAL ========== */}
+      <ContinuousScannerModal
+        isOpen={showContinuousScan}
+        onClose={() => setShowContinuousScan(false)}
+        onProductCreated={() => { loadProducts(); }}
+      />
+      {/* ========== WHOLESALER INVOICE OCR MODAL ========== */}
+      <InvoiceOcrModal
+        isOpen={showInvoiceOcr}
+        onClose={() => setShowInvoiceOcr(false)}
+        onProductsImported={() => { loadProducts(); loadCategories(); }}
+      />
+      {/* ========== STANDARD FORMULARY MODAL ========== */}
+      <StandardFormularyModal
+        isOpen={showFormulary}
+        onClose={() => setShowFormulary(false)}
+        onSelectDrug={(drug) => {
+          handleScannedDataApplied(drug);
+          setShowForm(true);
+        }}
+      />
     </div>
   );
 }
+

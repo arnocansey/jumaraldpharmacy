@@ -3,6 +3,8 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { Response } from "express";
 import { z } from "zod";
 import { emitInventoryUpdate } from "../lib/socket";
+import { lookupBarcode, scanProductPackagingImage } from "../services/scanner.service";
+import { parseWholesalerInvoice, parseVoiceTranscriptToProduct } from "../services/invoice.service";
 
 const productQuerySchema = z.object({
   search: z.string().optional(),
@@ -20,6 +22,7 @@ const productQuerySchema = z.object({
 const createProductSchema = z.object({
   name: z.string().min(1),
   sku: z.string().min(1),
+  barcode: z.string().optional().nullable(),
   description: z.string().min(1),
   price: z.number().positive(),
   compareAtPrice: z.number().positive().optional().nullable(),
@@ -43,6 +46,7 @@ const createProductSchema = z.object({
 const updateProductSchema = z.object({
   name: z.string().min(1).optional(),
   sku: z.string().min(1).optional(),
+  barcode: z.string().optional().nullable(),
   description: z.string().min(1).optional(),
   price: z.number().positive().optional(),
   compareAtPrice: z.number().positive().nullable().optional(),
@@ -95,6 +99,7 @@ export async function getProducts(req: any, res: Response) {
         { name: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } },
         { sku: { contains: search, mode: "insensitive" } },
+        { barcode: { contains: search, mode: "insensitive" } },
         { activeIngredients: { contains: search, mode: "insensitive" } },
       ];
     }
@@ -286,7 +291,7 @@ export async function createProduct(req: any, res: Response) {
 
     const product = await prisma.product.create({
       data: {
-        name: data.name, slug, sku: data.sku, description: data.description,
+        name: data.name, slug, sku: data.sku, barcode: data.barcode ?? null, description: data.description,
         price: data.price, compareAtPrice: data.compareAtPrice ?? null,
         stockQuantity: data.stockQuantity, minStockAlert: data.minStockAlert,
         requiresPrescription: data.requiresPrescription, isFeatured: data.isFeatured,
@@ -376,6 +381,7 @@ export async function updateProduct(req: any, res: Response) {
     if (data.name !== undefined) updatePayload.name = data.name;
     if (slug !== undefined) updatePayload.slug = slug;
     if (data.sku !== undefined) updatePayload.sku = data.sku;
+    if (data.barcode !== undefined) updatePayload.barcode = data.barcode;
     if (data.description !== undefined) updatePayload.description = data.description;
     if (data.price !== undefined) updatePayload.price = Number(data.price);
     if (data.compareAtPrice !== undefined) updatePayload.compareAtPrice = data.compareAtPrice !== null ? Number(data.compareAtPrice) : null;
@@ -494,3 +500,229 @@ export async function importProducts(req: any, res: Response) {
     return res.status(500).json({ message: "Import failed", error: err.message });
   }
 }
+
+/**
+ * Scan a product barcode to auto-fill details
+ */
+export async function scanProductBarcode(req: any, res: Response) {
+  try {
+    const { barcode } = req.params;
+    if (!barcode || !barcode.trim()) {
+      return res.status(400).json({ message: "Barcode parameter is required" });
+    }
+
+    const details = await lookupBarcode(barcode.trim());
+    if (!details) {
+      return res.status(404).json({ message: "No product details found for this barcode" });
+    }
+
+    return res.json({ status: "success", data: details });
+  } catch (error: any) {
+    console.error("scanProductBarcode error:", error);
+    return res.status(500).json({ message: error.message || "Failed to scan barcode" });
+  }
+}
+
+/**
+ * Scan a packaging image via AI Vision to extract structured product details
+ */
+export async function scanProductImage(req: any, res: Response) {
+  try {
+    let base64Image = "";
+    let mimeType = "image/jpeg";
+
+    if (req.file) {
+      base64Image = req.file.buffer.toString("base64");
+      mimeType = req.file.mimetype;
+    } else if (req.body.imageBase64) {
+      base64Image = req.body.imageBase64;
+      mimeType = req.body.mimeType || "image/jpeg";
+    } else {
+      return res.status(400).json({ message: "No image provided. Please upload an image file or provide imageBase64." });
+    }
+
+    const details = await scanProductPackagingImage(base64Image, mimeType);
+    return res.json({ status: "success", data: details });
+  } catch (error: any) {
+    console.error("scanProductImage error:", error);
+    return res.status(500).json({ message: error.message || "Failed to analyze product packaging image" });
+  }
+}
+
+/**
+ * Scan wholesaler invoice / delivery receipt via AI Vision
+ */
+export async function scanInvoiceImage(req: any, res: Response) {
+  try {
+    let base64Image = "";
+    let mimeType = "image/jpeg";
+
+    if (req.file) {
+      base64Image = req.file.buffer.toString("base64");
+      mimeType = req.file.mimetype;
+    } else if (req.body.imageBase64) {
+      base64Image = req.body.imageBase64;
+      mimeType = req.body.mimeType || "image/jpeg";
+    } else {
+      return res.status(400).json({ message: "No image provided. Please upload an image or provide imageBase64." });
+    }
+
+    const result = await parseWholesalerInvoice(base64Image, mimeType);
+    return res.json({ status: "success", data: result });
+  } catch (error: any) {
+    console.error("scanInvoiceImage error:", error);
+    return res.status(500).json({ message: error.message || "Failed to parse wholesaler invoice" });
+  }
+}
+
+/**
+ * Parse natural voice speech transcript into structured product fields
+ */
+export async function parseVoicePromptHandler(req: any, res: Response) {
+  try {
+    const { transcript } = req.body;
+    if (!transcript || !transcript.trim()) {
+      return res.status(400).json({ message: "Transcript text is required" });
+    }
+
+    const parsed = await parseVoiceTranscriptToProduct(transcript.trim());
+    return res.json({ status: "success", data: parsed });
+  } catch (error: any) {
+    console.error("parseVoicePromptHandler error:", error);
+    return res.status(500).json({ message: error.message || "Failed to parse voice dictation" });
+  }
+}
+
+/**
+ * Batch create multiple products from invoice staging or rapid scanning
+ */
+export async function createBatchProducts(req: any, res: Response) {
+  try {
+    const { products: rawProducts } = req.body;
+    if (!Array.isArray(rawProducts) || rawProducts.length === 0) {
+      return res.status(400).json({ message: "An array of products is required" });
+    }
+
+    const created: any[] = [];
+    const errors: string[] = [];
+
+    // Ensure fallback default category exists
+    let defaultCat = await prisma.category.findFirst({ where: { slug: "general-pharmaceuticals" } });
+    if (!defaultCat) {
+      defaultCat = await prisma.category.create({
+        data: { name: "General Pharmaceuticals", slug: "general-pharmaceuticals", description: "General pharmacy items" },
+      });
+    }
+
+    for (let i = 0; i < rawProducts.length; i++) {
+      const item = rawProducts[i];
+      try {
+        if (!item.name || !item.price) {
+          errors.push(`Item #${i + 1}: Name and price are required.`);
+          continue;
+        }
+
+        // Category resolution
+        let finalCategoryId = defaultCat.id;
+        const catName = (item.categoryName || item.category || "").trim();
+        if (catName) {
+          const catSlug = catName.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
+          let cat = await prisma.category.findFirst({
+            where: { OR: [{ name: { equals: catName, mode: "insensitive" } }, { slug: catSlug }] },
+          });
+          if (!cat) {
+            cat = await prisma.category.create({
+              data: { name: catName, slug: catSlug, description: `Category for ${catName}` },
+            });
+          }
+          finalCategoryId = cat.id;
+        }
+
+        // SKU resolution (ensure unique)
+        let sku = (item.sku || "").trim();
+        if (!sku) {
+          const cleanName = item.name.replace(/[^a-zA-Z0-9\s]/g, "").trim().split(/\s+/);
+          const prefix = cleanName.slice(0, 2).map((w: string) => w.slice(0, 3).toUpperCase()).join("-");
+          sku = `${prefix || "MED"}-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+        let skuCounter = 1;
+        const baseSku = sku;
+        while (await prisma.product.findUnique({ where: { sku } })) {
+          sku = `${baseSku}-${skuCounter++}`;
+        }
+
+        // Slug generation
+        const baseSlug = item.name.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
+        let slug = baseSlug;
+        let slugCounter = 1;
+        while (await prisma.product.findUnique({ where: { slug } })) {
+          slug = `${baseSlug}-${slugCounter++}`;
+        }
+
+        const product = await prisma.product.create({
+          data: {
+            name: item.name,
+            slug,
+            sku,
+            barcode: item.barcode || null,
+            description: item.description || `Medication: ${item.name}`,
+            price: Number(item.price),
+            compareAtPrice: item.compareAtPrice ? Number(item.compareAtPrice) : null,
+            costPrice: item.costPrice ? Number(item.costPrice) : null,
+            stockQuantity: Math.max(0, parseInt(item.stockQuantity ?? item.quantity) || 10),
+            minStockAlert: Math.max(1, parseInt(item.minStockAlert) || 5),
+            requiresPrescription: !!item.requiresPrescription,
+            dosageForm: item.dosageForm || null,
+            strength: item.strength || null,
+            activeIngredients: item.activeIngredients || null,
+            usageInstructions: item.usageInstructions || null,
+            sideEffects: item.sideEffects || null,
+            warnings: item.warnings || null,
+            manufacturer: item.manufacturer || null,
+            images: Array.isArray(item.images) ? item.images : item.imageUrl ? [item.imageUrl] : [],
+            categoryId: finalCategoryId,
+          },
+          include: { category: true },
+        });
+
+        // If batch expiry information was provided from invoice
+        if (item.batchNumber && item.expiryDate) {
+          try {
+            const exp = new Date(item.expiryDate);
+            if (!isNaN(exp.getTime())) {
+              await prisma.batchExpiry.create({
+                data: {
+                  productId: product.id,
+                  batchNumber: item.batchNumber,
+                  quantity: product.stockQuantity,
+                  expiryDate: exp,
+                  costPrice: item.costPrice ? Number(item.costPrice) : null,
+                  supplier: item.manufacturer || "Distributor",
+                },
+              });
+            }
+          } catch {
+            // Ignore batch creation failure
+          }
+        }
+
+        emitInventoryUpdate(product);
+        created.push(product);
+      } catch (err: any) {
+        errors.push(`"${item.name || 'Item'}": ${err.message}`);
+      }
+    }
+
+    return res.status(201).json({
+      status: "success",
+      createdCount: created.length,
+      products: created,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error: any) {
+    console.error("createBatchProducts error:", error);
+    return res.status(500).json({ message: error.message || "Batch product creation failed" });
+  }
+}
+
+

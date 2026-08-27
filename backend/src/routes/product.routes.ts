@@ -4,7 +4,9 @@ import { RoleName } from "@prisma/client";
 import {
   getProducts, getCategories, createCategory, updateCategory, deleteCategory, getBrands,
   getProductBySlug, createProduct, updateProduct, deleteProduct, importProducts,
+  scanProductBarcode, scanProductImage, scanInvoiceImage, parseVoicePromptHandler, createBatchProducts,
 } from "../controllers/product.controller";
+import { upload } from "../controllers/upload.controller";
 
 const router = Router();
 
@@ -14,6 +16,14 @@ router.post("/categories", authenticateToken, requireRole([RoleName.SUPER_ADMIN,
 router.put("/categories/:id", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), updateCategory);
 router.delete("/categories/:id", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), deleteCategory);
 router.get("/brands", getBrands);
+
+// Scanning, OCR, Voice & Batch Endpoints (must be registered before :slug route)
+router.get("/scan/barcode/:barcode", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), scanProductBarcode);
+router.post("/scan/ai-image", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), upload.single("image"), scanProductImage);
+router.post("/scan/invoice", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), upload.single("image"), scanInvoiceImage);
+router.post("/scan/voice", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), parseVoicePromptHandler);
+router.post("/batch", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), createBatchProducts);
+
 router.get("/:slug", getProductBySlug);
 router.post("/", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), createProduct);
 router.patch("/:id", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), updateProduct);
@@ -21,3 +31,4 @@ router.delete("/:id", authenticateToken, requireRole([RoleName.SUPER_ADMIN, Role
 router.post("/import", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.INVENTORY_CLERK]), importProducts);
 
 export default router;
+
