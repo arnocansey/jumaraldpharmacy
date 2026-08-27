@@ -39,7 +39,7 @@ export class OpenAIProvider implements AIProvider {
       }),
     });
 
-    const data = await res.json();
+    const data: any = await res.json();
     if (!res.ok) {
       throw new Error(data.error?.message || "OpenAI API request failed");
     }
@@ -78,7 +78,7 @@ export class OpenAIProvider implements AIProvider {
       }),
     });
 
-    const data = await res.json();
+    const data: any = await res.json();
     if (!res.ok) {
       throw new Error(data.error?.message || "OpenAI structured completion failed");
     }
@@ -111,7 +111,7 @@ export class OpenAIProvider implements AIProvider {
       }),
     });
 
-    const data = await res.json();
+    const data: any = await res.json();
     if (!res.ok) {
       return new Array(1536).fill(0).map((_, i) => (text.charCodeAt(i % text.length) || 0) / 255);
     }

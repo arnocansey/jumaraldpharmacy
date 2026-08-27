@@ -101,7 +101,7 @@ export async function lookupBarcode(barcode: string): Promise<ScannedProductDeta
         headers: { "User-Agent": "JumaraldPharmacy/1.0" },
       });
       if (res.ok) {
-        const json = await res.json();
+        const json: any = await res.json();
         if (json.results && json.results.length > 0) {
           fdaData = json.results[0];
           break;
@@ -142,7 +142,7 @@ export async function lookupBarcode(barcode: string): Promise<ScannedProductDeta
     const opfUrl = `https://world.openproductsfacts.org/api/v2/product/${encodeURIComponent(cleanBarcode)}.json`;
     const res = await fetch(opfUrl, { headers: { "User-Agent": "JumaraldPharmacy/1.0" } });
     if (res.ok) {
-      const json = await res.json();
+      const json: any = await res.json();
       if (json.status === 1 && json.product) {
         openProductData = json.product;
       }
@@ -156,7 +156,7 @@ export async function lookupBarcode(barcode: string): Promise<ScannedProductDeta
       const offUrl = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(cleanBarcode)}.json`;
       const res = await fetch(offUrl, { headers: { "User-Agent": "JumaraldPharmacy/1.0" } });
       if (res.ok) {
-        const json = await res.json();
+        const json: any = await res.json();
         if (json.status === 1 && json.product) {
           openProductData = json.product;
         }
