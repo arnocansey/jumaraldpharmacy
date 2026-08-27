@@ -306,7 +306,7 @@ export default function ProductScannerModal({
         toast.success(`AI analyzed packaging: ${res.data.name}`);
       }
     } catch (err: any) {
-      toast.error(err.message || "AI packaging analysis failed. Please check Gemini API key.");
+      toast.error(err.message || "AI packaging analysis failed. Please check your OpenAI or Gemini API key.");
     } finally {
       setAnalyzing(false);
     }

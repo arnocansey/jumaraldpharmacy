@@ -60,6 +60,7 @@ export default function ProductsPage() {
   const [formMode, setFormMode] = useState<"quick" | "detailed">("quick");
   const [showClinicalAccordion, setShowClinicalAccordion] = useState(false);
   const [isListeningVoice, setIsListeningVoice] = useState(false);
+  const [showActionsDropdown, setShowActionsDropdown] = useState(false);
 
   async function handleImageFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -415,74 +416,122 @@ export default function ProductsPage() {
             {tab === "products" ? `${products.length} products` : `${categories.length} categories`}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {tab === "products" && (
             <>
+              {/* Upload Hub Primary Launcher */}
               <button
+                type="button"
                 onClick={() => setShowHub(true)}
-                className="px-3.5 py-2 rounded-xl font-semibold border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 flex items-center gap-1.5 shadow-sm transition-all"
-                title="Choose from 5 smart product upload preferences"
+                className="px-3.5 py-2 rounded-xl text-xs font-bold border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 flex items-center gap-2 shadow-sm transition-all"
+                title="Open upload options: Scan, Invoice OCR, Voice, or Formulary"
               >
-                <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" /> Upload Hub
+                <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <span>Upload Options</span>
               </button>
-              <button
-                onClick={() => setShowScanner(true)}
-                className="px-3.5 py-2 rounded-xl font-semibold border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 flex items-center gap-1.5 shadow-sm transition-all"
-              >
-                <Scan className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Scan Barcode
-              </button>
-              <button
-                onClick={() => setShowContinuousScan(true)}
-                className="hidden sm:flex px-3 py-2 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 items-center gap-1.5 shadow-sm text-xs"
-                title="Rapid continuous box intake"
-              >
-                <Zap className="h-3.5 w-3.5 text-amber-500" /> Rapid Scan
-              </button>
-              <button
-                onClick={() => setShowInvoiceOcr(true)}
-                className="hidden sm:flex px-3 py-2 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 items-center gap-1.5 shadow-sm text-xs"
-                title="Distributor invoice / packing slip OCR"
-              >
-                <FileText className="h-3.5 w-3.5 text-blue-500" /> Invoice OCR
-              </button>
-              <button
-                onClick={() => {
-                  if (products.length === 0) { toast.error("No products to export"); return; }
-                  const headers = ["ID", "SKU", "Barcode", "Name", "Category", "Price", "StockQuantity", "RequiresPrescription"];
-                  const rows = products.map(p => [
-                    p.id,
-                    `"${p.sku}"`,
-                    `"${p.barcode || ''}"`,
-                    `"${p.name.replace(/"/g, '""')}"`,
-                    `"${p.category?.name || ''}"`,
-                    p.price,
-                    p.stockQuantity,
-                    p.requiresPrescription ? "Yes" : "No"
-                  ]);
-                  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-                  const encodedUri = encodeURI(csvContent);
-                  const link = document.createElement("a");
-                  link.setAttribute("href", encodedUri);
-                  link.setAttribute("download", `jumarald_products_${new Date().toISOString().slice(0, 10)}.csv`);
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  toast.success("Products CSV exported!");
-                }}
-                className="px-3 py-2 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 text-xs"
-              >
-                <Download className="h-3.5 w-3.5" /> CSV
-              </button>
-              <button
-                onClick={() => setShowImport(true)}
-                className="px-3 py-2 rounded-xl font-semibold border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-1.5 text-xs"
-              >
-                <Upload className="h-3.5 w-3.5" /> Import
-              </button>
+
+              {/* Actions Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowActionsDropdown(!showActionsDropdown)}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 shadow-sm transition-colors"
+                >
+                  <span>More Tools</span>
+                  <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform ${showActionsDropdown ? "rotate-180" : ""}`} />
+                </button>
+
+                {showActionsDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-20" onClick={() => setShowActionsDropdown(false)} />
+                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl py-1.5 z-30 animate-in fade-in slide-in-from-top-1 text-xs divide-y divide-slate-100 dark:divide-slate-700">
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={() => { setShowActionsDropdown(false); setShowScanner(true); }}
+                          className="w-full px-3.5 py-2 flex items-center gap-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 font-medium text-left"
+                        >
+                          <Scan className="h-4 w-4 text-emerald-500" />
+                          <span>Scan Barcode / Box</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setShowActionsDropdown(false); setShowContinuousScan(true); }}
+                          className="w-full px-3.5 py-2 flex items-center gap-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 font-medium text-left"
+                        >
+                          <Zap className="h-4 w-4 text-amber-500" />
+                          <span>Rapid Continuous Scan</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setShowActionsDropdown(false); setShowInvoiceOcr(true); }}
+                          className="w-full px-3.5 py-2 flex items-center gap-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 font-medium text-left"
+                        >
+                          <FileText className="h-4 w-4 text-blue-500" />
+                          <span>Wholesaler Invoice OCR</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setShowActionsDropdown(false); setShowFormulary(true); }}
+                          className="w-full px-3.5 py-2 flex items-center gap-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 font-medium text-left"
+                        >
+                          <BookOpen className="h-4 w-4 text-teal-500" />
+                          <span>Drug Formulary Library</span>
+                        </button>
+                      </div>
+
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={() => { setShowActionsDropdown(false); setShowImport(true); }}
+                          className="w-full px-3.5 py-2 flex items-center gap-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 font-medium text-left"
+                        >
+                          <Upload className="h-4 w-4 text-slate-400" />
+                          <span>Import CSV</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowActionsDropdown(false);
+                            if (products.length === 0) { toast.error("No products to export"); return; }
+                            const headers = ["ID", "SKU", "Barcode", "Name", "Category", "Price", "StockQuantity", "RequiresPrescription"];
+                            const rows = products.map(p => [
+                              p.id,
+                              `"${p.sku}"`,
+                              `"${p.barcode || ''}"`,
+                              `"${p.name.replace(/"/g, '""')}"`,
+                              `"${p.category?.name || ''}"`,
+                              p.price,
+                              p.stockQuantity,
+                              p.requiresPrescription ? "Yes" : "No"
+                            ]);
+                            const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+                            const encodedUri = encodeURI(csvContent);
+                            const link = document.createElement("a");
+                            link.setAttribute("href", encodedUri);
+                            link.setAttribute("download", `jumarald_products_${new Date().toISOString().slice(0, 10)}.csv`);
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            toast.success("Products CSV exported!");
+                          }}
+                          className="w-full px-3.5 py-2 flex items-center gap-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 font-medium text-left"
+                        >
+                          <Download className="h-4 w-4 text-slate-400" />
+                          <span>Export CSV</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </>
           )}
-          <button onClick={() => tab === "products" ? (setFormMode("quick"), resetForm(), setShowForm(true)) : (resetCatForm(), setShowCatForm(true))}
-            className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-emerald-700 flex items-center gap-1.5 shadow-sm text-xs sm:text-sm">
+
+          <button
+            onClick={() => tab === "products" ? (setFormMode("quick"), resetForm(), setShowForm(true)) : (resetCatForm(), setShowCatForm(true))}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-emerald-700 flex items-center gap-1.5 shadow-sm text-xs sm:text-sm transition-all"
+          >
             <Plus className="h-4 w-4" /> {tab === "products" ? "Add Product" : "Add Category"}
           </button>
         </div>
