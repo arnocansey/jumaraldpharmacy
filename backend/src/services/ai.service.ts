@@ -2,7 +2,40 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { prisma } from "../lib/prisma";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || "";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+
+async function callGenericTextAI(prompt: string, jsonMode = false): Promise<string> {
+  if (OPENAI_API_KEY) {
+    const body: any = {
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+    };
+    if (jsonMode) body.response_format = { type: "json_object" };
+
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data: any = await res.json();
+    if (!res.ok) throw new Error(data?.error?.message || "OpenAI request failed");
+    return data.choices?.[0]?.message?.content || "";
+  }
+
+  if (genAI) {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  }
+
+  throw new Error("No AI provider configured");
+}
 
 export interface ChatMessage {
   role: "user" | "model" | "system";
@@ -63,9 +96,8 @@ export async function consultHealthAssistant(
 
   const lastUserMessage = [...messages].reverse().find((m) => m.role === "user")?.content || "";
 
-  if (genAI) {
+  if (OPENAI_API_KEY || genAI) {
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = `You are "Dr. Jumarald AI", the Superintendent Clinical Pharmacy & Health Assistant for Jumarald Pharmacy & Wellness in Ghana.
 
 User Context:
@@ -86,8 +118,7 @@ ${messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n")}
 
 Respond directly to the patient:`;
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const text = await callGenericTextAI(prompt, false);
 
       const recommendedProducts = inventory.filter((p) =>
         text.toLowerCase().includes(p.name.toLowerCase())
@@ -98,7 +129,7 @@ Respond directly to the patient:`;
         recommendedProducts,
       };
     } catch (err) {
-      console.warn("Gemini API call failed, using Clinical AI Engine fallback:", err);
+      console.warn("AI API call failed, using Clinical AI Engine fallback:", err);
     }
   }
 
@@ -121,9 +152,8 @@ export async function analyzeDrugInteractions(drugs: string[]): Promise<{
     };
   }
 
-  if (genAI) {
+  if (OPENAI_API_KEY || genAI) {
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = `You are a Senior Clinical Pharmacologist. Analyze the potential pharmacological interactions between these drugs: ${drugs.join(", ")}.
 
 Return a JSON object ONLY with the following structure:
@@ -141,11 +171,10 @@ Return a JSON object ONLY with the following structure:
   ]
 }`;
 
-      const result = await model.generateContent(prompt);
-      const rawText = result.response.text().replace(/```json|```/g, "").trim();
+      const rawText = (await callGenericTextAI(prompt, true)).replace(/```json|```/g, "").trim();
       return JSON.parse(rawText);
     } catch (err) {
-      console.warn("Gemini interaction check failed, falling back to database check:", err);
+      console.warn("AI interaction check failed, falling back to database check:", err);
     }
   }
 
@@ -190,9 +219,8 @@ export async function explainPrescription(prescriptionText: string): Promise<{
   precautions: string[];
   dietaryNotes: string[];
 }> {
-  if (genAI) {
+  if (OPENAI_API_KEY || genAI) {
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = `You are a clinical pharmacist. Explain the following prescription in plain, patient-friendly English:
 "${prescriptionText}"
 
@@ -212,11 +240,10 @@ Return JSON ONLY:
   "dietaryNotes": ["Avoid alcohol", "Take with plenty of water"]
 }`;
 
-      const result = await model.generateContent(prompt);
-      const rawText = result.response.text().replace(/```json|```/g, "").trim();
+      const rawText = (await callGenericTextAI(prompt, true)).replace(/```json|```/g, "").trim();
       return JSON.parse(rawText);
     } catch (err) {
-      console.warn("Gemini prescription explanation failed:", err);
+      console.warn("AI prescription explanation failed:", err);
     }
   }
 

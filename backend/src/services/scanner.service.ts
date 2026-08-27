@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { prisma } from "../lib/prisma";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || "";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 export interface ScannedProductDetails {
@@ -211,12 +212,106 @@ export async function lookupBarcode(barcode: string): Promise<ScannedProductDeta
 }
 
 /**
- * Ask Gemini to identify or generate a clinical template for a barcode
+ * Universal Vision AI helper: supports OpenAI Vision (gpt-4o-mini / gpt-4o) and Google Gemini Vision
+ */
+async function callVisionAI(base64Image: string, mimeType: string, prompt: string): Promise<string> {
+  const cleanBase64 = base64Image.replace(/^data:image\/[a-zA-Z0-9.+]+;base64,/, "");
+
+  if (OPENAI_API_KEY) {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType || "image/jpeg"};base64,${cleanBase64}`,
+                },
+              },
+            ],
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+      }),
+    });
+
+    const data: any = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.error?.message || "OpenAI Vision request failed");
+    }
+    return data.choices?.[0]?.message?.content || "";
+  }
+
+  if (genAI) {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          data: cleanBase64,
+          mimeType: mimeType || "image/jpeg",
+        },
+      },
+    ]);
+    return result.response.text();
+  }
+
+  throw new Error("AI is not configured. Please set OPENAI_API_KEY or GEMINI_API_KEY in the backend environment.");
+}
+
+/**
+ * Universal Text AI helper: supports OpenAI and Google Gemini
+ */
+async function callTextAI(prompt: string, jsonMode: boolean = true): Promise<string> {
+  if (OPENAI_API_KEY) {
+    const body: any = {
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+    };
+    if (jsonMode) {
+      body.response_format = { type: "json_object" };
+    }
+
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data: any = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.error?.message || "OpenAI request failed");
+    }
+    return data.choices?.[0]?.message?.content || "";
+  }
+
+  if (genAI) {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  }
+
+  throw new Error("AI is not configured. Please set OPENAI_API_KEY or GEMINI_API_KEY in the backend environment.");
+}
+
+/**
+ * Ask AI to identify or generate a clinical template for a barcode
  */
 async function askGeminiForBarcode(barcode: string): Promise<ScannedProductDetails> {
-  if (!genAI) throw new Error("Gemini AI is not configured");
-
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   const prompt = `You are a clinical pharmacist at Jumarald Pharmacy.
 A user has scanned the product barcode: "${barcode}".
 If you recognize this barcode or GTIN/UPC/EAN, provide the authentic pharmaceutical details.
@@ -239,8 +334,7 @@ Return ONLY raw valid JSON (no markdown formatting, no code blocks):
   "requiresPrescription": false
 }`;
 
-  const result = await model.generateContent(prompt);
-  const rawText = result.response.text().replace(/```json|```/g, "").trim();
+  const rawText = (await callTextAI(prompt, true)).replace(/```json|```/g, "").trim();
   const parsed = JSON.parse(rawText);
 
   return {
@@ -255,10 +349,9 @@ Return ONLY raw valid JSON (no markdown formatting, no code blocks):
  * Enrich partial product data with clinical directions, warnings, and dosage form
  */
 async function enrichScannedProductWithAI(partial: ScannedProductDetails): Promise<ScannedProductDetails> {
-  if (!genAI) return partial;
+  if (!OPENAI_API_KEY && !genAI) return partial;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const prompt = `You are a pharmacist for Jumarald Pharmacy. Given this product data:
 Name: ${partial.name}
 Ingredients: ${partial.activeIngredients || "N/A"}
@@ -278,8 +371,7 @@ Provide full clinical pharmacy fields in valid JSON (no markdown, no backticks):
   "requiresPrescription": boolean
 }`;
 
-    const result = await model.generateContent(prompt);
-    const rawText = result.response.text().replace(/```json|```/g, "").trim();
+    const rawText = (await callTextAI(prompt, true)).replace(/```json|```/g, "").trim();
     const enriched = JSON.parse(rawText);
 
     return {
@@ -294,13 +386,13 @@ Provide full clinical pharmacy fields in valid JSON (no markdown, no backticks):
       categoryName: partial.categoryName || enriched.categoryName,
       requiresPrescription: partial.requiresPrescription ?? enriched.requiresPrescription,
     };
-  } catch (err) {
+  } catch {
     return partial;
   }
 }
 
 /**
- * Scan a medicine packaging image (via Gemini Vision)
+ * Scan a medicine packaging image (via OpenAI Vision or Gemini Vision)
  * Extracts all clinical and packaging text: name, SKU, active ingredients,
  * dosage form, strength, manufacturer, instructions, warnings, and barcode if visible.
  */
@@ -308,16 +400,11 @@ export async function scanProductPackagingImage(
   base64Image: string,
   mimeType: string = "image/jpeg"
 ): Promise<ScannedProductDetails> {
-  if (!genAI) {
+  if (!OPENAI_API_KEY && !genAI) {
     throw new Error(
-      "Gemini AI is not configured. Please set GEMINI_API_KEY in the backend environment to enable visual packaging scans."
+      "AI is not configured. Please set OPENAI_API_KEY or GEMINI_API_KEY in the backend environment to enable visual packaging scans."
     );
   }
-
-  // Clean base64 prefix if present
-  const cleanBase64 = base64Image.replace(/^data:image\/[a-zA-Z]+;base64,/, "");
-
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `You are an expert clinical pharmacist and computer vision AI assistant for Jumarald Pharmacy.
 Carefully examine this medicine or health product packaging image (box, bottle, label, or blister pack).
@@ -344,17 +431,7 @@ CRITICAL RULES:
 2. Read text carefully from the image, correcting any OCR blur if the drug is an established pharmaceutical.
 3. If barcode digits are clearly readable on the packaging, include them in "barcode".`;
 
-  const result = await model.generateContent([
-    prompt,
-    {
-      inlineData: {
-        data: cleanBase64,
-        mimeType: mimeType || "image/jpeg",
-      },
-    },
-  ]);
-
-  const rawText = result.response.text().replace(/```json|```/g, "").trim();
+  const rawText = (await callVisionAI(base64Image, mimeType, prompt)).replace(/```json|```/g, "").trim();
 
   try {
     const data = JSON.parse(rawText);
@@ -379,3 +456,4 @@ CRITICAL RULES:
     throw new Error(`Failed to parse AI vision response: ${err.message}. Response was: ${rawText.slice(0, 150)}`);
   }
 }
+

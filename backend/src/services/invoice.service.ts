@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { generateSkuFromName } from "./scanner.service";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || "";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 export interface ExtractedInvoiceItem {
@@ -38,20 +39,110 @@ export interface VoiceParsedProduct {
 }
 
 /**
- * Parse a wholesaler/distributor invoice, receipt, or packing slip photo using Gemini Vision
+ * Universal Vision AI helper for invoice OCR (supports OpenAI Vision and Gemini Vision)
+ */
+async function callInvoiceVisionAI(base64Image: string, mimeType: string, prompt: string): Promise<string> {
+  const cleanBase64 = base64Image.replace(/^data:image\/[a-zA-Z0-9.+]+;base64,/, "");
+
+  if (OPENAI_API_KEY) {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType || "image/jpeg"};base64,${cleanBase64}`,
+                },
+              },
+            ],
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+      }),
+    });
+
+    const data: any = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.error?.message || "OpenAI Vision invoice request failed");
+    }
+    return data.choices?.[0]?.message?.content || "";
+  }
+
+  if (genAI) {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          data: cleanBase64,
+          mimeType: mimeType || "image/jpeg",
+        },
+      },
+    ]);
+    return result.response.text();
+  }
+
+  throw new Error("AI is not configured. Please set OPENAI_API_KEY or GEMINI_API_KEY in the backend environment.");
+}
+
+/**
+ * Universal Text AI helper for voice transcript parsing
+ */
+async function callVoiceParserAI(prompt: string): Promise<string> {
+  if (OPENAI_API_KEY) {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+      }),
+    });
+
+    const data: any = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.error?.message || "OpenAI voice parse request failed");
+    }
+    return data.choices?.[0]?.message?.content || "";
+  }
+
+  if (genAI) {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  }
+
+  throw new Error("AI is not configured. Please set OPENAI_API_KEY or GEMINI_API_KEY in the backend environment.");
+}
+
+/**
+ * Parse a wholesaler/distributor invoice, receipt, or packing slip photo using OpenAI Vision or Gemini Vision
  */
 export async function parseWholesalerInvoice(
   base64Image: string,
   mimeType: string = "image/jpeg"
 ): Promise<{ distributor?: string; invoiceNumber?: string; items: ExtractedInvoiceItem[] }> {
-  if (!genAI) {
+  if (!OPENAI_API_KEY && !genAI) {
     throw new Error(
-      "Gemini AI is not configured. Please set GEMINI_API_KEY in the backend environment to enable invoice parsing."
+      "AI is not configured. Please set OPENAI_API_KEY or GEMINI_API_KEY in the backend environment to enable invoice parsing."
     );
   }
-
-  const cleanBase64 = base64Image.replace(/^data:image\/[a-zA-Z]+;base64,/, "");
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `You are a clinical pharmacist and optical character recognition (OCR) assistant for Jumarald Pharmacy in Ghana.
 Analyze this paper invoice, delivery note, receipt, or packing slip from a pharmaceutical distributor (e.g. Ernest Chemists, Tobinco, Kinapharma, Ayrton, Unichem, etc.).
@@ -88,17 +179,7 @@ RULES:
 3. If no cost price is visible, provide an estimated realistic Ghanaian retail price in GHS.
 4. Ensure items array contains all distinct medications visible on the document.`;
 
-  const result = await model.generateContent([
-    prompt,
-    {
-      inlineData: {
-        data: cleanBase64,
-        mimeType: mimeType || "image/jpeg",
-      },
-    },
-  ]);
-
-  const rawText = result.response.text().replace(/```json|```/g, "").trim();
+  const rawText = (await callInvoiceVisionAI(base64Image, mimeType, prompt)).replace(/```json|```/g, "").trim();
 
   try {
     const data = JSON.parse(rawText);
@@ -144,8 +225,8 @@ RULES:
  * Parse natural voice speech transcript into structured product fields
  */
 export async function parseVoiceTranscriptToProduct(transcript: string): Promise<VoiceParsedProduct> {
-  if (!genAI) {
-    // Basic regex heuristic fallback if Gemini is not configured
+  if (!OPENAI_API_KEY && !genAI) {
+    // Basic regex heuristic fallback if no AI provider is configured
     const clean = transcript.trim();
     const qtyMatch = clean.match(/(\d+)\s*(boxes|packs|bottles|pieces|units|tablets|capsules)?/i);
     const priceMatch = clean.match(/(\d+(?:\.\d+)?)\s*(cedis|ghs|ghana cedis|dollars)?/i);
@@ -158,8 +239,6 @@ export async function parseVoiceTranscriptToProduct(transcript: string): Promise
     };
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
   const prompt = `You are an AI assistant for Jumarald Pharmacy in Ghana.
 A pharmacist dictated the following spoken sentence to add a product to the catalog:
 "${transcript}"
@@ -169,8 +248,8 @@ Parse the speech into the following structured JSON format:
   "name": "Full product name (e.g. Paracetamol 500mg Tablets)",
   "sku": "Concise clean SKU",
   "price": 25.00,
-  "costPrice": 18.00 (or null if not mentioned),
-  "stockQuantity": 50 (or 10 if not mentioned),
+  "costPrice": 18.00,
+  "stockQuantity": 50,
   "strength": "e.g. 500mg, 10mg/5ml",
   "dosageForm": "Tablet, Capsule, Syrup, Suspension, Injection, Cream, etc.",
   "activeIngredients": "Active ingredients if inferrable",
@@ -181,10 +260,8 @@ Parse the speech into the following structured JSON format:
 
 Return ONLY raw valid JSON (no markdown backticks, no explanations).`;
 
-  const result = await model.generateContent(prompt);
-  const rawText = result.response.text().replace(/```json|```/g, "").trim();
-
   try {
+    const rawText = (await callVoiceParserAI(prompt)).replace(/```json|```/g, "").trim();
     const data = JSON.parse(rawText);
     return {
       name: data.name || transcript,
@@ -199,7 +276,13 @@ Return ONLY raw valid JSON (no markdown backticks, no explanations).`;
       categoryName: data.categoryName || "General Pharmaceuticals",
       requiresPrescription: typeof data.requiresPrescription === "boolean" ? data.requiresPrescription : false,
     };
-  } catch (err: any) {
-    throw new Error(`Failed to parse voice transcript: ${err.message}`);
+  } catch {
+    // Fallback to basic extraction
+    return {
+      name: transcript,
+      stockQuantity: 10,
+      price: 20.0,
+      requiresPrescription: false,
+    };
   }
 }
