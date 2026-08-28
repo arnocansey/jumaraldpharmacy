@@ -35,6 +35,7 @@ import {
   Scan,
   Zap,
   BookOpen,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -89,6 +90,7 @@ const allSections: NavSection[] = [
   {
     label: "System & Management",
     items: [
+      { name: "QuickBooks Sync", href: "/quickbooks", icon: FileSpreadsheet, badge: "QB 19" },
       { name: "Staff & Users", href: "/users", icon: Users },
       { name: "Audit Logs", href: "/audit-logs", icon: ShieldCheck },
       { name: "Notifications", href: "/notifications", icon: Bell },
