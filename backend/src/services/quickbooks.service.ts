@@ -84,6 +84,24 @@ export async function saveQuickbooksConfig(config: Partial<QuickbooksConfig>): P
 }
 
 /**
+ * Generate unique product slug for new products
+ */
+export async function generateProductSlug(name: string): Promise<string> {
+  const baseSlug =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-") || `item-${Date.now()}`;
+  let slug = baseSlug;
+  let counter = 1;
+  while (await prisma.product.findUnique({ where: { slug } })) {
+    slug = `${baseSlug}-${counter++}`;
+  }
+  return slug;
+}
+
+/**
  * Generate .qwc configuration file content for QuickBooks Web Connector 2.3+
  */
 export function generateQwcFileContent(
@@ -216,17 +234,6 @@ export async function processItemInventoryResponseQbXml(
           where: { name: { equals: name, mode: "insensitive" } },
         });
       }
-
-async function generateProductSlug(name: string): Promise<string> {
-  const baseSlug = name.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-") || `item-${Date.now()}`;
-  let slug = baseSlug;
-  let counter = 1;
-  while (await prisma.product.findUnique({ where: { slug } })) {
-    slug = `${baseSlug}-${counter++}`;
-  }
-  return slug;
-}
-
       if (existing) {
         // Update product stock and price from QuickBooks master
         await prisma.product.update({
