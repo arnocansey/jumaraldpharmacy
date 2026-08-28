@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, Filter, Star, Plus, ArrowUpDown, Package } from "lucide-react";
+import { Search, Filter, Star, Plus, ArrowUpDown, Package, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
@@ -28,12 +28,18 @@ export default function ShopPage() {
   const { data: categoriesData } = useCategoriesQuery();
   const categories = categoriesData || [];
 
+  const limit = 12;
+
   const { data: productsData, isLoading: loading } = useProductsQuery({
     category: selectedCategory !== "all" ? selectedCategory : undefined,
     search: search || undefined,
-    sort: sortBy,
-    prescriptionOnly: rxOnly,
-    inStockOnly: inStockOnly,
+    sortBy: sortBy,
+    requiresPrescription: rxOnly ? true : undefined,
+    inStockOnly: inStockOnly || undefined,
+    minPrice: priceRange.min || undefined,
+    maxPrice: priceRange.max || undefined,
+    page: page,
+    limit: limit,
   });
 
   const products = productsData?.products || [];
@@ -283,16 +289,73 @@ export default function ShopPage() {
                 })}
               </div>
 
-              {/* Pagination */}
+              {/* Pagination Controls */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-4">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-xl text-sm font-bold border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                    Previous
-                  </button>
-                  <span className="text-sm text-slate-500 font-medium">Page {page} of {totalPages}</span>
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded-xl text-sm font-bold border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                    Next
-                  </button>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-slate-100 dark:border-slate-800">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Showing Page <span className="font-bold text-slate-900 dark:text-white">{page}</span> of <span className="font-bold text-slate-900 dark:text-white">{totalPages}</span> ({totalCount} total medications)
+                  </span>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Previous Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPage((p) => Math.max(1, p - 1));
+                        window.scrollTo({ top: 350, behavior: "smooth" });
+                      }}
+                      disabled={page <= 1}
+                      className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center gap-1 text-slate-700 dark:text-slate-300 shadow-sm"
+                    >
+                      <ChevronLeft className="h-4 w-4" /> Previous
+                    </button>
+
+                    {/* Numbered Page Buttons */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((pNum) => {
+                        if (totalPages <= 7) return true;
+                        if (pNum === 1 || pNum === totalPages) return true;
+                        if (Math.abs(pNum - page) <= 1) return true;
+                        return false;
+                      })
+                      .map((pNum, idx, arr) => {
+                        const showEllipsisBefore = idx > 0 && pNum - arr[idx - 1] > 1;
+                        return (
+                          <React.Fragment key={pNum}>
+                            {showEllipsisBefore && (
+                              <span className="px-1 text-xs text-slate-400">...</span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPage(pNum);
+                                window.scrollTo({ top: 350, behavior: "smooth" });
+                              }}
+                              className={`h-8 w-8 rounded-xl text-xs font-bold transition-all flex items-center justify-center ${
+                                page === pNum
+                                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30 scale-105"
+                                  : "border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                              }`}
+                            >
+                              {pNum}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+
+                    {/* Next Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPage((p) => Math.min(totalPages, p + 1));
+                        window.scrollTo({ top: 350, behavior: "smooth" });
+                      }}
+                      disabled={page >= totalPages}
+                      className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center gap-1 text-slate-700 dark:text-slate-300 shadow-sm"
+                    >
+                      Next <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               )}
             </>

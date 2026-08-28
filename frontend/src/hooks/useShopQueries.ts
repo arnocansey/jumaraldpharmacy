@@ -49,15 +49,25 @@ export function useProductsQuery(params: {
   category?: string;
   search?: string;
   sort?: string;
+  sortBy?: string;
   prescriptionOnly?: boolean;
+  requiresPrescription?: boolean;
   inStockOnly?: boolean;
+  page?: number;
+  limit?: number;
+  minPrice?: string | number;
+  maxPrice?: string | number;
 }) {
   const searchParams = new URLSearchParams();
   if (params.category) searchParams.set("category", params.category);
   if (params.search) searchParams.set("search", params.search);
-  if (params.sort) searchParams.set("sort", params.sort);
-  if (params.prescriptionOnly) searchParams.set("prescription", "true");
-  if (params.inStockOnly) searchParams.set("inStock", "true");
+  if (params.sortBy || params.sort) searchParams.set("sortBy", params.sortBy || params.sort || "createdAt");
+  if (params.prescriptionOnly || params.requiresPrescription) searchParams.set("requiresPrescription", "true");
+  if (params.inStockOnly) searchParams.set("inStockOnly", "true");
+  if (params.page !== undefined) searchParams.set("page", String(params.page));
+  if (params.limit !== undefined) searchParams.set("limit", String(params.limit));
+  if (params.minPrice) searchParams.set("minPrice", String(params.minPrice));
+  if (params.maxPrice) searchParams.set("maxPrice", String(params.maxPrice));
 
   const queryString = searchParams.toString();
 
@@ -66,7 +76,7 @@ export function useProductsQuery(params: {
     queryFn: async () => {
       const data = await apiFetch<ProductsResponse | Product[]>(`/products?${queryString}`);
       if (Array.isArray(data)) {
-        return { products: data, pagination: { total: data.length, page: 1, pages: 1 } };
+        return { products: data, pagination: { total: data.length, page: params.page || 1, pages: 1 } };
       }
       return data;
     },
