@@ -8,6 +8,7 @@ import {
   parseQuickBooksItemExport,
 } from "../services/quickbooks.service";
 import { prisma } from "../lib/prisma";
+import { cacheGet, cacheSet, cacheDel } from "../lib/cache";
 
 /**
  * Handle QuickBooks Web Connector (QBWC) SOAP requests
@@ -69,6 +70,7 @@ export async function getSettings(req: Request, res: Response) {
 export async function updateSettings(req: Request, res: Response) {
   try {
     const updated = await saveQuickbooksConfig(req.body);
+    await cacheDel("quickbooks:*");
     return res.json({ message: "QuickBooks settings updated successfully", config: updated });
   } catch (err: any) {
     return res.status(500).json({ message: err.message || "Failed to save QB settings" });
@@ -80,6 +82,13 @@ export async function updateSettings(req: Request, res: Response) {
  */
 export async function getSyncStatus(req: Request, res: Response) {
   try {
+    const cacheKey = "quickbooks:sync_status";
+    const cached = await cacheGet<any>(cacheKey);
+    if (cached) {
+      res.setHeader("X-Cache", "HIT");
+      return res.json(cached);
+    }
+
     const config = await getQuickbooksConfig();
 
     const [totalProducts, inStockCount, totalOrders, recentOrders] = await Promise.all([
@@ -110,7 +119,7 @@ export async function getSyncStatus(req: Request, res: Response) {
       createdAt: o.createdAt,
     }));
 
-    return res.json({
+    const result = {
       config,
       stats: {
         totalProducts,
@@ -121,7 +130,11 @@ export async function getSyncStatus(req: Request, res: Response) {
         lastSalesSync: config.lastSalesSync || null,
       },
       transactions,
-    });
+    };
+
+    await cacheSet(cacheKey, result, 20); // 20s cache
+    res.setHeader("X-Cache", "MISS");
+    return res.json(result);
   } catch (err: any) {
     return res.status(500).json({ message: err.message || "Failed to fetch QB sync status" });
   }
@@ -133,6 +146,7 @@ export async function getSyncStatus(req: Request, res: Response) {
 export async function triggerSyncNow(req: Request, res: Response) {
   try {
     await saveQuickbooksConfig({ lastSalesSync: new Date().toISOString() });
+    await cacheDel("quickbooks:*");
     return res.json({
       message: "Sync queue activated. Open QuickBooks Web Connector on your Windows PC and click 'Update Selected' to sync immediately.",
     });
@@ -152,6 +166,8 @@ export async function importItemsFile(req: Request, res: Response) {
     }
 
     const result = await parseQuickBooksItemExport(fileContent, filename || "items.csv");
+    await cacheDel("quickbooks:*");
+    await cacheDel("products:*");
     return res.json({
       message: `QuickBooks inventory processed! Updated ${result.updated} items, created ${result.created} new items.`,
       result,

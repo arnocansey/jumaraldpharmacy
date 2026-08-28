@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { Response } from "express";
 import { z } from "zod";
 import { emitInventoryUpdate } from "../lib/socket";
+import { cacheGet, cacheSet, cacheDel } from "../lib/cache";
 import { lookupBarcode, scanProductPackagingImage } from "../services/scanner.service";
 import { parseWholesalerInvoice, parseVoiceTranscriptToProduct } from "../services/invoice.service";
 
@@ -93,6 +94,13 @@ export async function getProducts(req: any, res: Response) {
     const query = productQuerySchema.parse(req.query);
     const { search, category, brand, requiresPrescription, inStockOnly, minPrice, maxPrice, sortBy, page, limit } = query;
 
+    const cacheKey = `products:list:${JSON.stringify(query)}`;
+    const cached = await cacheGet<any>(cacheKey);
+    if (cached) {
+      res.setHeader("X-Cache", "HIT");
+      return res.json(cached);
+    }
+
     const where: any = {};
     if (search) {
       where.OR = [
@@ -127,7 +135,10 @@ export async function getProducts(req: any, res: Response) {
       prisma.product.count({ where }),
     ]);
 
-    return res.json({ products, pagination: { total, page: Number(page), pages: Math.ceil(total / take) } });
+    const result = { products, pagination: { total, page: Number(page), pages: Math.ceil(total / take) } };
+    await cacheSet(cacheKey, result, 120); // 2 min cache
+    res.setHeader("X-Cache", "MISS");
+    return res.json(result);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: "Invalid query parameters", errors: error.errors });
@@ -138,6 +149,13 @@ export async function getProducts(req: any, res: Response) {
 
 export async function getCategories(req: any, res: Response) {
   try {
+    const cacheKey = "categories:all";
+    const cached = await cacheGet<any>(cacheKey);
+    if (cached) {
+      res.setHeader("X-Cache", "HIT");
+      return res.json(cached);
+    }
+
     let categories = await prisma.category.findMany({
       include: { _count: { select: { products: true } } },
       orderBy: { name: "asc" },
@@ -149,6 +167,9 @@ export async function getCategories(req: any, res: Response) {
         orderBy: { name: "asc" },
       });
     }
+
+    await cacheSet(cacheKey, categories, 300); // 5 min cache
+    res.setHeader("X-Cache", "MISS");
     return res.json(categories);
   } catch {
     return res.status(500).json({ message: "Failed to fetch categories" });
@@ -166,6 +187,8 @@ export async function createCategory(req: any, res: Response) {
     const category = await prisma.category.create({
       data: { name: data.name, slug, description: data.description, imageUrl: data.imageUrl },
     });
+    await cacheDel("categories:*");
+    await cacheDel("products:*");
     return res.status(201).json(category);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -196,6 +219,8 @@ export async function updateCategory(req: any, res: Response) {
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl ? imageUrl : null;
 
     const category = await prisma.category.update({ where: { id }, data: updateData });
+    await cacheDel("categories:*");
+    await cacheDel("products:*");
     return res.json(category);
   } catch {
     return res.status(500).json({ message: "Failed to update category" });
@@ -211,6 +236,8 @@ export async function deleteCategory(req: any, res: Response) {
       return res.status(400).json({ message: `Cannot delete category with ${existing._count.products} products. Move or delete products first.` });
     }
     await prisma.category.delete({ where: { id } });
+    await cacheDel("categories:*");
+    await cacheDel("products:*");
     return res.json({ message: "Category deleted" });
   } catch {
     return res.status(500).json({ message: "Failed to delete category" });
@@ -305,6 +332,8 @@ export async function createProduct(req: any, res: Response) {
     });
 
     emitInventoryUpdate(product);
+    await cacheDel("products:*");
+    await cacheDel("analytics:*");
 
     return res.status(201).json(product);
   } catch (error: any) {
@@ -407,6 +436,8 @@ export async function updateProduct(req: any, res: Response) {
     });
 
     emitInventoryUpdate(updated);
+    await cacheDel("products:*");
+    await cacheDel("analytics:*");
 
     return res.json(updated);
   } catch (error: any) {
@@ -424,6 +455,8 @@ export async function deleteProduct(req: any, res: Response) {
     const existing = await prisma.product.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ message: "Product not found" });
     await prisma.product.delete({ where: { id } });
+    await cacheDel("products:*");
+    await cacheDel("analytics:*");
     return res.json({ message: "Product deleted successfully" });
   } catch {
     return res.status(400).json({ message: "Delete failed" });

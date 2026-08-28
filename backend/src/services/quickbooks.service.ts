@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import crypto from "crypto";
+import { cacheDel } from "../lib/cache";
 
 export interface QuickbooksConfig {
   syncEnabled: boolean;
@@ -271,6 +272,8 @@ export async function processItemInventoryResponseQbXml(
 
     // Update last sync time
     await saveQuickbooksConfig({ lastInventorySync: new Date().toISOString() });
+    await cacheDel("products:*");
+    await cacheDel("quickbooks:*");
   } catch (err: any) {
     console.error("[QB Service] Failed to process inventory response:", err);
     errors.push(err.message || "Failed to parse inventory XML");
@@ -578,6 +581,8 @@ export async function parseQuickBooksItemExport(
   }
 
   await saveQuickbooksConfig({ lastInventorySync: new Date().toISOString() });
+  await cacheDel("products:*");
+  await cacheDel("quickbooks:*");
   return { updated, created, total: updated + created, errors };
 }
 

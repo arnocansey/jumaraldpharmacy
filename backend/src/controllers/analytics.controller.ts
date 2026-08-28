@@ -1,9 +1,16 @@
 import { prisma } from "../lib/prisma";
 import { Response } from "express";
 import { PrescriptionStatus, OrderStatus } from "@prisma/client";
+import { cacheGet, cacheSet } from "../lib/cache";
 
 export async function getOverview(req: any, res: Response) {
   try {
+    const cacheKey = "analytics:overview";
+    const cached = await cacheGet<any>(cacheKey);
+    if (cached) {
+      res.setHeader("X-Cache", "HIT");
+      return res.json(cached);
+    }
     const [
       totalOrders,
       totalRevenue,
@@ -75,7 +82,7 @@ export async function getOverview(req: any, res: Response) {
 
     const avgOrderValue = totalOrders > 0 ? (totalRevenue._sum.totalAmount || 0) / totalOrders : 0;
 
-    return res.json({
+    const result = {
       summary: {
         totalOrders,
         totalRevenue: totalRevenue._sum.totalAmount || 0,
@@ -95,7 +102,11 @@ export async function getOverview(req: any, res: Response) {
         avgOrderValue: Math.round(avgOrderValue * 100) / 100,
       },
       chartData,
-    });
+    };
+
+    await cacheSet(cacheKey, result, 45); // 45s cache
+    res.setHeader("X-Cache", "MISS");
+    return res.json(result);
   } catch {
     return res.status(500).json({ message: "Failed to fetch analytics summary" });
   }
