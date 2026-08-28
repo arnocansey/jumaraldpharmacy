@@ -56,8 +56,8 @@ export function ProductCard({ product }: { product: ProductProps }) {
           (product as any).isPrescription === true
         ),
         images: product.images || [],
-        category: product.category,
-        brand: product.brand,
+        category: typeof product.category === "string" ? product.category : product.category?.name || "General",
+        brand: typeof product.brand === "string" ? product.brand : product.brand?.name || "",
       },
       1
     );

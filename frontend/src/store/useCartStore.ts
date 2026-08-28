@@ -11,8 +11,9 @@ export interface CartProduct {
   stockQuantity: number;
   requiresPrescription: boolean;
   images: string[];
-  category: string | { id?: string; name: string; slug?: string };
-  brand?: string | { id?: string; name: string; slug?: string };
+  category?: any;
+  brand?: any;
+  [key: string]: any;
 }
 
 export interface CartItem {
