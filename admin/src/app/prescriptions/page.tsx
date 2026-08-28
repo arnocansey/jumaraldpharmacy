@@ -211,16 +211,16 @@ export default function PrescriptionsPage() {
         <p className="text-slate-500 dark:text-slate-400 text-sm">Review, verify, and fulfill patient prescription documents</p>
       </div>
 
-      <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-1.5 scrollbar-thin">
         {["", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "CLARIFICATION_NEEDED"].map((s) => (
           <button key={s} onClick={() => setStatusFilter(s)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${statusFilter === s ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20" : "glass-panel text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"}`}>
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${statusFilter === s ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20" : "glass-panel text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"}`}>
             {s ? s.replace(/_/g, " ") : "All Prescriptions"}
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
         {loading ? (
           [1, 2, 3].map((i) => <div key={i} className="glass-panel rounded-2xl p-6 animate-pulse"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-3" /><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2" /></div>)
         ) : filtered.length === 0 ? (
@@ -232,7 +232,7 @@ export default function PrescriptionsPage() {
             const hasOrder = p.orders && p.orders.length > 0;
             return (
               <div key={p.id} onClick={() => { setSelected(p); setNote(""); setImgError(false); setShowOrderBuilder(false); setOrderItems([]); }}
-                className="glass-panel glass-panel-hover rounded-2xl p-5 cursor-pointer group">
+                className="glass-panel glass-panel-hover rounded-2xl p-4 sm:p-5 cursor-pointer group">
                 <div className="flex items-start justify-between mb-3">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${config.color}`}>
                     <Icon className="h-3.5 w-3.5" /> {p.status.replace(/_/g, " ")}
@@ -257,10 +257,10 @@ export default function PrescriptionsPage() {
       </div>
 
       {selected && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto" onClick={() => setSelected(null)}>
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-slate-950/85 backdrop-blur-2xl border border-white/10 rounded-3xl max-w-2xl w-full p-6 max-h-[92vh] overflow-y-auto shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] text-white relative overflow-hidden"
+            className="bg-slate-950/85 backdrop-blur-2xl border border-white/10 rounded-2xl sm:rounded-3xl max-w-2xl w-full p-4 sm:p-6 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] text-white relative overflow-hidden"
           >
             {/* Ambient Background Glow Effect */}
             <div className="absolute -top-24 -right-24 w-60 h-60 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />

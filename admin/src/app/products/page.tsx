@@ -1005,7 +1005,8 @@ export default function ProductsPage() {
                 className="flex-1 outline-none text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent" />
             </div>
           </div>
-          <div className="overflow-x-auto">
+          {/* Desktop Table View (>= md) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-700/50">
@@ -1068,6 +1069,78 @@ export default function ProductsPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Cards View (< md) */}
+          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700/60">
+            {loading ? (
+              <div className="p-8 text-center text-slate-400 dark:text-slate-500">Loading products...</div>
+            ) : products.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 dark:text-slate-500">No products found</div>
+            ) : (
+              products.map((product) => (
+                <div key={product.id} className="p-4 flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors">
+                  <div className="w-14 h-14 bg-slate-100 dark:bg-slate-700 rounded-xl overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                    {product.images[0] ? (
+                      <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <Package className="h-6 w-6 text-slate-300 dark:text-slate-500" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-1">
+                      <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">
+                        {product.name}
+                      </h3>
+                      {product.requiresPrescription ? (
+                        <span className="text-[9px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full shrink-0">
+                          Rx
+                        </span>
+                      ) : (
+                        <span className="text-[9px] bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded-full shrink-0">
+                          OTC
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 font-mono">
+                      <span>{product.sku}</span>
+                      {product.category?.name && <span>• {product.category.name}</span>}
+                    </div>
+                    <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-700/60">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                          GHS {product.price.toFixed(2)}
+                        </span>
+                        <StockBadge quantity={product.stockQuantity} minAlert={product.minStockAlert} />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setViewProduct(product)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+                          title="View"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => startEdit(product)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+                          title="Edit"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteProduct(product.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
           {totalPages > 1 && (
             <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
               <span className="text-sm text-slate-500 dark:text-slate-400">Page {page} of {totalPages}</span>
@@ -1085,7 +1158,8 @@ export default function ProductsPage() {
       {/* ========== CATEGORIES TAB ========== */}
       {tab === "categories" && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Desktop Table View (>= md) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-700/50">
@@ -1128,6 +1202,35 @@ export default function ProductsPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Category Cards (< md) */}
+          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700/60">
+            {categories.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 dark:text-slate-500">No categories found</div>
+            ) : (
+              categories.map((cat) => (
+                <div key={cat.id} className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center shrink-0">
+                      <Tag className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{cat.name}</p>
+                      <p className="text-xs text-slate-400 font-mono truncate">{cat.slug}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${(cat._count?.products || 0) > 0 ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"}`}>
+                      {cat._count?.products || 0} items
+                    </span>
+                    <button onClick={() => startEditCat(cat)} className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-700"><Edit className="h-4 w-4" /></button>
+                    <button onClick={() => deleteCategory(cat.id, cat.name, cat._count?.products || 0)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

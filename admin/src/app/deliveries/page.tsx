@@ -50,7 +50,8 @@ export default function DeliveriesPage() {
         <div className="p-4 border-b border-slate-100 dark:border-slate-700">
           <h3 className="font-bold text-slate-800 dark:text-slate-100">Recent Deliveries</h3>
         </div>
-        <div className="overflow-x-auto">
+        {/* Desktop Table View (>= md) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-700/50">
@@ -83,6 +84,35 @@ export default function DeliveriesPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Delivery Cards (< md) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700/60">
+          {loading ? (
+            <div className="p-8 text-center text-slate-400">Loading deliveries...</div>
+          ) : !stats?.recentDeliveries.length ? (
+            <div className="p-8 text-center text-slate-400 dark:text-slate-500">No deliveries yet</div>
+          ) : (
+            stats.recentDeliveries.map((d: any) => (
+              <div key={d.id} className="p-4 space-y-2 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200">
+                    {d.trackingNumber}
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLORS[d.status] || "bg-slate-100 text-slate-600"}`}>
+                    {d.status.replace(/_/g, " ")}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
+                  <span>Order: <strong className="font-mono">{d.order?.orderNumber || "—"}</strong></span>
+                  <span className="flex items-center gap-1"><User className="h-3.5 w-3.5 text-slate-400" /> {d.driver?.name || "Unassigned"}</span>
+                </div>
+                {d.branch?.name && (
+                  <p className="text-[11px] text-slate-400">Branch: {d.branch.name}</p>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

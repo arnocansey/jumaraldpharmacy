@@ -98,10 +98,11 @@ export default function OrdersPage() {
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        <button onClick={() => setStatusFilter("")} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${!statusFilter ? "bg-emerald-600 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"}`}>All</button>
+      {/* Horizontal Status Pills */}
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1.5 scrollbar-thin">
+        <button onClick={() => setStatusFilter("")} className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${!statusFilter ? "bg-emerald-600 text-white shadow-sm" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"}`}>All Orders</button>
         {STATUS_OPTIONS.map((s) => (
-          <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${statusFilter === s ? "bg-emerald-600 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"}`}>
+          <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${statusFilter === s ? "bg-emerald-600 text-white shadow-sm" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"}`}>
             {s.replace(/_/g, " ")}
           </button>
         ))}
@@ -111,10 +112,12 @@ export default function OrdersPage() {
         <div className="p-4 border-b border-slate-100 dark:border-slate-700">
           <div className="flex items-center gap-3">
             <Search className="h-4 w-4 text-slate-400" />
-            <input type="text" placeholder="Search orders..." value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1 outline-none text-sm bg-transparent text-slate-700 dark:text-slate-300 placeholder:text-slate-400" />
+            <input type="text" placeholder="Search orders by number, patient name..." value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1 outline-none text-sm bg-transparent text-slate-700 dark:text-slate-300 placeholder:text-slate-400" />
           </div>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Desktop Table View (>= md) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-700/50">
@@ -128,7 +131,7 @@ export default function OrdersPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {loading ? <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400">Loading...</td></tr>
-              : filtered.length === 0 ? <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 dark:text-slate-500">No orders</td></tr>
+              : filtered.length === 0 ? <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400 dark:text-slate-500">No orders found</td></tr>
               : filtered.map((order) => (
                 <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                   <td className="px-4 py-3 font-mono text-sm font-semibold text-slate-800 dark:text-slate-200">{order.orderNumber}</td>
@@ -148,6 +151,62 @@ export default function OrdersPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Order Cards (< md) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700/60">
+          {loading ? (
+            <div className="p-8 text-center text-slate-400">Loading orders...</div>
+          ) : filtered.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 dark:text-slate-500">No orders found</div>
+          ) : (
+            filtered.map((order) => (
+              <div key={order.id} className="p-4 space-y-2.5 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-sm font-bold text-slate-800 dark:text-slate-100">
+                    {order.orderNumber}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                      {order.user?.name || "Guest Customer"}
+                    </p>
+                    <p className="text-xs text-slate-400 font-mono">
+                      {order.orderItems?.length || 1} items
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
+                      GHS {Number(order.totalAmount || 0).toFixed(2)}
+                    </p>
+                    {order.payments && order.payments[0] ? (
+                      <span className={`text-[10px] font-bold ${order.payments[0].status === "COMPLETED" ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+                        ● {order.payments[0].status}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400">Unpaid</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2">
+                  <span className="text-xs text-slate-500">Status:</span>
+                  <select
+                    value={order.status}
+                    onChange={(e) => updateStatus(order.id, e.target.value)}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-xl border-0 cursor-pointer outline-none shadow-sm ${STATUS_COLORS[order.status] || "bg-slate-100 text-slate-600"}`}
+                  >
+                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+                  </select>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

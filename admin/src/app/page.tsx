@@ -131,13 +131,13 @@ export default function AdminDashboard() {
   return (
     <div className="w-full space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Executive Dashboard</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Real-time pharmacy operations overview</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100">Executive Dashboard</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">Real-time pharmacy operations overview</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-xl p-1 overflow-x-auto">
             {([
               { key: "today" as const, label: "Today" },
               { key: "7d" as const, label: "7D" },
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
               <button
                 key={opt.key}
                 onClick={() => setDateRange(opt.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-colors ${
                   dateRange === opt.key
                     ? "bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm"
                     : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
@@ -158,9 +158,10 @@ export default function AdminDashboard() {
               </button>
             ))}
           </div>
-          {lastUpdated && <span className="text-xs text-slate-400 dark:text-slate-500">Updated {lastUpdated.toLocaleTimeString()}</span>}
+          {lastUpdated && <span className="hidden md:inline text-xs text-slate-400 dark:text-slate-500">Updated {lastUpdated.toLocaleTimeString()}</span>}
           <button onClick={() => loadDashboard(true)} disabled={refreshing}
-            className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50">
+            className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 shrink-0"
+            title="Refresh">
             <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
           </button>
         </div>

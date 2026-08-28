@@ -33,7 +33,8 @@ import {
   ChevronRight,
   Plus,
   Scan,
-  Layers,
+  Zap,
+  BookOpen,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -97,18 +98,12 @@ const allSections: NavSection[] = [
   },
 ];
 
-const primaryTabs = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Products", href: "/products", icon: Pill },
-  { name: "Orders", href: "/orders", icon: ShoppingCart },
-  { name: "Prescriptions", href: "/prescriptions", icon: FileText },
-];
-
 export function AdminBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -122,14 +117,15 @@ export function AdminBottomNav() {
     } catch {}
   }, []);
 
-  // Close drawer on path change
+  // Close menus on path change
   useEffect(() => {
     setDrawerOpen(false);
+    setQuickActionsOpen(false);
   }, [pathname]);
 
   // Lock body scroll when drawer is open
   useEffect(() => {
-    if (drawerOpen) {
+    if (drawerOpen || quickActionsOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -137,7 +133,7 @@ export function AdminBottomNav() {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [drawerOpen]);
+  }, [drawerOpen, quickActionsOpen]);
 
   const handleLogout = () => {
     localStorage.removeItem("jumarald_admin_token");
@@ -153,14 +149,17 @@ export function AdminBottomNav() {
 
   const ThemeIcon = !mounted ? Monitor : theme === "dark" ? Moon : theme === "system" ? Monitor : Sun;
 
-  // Check if current route is one of the secondary routes (not in primary tabs)
-  const isSecondaryActive =
-    !primaryTabs.some((tab) => tab.href === pathname) && pathname !== "/login";
-
   const userRole = user?.role || "ADMIN";
   const initials = user?.name
     ? user.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
     : "CP";
+
+  const isHomeActive = pathname === "/";
+  const isProductsActive = pathname.startsWith("/products") || pathname.startsWith("/inventory");
+  const isOrdersActive = pathname.startsWith("/orders") || pathname.startsWith("/deliveries");
+  const isPrescriptionsActive = pathname.startsWith("/prescriptions");
+  const isMoreActive =
+    !isHomeActive && !isProductsActive && !isOrdersActive && !isPrescriptionsActive && pathname !== "/login";
 
   const roleAllowedHrefs: Record<string, string[]> = {
     INVENTORY_CLERK: ["/", "/products", "/inventory"],
@@ -185,87 +184,211 @@ export function AdminBottomNav() {
 
   return (
     <>
-      {/* ── Fixed Mobile Bottom Navigation Bar ── */}
+      {/* ── Fixed Mobile Bottom Navigation Bar (iOS / Android Native Feel) ── */}
       <nav
         aria-label="Mobile Navigation Bar"
-        className="fixed bottom-0 inset-x-0 z-40 md:hidden glass-bottom-nav bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-emerald-500/20 dark:border-slate-800 shadow-[0_-4px_25px_rgba(0,0,0,0.1)] transition-transform duration-300 pb-safe"
+        className="fixed bottom-0 inset-x-0 z-40 md:hidden glass-bottom-nav bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-emerald-500/20 dark:border-slate-800 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] transition-transform duration-300 pb-safe"
       >
-        <div className="flex items-center justify-around h-16 px-2 max-w-lg mx-auto">
-          {primaryTabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = pathname === tab.href;
-
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={`relative flex flex-col items-center justify-center flex-1 h-full py-1 transition-all duration-200 group ${
-                  isActive
-                    ? "text-emerald-600 dark:text-emerald-400 font-bold"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                }`}
-              >
-                {/* Active Indicator Top Pill */}
-                {isActive && (
-                  <span className="absolute top-0 w-8 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                )}
-
-                <div
-                  className={`p-1.5 rounded-xl transition-transform duration-200 group-active:scale-90 ${
-                    isActive ? "bg-emerald-50 dark:bg-emerald-950/60" : ""
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                </div>
-                <span className="text-[10px] tracking-tight mt-0.5 leading-tight">{tab.name}</span>
-              </Link>
-            );
-          })}
-
-          {/* 5th Tab: "More / All Sections" Drawer Trigger */}
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className={`relative flex flex-col items-center justify-center flex-1 h-full py-1 transition-all duration-200 group ${
-              isSecondaryActive || drawerOpen
+        <div className="flex items-center justify-between h-16 px-3 max-w-md mx-auto relative">
+          {/* Tab 1: Dashboard */}
+          <Link
+            href="/"
+            className={`relative flex flex-col items-center justify-center flex-1 h-full py-1 transition-all duration-200 ${
+              isHomeActive
                 ? "text-emerald-600 dark:text-emerald-400 font-bold"
                 : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
             }`}
           >
-            {isSecondaryActive && (
+            {isHomeActive && (
               <span className="absolute top-0 w-8 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
             )}
+            <div className={`p-1.5 rounded-xl transition-transform active:scale-90 ${isHomeActive ? "bg-emerald-50 dark:bg-emerald-950/60" : ""}`}>
+              <LayoutDashboard className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] tracking-tight mt-0.5 font-medium">Home</span>
+          </Link>
 
+          {/* Tab 2: Products */}
+          <Link
+            href="/products"
+            className={`relative flex flex-col items-center justify-center flex-1 h-full py-1 transition-all duration-200 ${
+              isProductsActive
+                ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+            }`}
+          >
+            {isProductsActive && (
+              <span className="absolute top-0 w-8 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+            )}
+            <div className={`p-1.5 rounded-xl transition-transform active:scale-90 ${isProductsActive ? "bg-emerald-50 dark:bg-emerald-950/60" : ""}`}>
+              <Pill className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] tracking-tight mt-0.5 font-medium">Products</span>
+          </Link>
+
+          {/* Center Elevated Action Hub (FAB) */}
+          <div className="flex-1 flex flex-col items-center justify-center relative -top-3">
+            <button
+              type="button"
+              onClick={() => setQuickActionsOpen(true)}
+              className="h-13 w-13 p-3 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-lg shadow-emerald-600/40 ring-4 ring-white dark:ring-slate-900 active:scale-95 transition-transform flex items-center justify-center"
+              title="Quick Action / Scan"
+            >
+              <Sparkles className="h-5 w-5 animate-pulse" />
+            </button>
+            <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 tracking-tight">
+              Action Hub
+            </span>
+          </div>
+
+          {/* Tab 3: Orders */}
+          <Link
+            href="/orders"
+            className={`relative flex flex-col items-center justify-center flex-1 h-full py-1 transition-all duration-200 ${
+              isOrdersActive
+                ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+            }`}
+          >
+            {isOrdersActive && (
+              <span className="absolute top-0 w-8 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+            )}
+            <div className={`p-1.5 rounded-xl transition-transform active:scale-90 ${isOrdersActive ? "bg-emerald-50 dark:bg-emerald-950/60" : ""}`}>
+              <ShoppingCart className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] tracking-tight mt-0.5 font-medium">Orders</span>
+          </Link>
+
+          {/* Tab 4: More Menu */}
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className={`relative flex flex-col items-center justify-center flex-1 h-full py-1 transition-all duration-200 ${
+              isMoreActive || drawerOpen
+                ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+            }`}
+          >
+            {isMoreActive && (
+              <span className="absolute top-0 w-8 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+            )}
             <div
-              className={`p-1.5 rounded-xl transition-transform duration-200 group-active:scale-90 relative ${
-                isSecondaryActive || drawerOpen ? "bg-emerald-50 dark:bg-emerald-950/60" : ""
+              className={`p-1.5 rounded-xl transition-transform active:scale-90 relative ${
+                isMoreActive || drawerOpen ? "bg-emerald-50 dark:bg-emerald-950/60" : ""
               }`}
             >
               <Menu className="h-5 w-5" />
-              {isSecondaryActive && (
+              {isMoreActive && (
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
               )}
             </div>
-            <span className="text-[10px] tracking-tight mt-0.5 leading-tight">More</span>
+            <span className="text-[10px] tracking-tight mt-0.5 font-medium">More</span>
           </button>
         </div>
       </nav>
 
-      {/* ── Slide-up Mobile Navigation Hub Drawer ── */}
+      {/* ── Quick Action Hub Bottom Sheet (Triggered by Center FAB) ── */}
+      {quickActionsOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex flex-col justify-end">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setQuickActionsOpen(false)}
+          />
+          <div className="relative w-full bg-white dark:bg-slate-900 rounded-t-[2.5rem] border-t border-emerald-500/20 dark:border-slate-800 shadow-2xl overflow-hidden p-6 z-10 animate-in slide-in-from-bottom duration-250 pb-safe">
+            <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-5" />
+
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-emerald-500" />
+                  Pharmacy Quick Actions
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Instant mobile tools for counter & inventory ops
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickActionsOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Link
+                href="/products"
+                onClick={() => setQuickActionsOpen(false)}
+                className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-500/20 hover:border-emerald-500 transition-all flex flex-col gap-2 text-left"
+              >
+                <div className="p-2 w-fit rounded-xl bg-emerald-600 text-white shadow-md shadow-emerald-600/30">
+                  <Plus className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">Add Product</h4>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Fast 3-field quick add</p>
+                </div>
+              </Link>
+
+              <Link
+                href="/products"
+                onClick={() => setQuickActionsOpen(false)}
+                className="p-3.5 rounded-2xl bg-purple-50/80 dark:bg-purple-950/40 border border-purple-500/20 hover:border-purple-500 transition-all flex flex-col gap-2 text-left"
+              >
+                <div className="p-2 w-fit rounded-xl bg-purple-600 text-white shadow-md shadow-purple-600/30">
+                  <Scan className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">Scan Barcode / Box</h4>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">AI packaging vision</p>
+                </div>
+              </Link>
+
+              <Link
+                href="/copilot"
+                onClick={() => setQuickActionsOpen(false)}
+                className="p-3.5 rounded-2xl bg-teal-50/80 dark:bg-teal-950/40 border border-teal-500/20 hover:border-teal-500 transition-all flex flex-col gap-2 text-left"
+              >
+                <div className="p-2 w-fit rounded-xl bg-teal-600 text-white shadow-md shadow-teal-600/30">
+                  <Bot className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">Dr. Jumarald AI</h4>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Drug interactions & AI</p>
+                </div>
+              </Link>
+
+              <Link
+                href="/prescriptions"
+                onClick={() => setQuickActionsOpen(false)}
+                className="p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-500/20 hover:border-blue-500 transition-all flex flex-col gap-2 text-left"
+              >
+                <div className="p-2 w-fit rounded-xl bg-blue-600 text-white shadow-md shadow-blue-600/30">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">Review Rx Queue</h4>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Pending doctor slips</p>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Slide-up Full Navigation Hub Drawer ── */}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex flex-col justify-end">
-          {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={() => setDrawerOpen(false)}
           />
 
-          {/* Drawer Sheet */}
-          <div className="relative w-full max-h-[88vh] bg-white dark:bg-slate-900 rounded-t-[2rem] border-t border-emerald-500/20 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300 z-10">
-            {/* Sheet Handle */}
+          <div className="relative w-full max-h-[88vh] bg-white dark:bg-slate-900 rounded-t-[2.5rem] border-t border-emerald-500/20 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300 z-10">
             <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-3 mb-1" />
 
-            {/* Header: User Info & Controls */}
+            {/* Header */}
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center font-bold text-white text-sm shadow-md shadow-emerald-500/20">
@@ -300,26 +423,6 @@ export function AdminBottomNav() {
                   <X className="h-5 w-5" />
                 </button>
               </div>
-            </div>
-
-            {/* Drawer Quick Action Shortcuts */}
-            <div className="px-6 py-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-b border-emerald-500/10 grid grid-cols-2 gap-2">
-              <Link
-                href="/products"
-                onClick={() => setDrawerOpen(false)}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-emerald-500/20 text-xs font-bold text-emerald-700 dark:text-emerald-300 shadow-sm"
-              >
-                <Plus className="h-4 w-4 text-emerald-500" />
-                <span>Upload Product</span>
-              </Link>
-              <Link
-                href="/copilot"
-                onClick={() => setDrawerOpen(false)}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-purple-500/20 text-xs font-bold text-purple-700 dark:text-purple-300 shadow-sm"
-              >
-                <Bot className="h-4 w-4 text-purple-500" />
-                <span>Pharmacist Copilot</span>
-              </Link>
             </div>
 
             {/* Categorized Navigation List */}
@@ -375,9 +478,9 @@ export function AdminBottomNav() {
             </div>
 
             {/* Drawer Footer: Logout */}
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900 flex items-center justify-between">
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900 flex items-center justify-between pb-safe">
               <div className="text-[11px] text-slate-400">
-                &copy; 2026 Jumarald Pharmacy Control
+                &copy; 2026 Jumarald Pharmacy
               </div>
               <button
                 type="button"
