@@ -130,7 +130,12 @@ export async function getProducts(req: any, res: Response) {
     const take = Number(limit);
     const skip = (Number(page) - 1) * take;
 
-    const sanitizedProducts = products.map((p) => {
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({ where, orderBy, take, skip, include: { category: true, brand: true } }),
+      prisma.product.count({ where }),
+    ]);
+
+    const sanitizedProducts = products.map((p: any) => {
       const catSlug = p.category?.slug?.toLowerCase() || "";
       const catName = p.category?.name?.toLowerCase() || "";
       const isRx = Boolean(
