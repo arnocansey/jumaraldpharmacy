@@ -10,6 +10,7 @@ import {
   PlusCircle,
   ArrowRight,
   Sparkles,
+  Camera,
 } from "lucide-react";
 
 export type UploadPreferenceMode =
@@ -18,7 +19,8 @@ export type UploadPreferenceMode =
   | "continuous_scan"
   | "invoice_ocr"
   | "voice_dictation"
-  | "formulary";
+  | "formulary"
+  | "live_camera";
 
 interface ProductUploadHubModalProps {
   isOpen: boolean;
@@ -50,6 +52,15 @@ export default function ProductUploadHubModal({
       icon: Zap,
       color: "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400",
       border: "hover:border-amber-400 dark:hover:border-amber-600",
+    },
+    {
+      mode: "live_camera",
+      title: "Live Camera Photo Capture",
+      description: "Snap product packaging & box photos with your PC webcam or phone camera directly into the product catalog.",
+      badge: "Desktop & Mobile",
+      icon: Camera,
+      color: "bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400",
+      border: "hover:border-rose-400 dark:hover:border-rose-600",
     },
     {
       mode: "continuous_scan",

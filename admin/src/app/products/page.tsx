@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload, Download, Loader2, Image as ImageIcon, Scan, Barcode, Sparkles, Mic, BookOpen, Layers, Zap, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload, Download, Loader2, Image as ImageIcon, Scan, Barcode, Sparkles, Mic, BookOpen, Layers, Zap, ChevronDown, ChevronUp, FileText, Camera } from "lucide-react";
 import { apiFetch, apiUpload } from "@/lib/api";
 import { toast } from "sonner";
 import ProductImportModal from "@/components/ProductImportModal";
@@ -10,6 +10,7 @@ import ProductUploadHubModal, { UploadPreferenceMode } from "@/components/Produc
 import ContinuousScannerModal from "@/components/ContinuousScannerModal";
 import InvoiceOcrModal from "@/components/InvoiceOcrModal";
 import StandardFormularyModal from "@/components/StandardFormularyModal";
+import LiveCameraModal from "@/components/LiveCameraModal";
 
 interface Product {
   id: string; name: string; slug: string; sku: string; barcode?: string; price: number; compareAtPrice?: number;
@@ -61,6 +62,8 @@ export default function ProductsPage() {
   const [showClinicalAccordion, setShowClinicalAccordion] = useState(false);
   const [isListeningVoice, setIsListeningVoice] = useState(false);
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
+  const [showLiveCamera, setShowLiveCamera] = useState(false);
+  const [cameraTarget, setCameraTarget] = useState<"product" | "category">("product");
 
   async function handleImageFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -298,6 +301,12 @@ export default function ProductsPage() {
       setTimeout(() => startVoiceDictation(), 300);
     } else if (selectedMode === "formulary") {
       setShowFormulary(true);
+    } else if (selectedMode === "live_camera") {
+      setFormMode("quick");
+      resetForm();
+      setShowForm(true);
+      setCameraTarget("product");
+      setShowLiveCamera(true);
     }
   }
 
@@ -816,19 +825,50 @@ export default function ProductsPage() {
                 <label className={labelClass}>Product Images</label>
                 
                 {/* Image Upload Dropzone & Button */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                  <label className="flex-1 cursor-pointer flex items-center justify-center gap-2 border-2 border-dashed border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 p-3 rounded-xl transition-colors">
+                {/* Dual Image Input: Live Desktop/Mobile Camera + File Selector */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Option 1: Live Webcam / Phone Camera Capture */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCameraTarget("product");
+                      setShowLiveCamera(true);
+                    }}
+                    className="cursor-pointer flex items-center justify-center gap-3 border-2 border-emerald-500/40 bg-emerald-50/80 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 p-3.5 rounded-2xl transition-all shadow-sm group"
+                  >
+                    <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/30 group-hover:scale-105 transition-transform">
+                      <Camera className="h-5 w-5" />
+                    </div>
+                    <div className="text-left">
+                      <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 block">
+                        Take Live Picture
+                      </span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                        Use PC Webcam or Phone Cam
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Option 2: Choose File from Disk */}
+                  <label className="cursor-pointer flex items-center justify-center gap-3 border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 p-3.5 rounded-2xl transition-all shadow-sm group">
                     {uploadingImage ? (
                       <>
                         <Loader2 className="h-5 w-5 animate-spin text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Uploading Image...</span>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Uploading File(s)...</span>
                       </>
                     ) : (
                       <>
-                        <Upload className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                          Upload Image Files (PNG, JPG, WebP)
-                        </span>
+                        <div className="h-9 w-9 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center group-hover:scale-105 transition-transform">
+                          <Upload className="h-5 w-5" />
+                        </div>
+                        <div className="text-left">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
+                            Choose from Files
+                          </span>
+                          <span className="text-[10px] text-slate-400 block">
+                            Upload PNG, JPG, WebP from PC
+                          </span>
+                        </div>
                       </>
                     )}
                     <input
@@ -956,30 +996,47 @@ export default function ProductsPage() {
               </div>
               <div>
                 <label className={labelClass}>Category Cover Image</label>
-                <div className="flex items-center gap-3 mb-2">
+                <div className="space-y-2 mb-2">
                   {catImageUrl ? (
-                    <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
+                    <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
                       <img src={catImageUrl} alt="Category preview" className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => setCatImageUrl("")}
-                        className="absolute top-1 right-1 p-0.5 rounded-full bg-red-600 text-white"
+                        className="absolute top-1 right-1 p-1 rounded-full bg-red-600 text-white shadow"
                       >
                         <X className="h-3 w-3" />
                       </button>
                     </div>
                   ) : null}
-                  <label className="flex-1 cursor-pointer flex items-center justify-center gap-2 border-2 border-dashed border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/20 p-2.5 rounded-xl hover:bg-emerald-100/50 transition-colors">
-                    {uploadingCatImage ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-                    ) : (
-                      <Upload className="h-4 w-4 text-emerald-600" />
-                    )}
-                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                      {uploadingCatImage ? "Uploading..." : "Upload Category Image"}
-                    </span>
-                    <input type="file" accept="image/*" onChange={handleCatImageUpload} disabled={uploadingCatImage} className="hidden" />
-                  </label>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCameraTarget("category");
+                        setShowLiveCamera(true);
+                      }}
+                      className="cursor-pointer flex items-center justify-center gap-2 border border-emerald-500/40 bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100/50 p-2.5 rounded-xl transition-all"
+                    >
+                      <Camera className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                        Take Live Picture
+                      </span>
+                    </button>
+
+                    <label className="cursor-pointer flex items-center justify-center gap-2 border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 p-2.5 rounded-xl hover:bg-slate-100 transition-colors">
+                      {uploadingCatImage ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-slate-600" />
+                      ) : (
+                        <Upload className="h-4 w-4 text-slate-600" />
+                      )}
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {uploadingCatImage ? "Uploading..." : "Choose File"}
+                      </span>
+                      <input type="file" accept="image/*" onChange={handleCatImageUpload} disabled={uploadingCatImage} className="hidden" />
+                    </label>
+                  </div>
                 </div>
                 <input placeholder="Or enter direct image URL..." value={catImageUrl} onChange={(e) => setCatImageUrl(e.target.value)} className={inputClass} />
               </div>
@@ -1272,6 +1329,23 @@ export default function ProductsPage() {
         onSelectDrug={(drug) => {
           handleScannedDataApplied(drug);
           setShowForm(true);
+        }}
+      />
+      {/* ========== LIVE WEBCAM / CAMERA CAPTURE MODAL ========== */}
+      <LiveCameraModal
+        isOpen={showLiveCamera}
+        onClose={() => setShowLiveCamera(false)}
+        title={cameraTarget === "product" ? "Take Product Photo(s)" : "Take Category Photo"}
+        onPhotosCaptured={(urls) => {
+          if (cameraTarget === "product") {
+            const currentList = form.images
+              ? form.images.split(",").map((s) => s.trim()).filter(Boolean)
+              : [];
+            const updatedList = [...currentList, ...urls];
+            setForm((prev) => ({ ...prev, images: updatedList.join(", ") }));
+          } else {
+            if (urls[0]) setCatImageUrl(urls[0]);
+          }
         }}
       />
     </div>
