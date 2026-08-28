@@ -217,6 +217,16 @@ export async function processItemInventoryResponseQbXml(
         });
       }
 
+async function generateProductSlug(name: string): Promise<string> {
+  const baseSlug = name.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-") || `item-${Date.now()}`;
+  let slug = baseSlug;
+  let counter = 1;
+  while (await prisma.product.findUnique({ where: { slug } })) {
+    slug = `${baseSlug}-${counter++}`;
+  }
+  return slug;
+}
+
       if (existing) {
         // Update product stock and price from QuickBooks master
         await prisma.product.update({
@@ -232,9 +242,11 @@ export async function processItemInventoryResponseQbXml(
         updatedCount++;
       } else if (salesPrice > 0 || qtyOnHand > 0) {
         // Create newly discovered item from QuickBooks
+        const slug = await generateProductSlug(name);
         await prisma.product.create({
           data: {
             name,
+            slug,
             sku,
             barcode: barcode || null,
             description: salesDesc || `Pharmaceutical item synced from QuickBooks Desktop: ${name}`,
@@ -480,9 +492,11 @@ export async function parseQuickBooksItemExport(
           });
           updated++;
         } else {
+          const slug = await generateProductSlug(name);
           await prisma.product.create({
             data: {
               name,
+              slug,
               sku,
               description: desc || name,
               price: salesPrice > 0 ? salesPrice : 15.0,
@@ -537,9 +551,11 @@ export async function parseQuickBooksItemExport(
         });
         updated++;
       } else if (price > 0 || qty > 0) {
+        const slug = await generateProductSlug(name);
         await prisma.product.create({
           data: {
             name,
+            slug,
             sku,
             description: desc || name,
             price: price > 0 ? price : 15.0,
