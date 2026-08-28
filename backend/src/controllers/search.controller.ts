@@ -337,18 +337,20 @@ export async function globalAdminSearch(req: any, res: Response) {
       prisma.prescription.findMany({
         where: {
           OR: [
-            { prescriptionNumber: { contains: q, mode: "insensitive" } },
-            { patientName: { contains: q, mode: "insensitive" } },
+            { id: { contains: q, mode: "insensitive" } },
             { doctorName: { contains: q, mode: "insensitive" } },
+            { doctorLicense: { contains: q, mode: "insensitive" } },
+            { patientNotes: { contains: q, mode: "insensitive" } },
+            { user: { name: { contains: q, mode: "insensitive" } } },
+            { user: { email: { contains: q, mode: "insensitive" } } },
           ],
         },
         select: {
           id: true,
-          prescriptionNumber: true,
-          patientName: true,
           doctorName: true,
           status: true,
           createdAt: true,
+          user: { select: { name: true, email: true, phone: true } },
         },
         take: 6,
       }),

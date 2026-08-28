@@ -39,11 +39,10 @@ interface GlobalSearchResults {
   }>;
   prescriptions: Array<{
     id: string;
-    prescriptionNumber: string;
-    patientName: string;
     doctorName?: string;
     status: string;
     createdAt: string;
+    user?: { name: string; email: string; phone?: string };
   }>;
   users: Array<{
     id: string;
@@ -359,10 +358,10 @@ export default function GlobalSearchModal({
                       </div>
                       <div className="min-w-0">
                         <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400">
-                          {rx.patientName}
+                          {rx.user?.name || "Patient Prescription"}
                         </h4>
                         <p className="text-[10px] text-slate-400 font-mono">
-                          {rx.prescriptionNumber || "No Rx #"} {rx.doctorName ? `• Dr. ${rx.doctorName}` : ""}
+                          ID: {rx.id.slice(0, 8)}... {rx.doctorName ? `• Dr. ${rx.doctorName}` : ""}
                         </p>
                       </div>
                     </div>
