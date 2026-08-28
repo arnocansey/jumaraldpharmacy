@@ -28,13 +28,22 @@ export async function initializePayment(req: AuthenticatedRequest, res: Response
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { orderItems: { include: { product: true } } },
+      include: { orderItems: { include: { product: { include: { category: true } } } } },
     });
     if (!order) return res.status(404).json({ message: "Order not found" });
     if (req.user && order.userId !== req.user.id) return res.status(403).json({ message: "Unauthorized" });
 
     // Strict Prescription Gating: Block payment if prescription is required but not attached
-    const hasRx = order.orderItems.some((item) => item.product.requiresPrescription === true);
+    const hasRx = order.orderItems.some((item) => {
+      const p = item.product;
+      if (p.requiresPrescription === true) return true;
+      if (p.category) {
+        const catSlug = p.category.slug?.toLowerCase() || "";
+        const catName = p.category.name?.toLowerCase() || "";
+        if (catSlug.includes("prescription") || catName.includes("prescription")) return true;
+      }
+      return false;
+    });
     if (hasRx && !order.prescriptionId) {
       return res.status(400).json({
         message: "Payment Blocked: A doctor's prescription is mandatory for prescription medicines in this order. Please upload your prescription before proceeding to payment.",

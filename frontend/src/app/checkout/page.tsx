@@ -27,7 +27,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-import { useCartStore } from "@/store/useCartStore";
+import { useCartStore, isProductPrescriptionRequired } from "@/store/useCartStore";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { API_URL, apiUpload } from "@/lib/api";
@@ -67,25 +67,11 @@ export default function CheckoutPage() {
   const [previewRxModal, setPreviewRxModal] = useState(false);
 
   const requiresRx = useMemo(() => {
-    return items.some((item) =>
-      Boolean(
-        item.product?.requiresPrescription === true ||
-        String(item.product?.requiresPrescription).toLowerCase() === "true" ||
-        (item.product as any)?.isPrescription === true ||
-        (item.product as any)?.requires_prescription === true
-      )
-    );
+    return items.some((item) => isProductPrescriptionRequired(item.product));
   }, [items]);
 
   const rxItems = useMemo(() => {
-    return items.filter((item) =>
-      Boolean(
-        item.product?.requiresPrescription === true ||
-        String(item.product?.requiresPrescription).toLowerCase() === "true" ||
-        (item.product as any)?.isPrescription === true ||
-        (item.product as any)?.requires_prescription === true
-      )
-    );
+    return items.filter((item) => isProductPrescriptionRequired(item.product));
   }, [items]);
 
   const handlePrescriptionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

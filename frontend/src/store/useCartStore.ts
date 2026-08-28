@@ -20,6 +20,26 @@ export interface CartItem {
   quantity: number;
 }
 
+export function isProductPrescriptionRequired(product: any): boolean {
+  if (!product) return false;
+  if (product.requiresPrescription === true || String(product.requiresPrescription).toLowerCase() === "true") return true;
+  if (product.isPrescription === true || String(product.isPrescription).toLowerCase() === "true") return true;
+  if (product.prescriptionRequired === true || String(product.prescriptionRequired).toLowerCase() === "true") return true;
+  if (product.prescription === true || String(product.prescription).toLowerCase() === "true") return true;
+  
+  // Category checks
+  const catSlug = typeof product.category === "string" ? product.category.toLowerCase() : product.category?.slug?.toLowerCase() || "";
+  const catName = typeof product.category === "string" ? product.category.toLowerCase() : product.category?.name?.toLowerCase() || "";
+  if (catSlug.includes("prescription") || catName.includes("prescription")) return true;
+
+  // Tags checks
+  if (Array.isArray(product.tags) && product.tags.some((t: any) => String(t).toLowerCase().includes("prescription") || String(t).toLowerCase() === "rx")) {
+    return true;
+  }
+
+  return false;
+}
+
 const CART_STORAGE_KEY = "jumarald_cart_items_v1";
 
 export function useCartStore() {
@@ -30,7 +50,16 @@ export function useCartStore() {
     try {
       const saved = localStorage.getItem(CART_STORAGE_KEY);
       if (saved) {
-        setItems(JSON.parse(saved));
+        const rawItems: CartItem[] = JSON.parse(saved);
+        // Normalize loaded cart items
+        const normalized = rawItems.map((item) => ({
+          ...item,
+          product: {
+            ...item.product,
+            requiresPrescription: isProductPrescriptionRequired(item.product),
+          },
+        }));
+        setItems(normalized);
       }
     } catch (e) {
       console.error("Failed to load cart from storage", e);
@@ -45,12 +74,14 @@ export function useCartStore() {
   }, [items, isInitialized]);
 
   const addToCart = (product: CartProduct, quantity = 1) => {
+    const isRx = isProductPrescriptionRequired(product);
+    const normalizedProduct: CartProduct = { ...product, requiresPrescription: isRx };
     setItems((prev) => {
       const existing = prev.find((i) => i.product.id === product.id);
       if (existing) {
-        return prev.map((i) => (i.product.id === product.id ? { ...i, quantity: i.quantity + quantity } : i));
+        return prev.map((i) => (i.product.id === product.id ? { ...i, product: normalizedProduct, quantity: i.quantity + quantity } : i));
       }
-      return [...prev, { product, quantity }];
+      return [...prev, { product: normalizedProduct, quantity }];
     });
   };
 
@@ -72,14 +103,7 @@ export function useCartStore() {
 
   const totalItemCount = items.reduce((acc, item) => acc + item.quantity, 0);
   const subtotalAmount = items.reduce((acc, item) => acc + (Number(item.product?.price) || 0) * item.quantity, 0);
-  const requiresPrescription = items.some((item) =>
-    Boolean(
-      item.product?.requiresPrescription === true ||
-      String(item.product?.requiresPrescription).toLowerCase() === "true" ||
-      (item.product as any)?.isPrescription === true ||
-      (item.product as any)?.requires_prescription === true
-    )
-  );
+  const requiresPrescription = items.some((item) => isProductPrescriptionRequired(item.product));
 
   return {
     items,

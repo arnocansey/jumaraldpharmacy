@@ -130,12 +130,21 @@ export async function getProducts(req: any, res: Response) {
     const take = Number(limit);
     const skip = (Number(page) - 1) * take;
 
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({ where, orderBy, take, skip, include: { category: true, brand: true } }),
-      prisma.product.count({ where }),
-    ]);
+    const sanitizedProducts = products.map((p) => {
+      const catSlug = p.category?.slug?.toLowerCase() || "";
+      const catName = p.category?.name?.toLowerCase() || "";
+      const isRx = Boolean(
+        p.requiresPrescription === true ||
+        catSlug.includes("prescription") ||
+        catName.includes("prescription")
+      );
+      return {
+        ...p,
+        requiresPrescription: isRx,
+      };
+    });
 
-    const result = { products, pagination: { total, page: Number(page), pages: Math.ceil(total / take) } };
+    const result = { products: sanitizedProducts, pagination: { total, page: Number(page), pages: Math.ceil(total / take) } };
     await cacheSet(cacheKey, result, 120); // 2 min cache
     res.setHeader("X-Cache", "MISS");
     return res.json(result);
@@ -265,7 +274,19 @@ export async function getProductBySlug(req: any, res: Response) {
       },
     });
     if (!product) return res.status(404).json({ message: "Product not found" });
-    return res.json(product);
+
+    const catSlug = product.category?.slug?.toLowerCase() || "";
+    const catName = product.category?.name?.toLowerCase() || "";
+    const isRx = Boolean(
+      product.requiresPrescription === true ||
+      catSlug.includes("prescription") ||
+      catName.includes("prescription")
+    );
+
+    return res.json({
+      ...product,
+      requiresPrescription: isRx,
+    });
   } catch {
     return res.status(500).json({ message: "Failed to fetch product details" });
   }
@@ -306,6 +327,15 @@ export async function createProduct(req: any, res: Response) {
       finalCategoryId = defaultCat.id;
     }
 
+    // Auto-detect and enforce prescription requirement if category is Prescription Medications
+    let isPrescriptionRequired = Boolean(data.requiresPrescription);
+    if (finalCategoryId) {
+      const cat = await prisma.category.findUnique({ where: { id: finalCategoryId } });
+      if (cat && (cat.slug.includes("prescription") || cat.name.toLowerCase().includes("prescription"))) {
+        isPrescriptionRequired = true;
+      }
+    }
+
     const baseSlug = data.name.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
     let slug = baseSlug;
     let counter = 1;
@@ -321,7 +351,7 @@ export async function createProduct(req: any, res: Response) {
         name: data.name, slug, sku: data.sku, barcode: data.barcode ?? null, description: data.description,
         price: data.price, compareAtPrice: data.compareAtPrice ?? null,
         stockQuantity: data.stockQuantity, minStockAlert: data.minStockAlert,
-        requiresPrescription: data.requiresPrescription, isFeatured: data.isFeatured,
+        requiresPrescription: isPrescriptionRequired, isFeatured: data.isFeatured,
         dosageForm: data.dosageForm ?? null, strength: data.strength ?? null,
         activeIngredients: data.activeIngredients ?? null, usageInstructions: data.usageInstructions ?? null,
         sideEffects: data.sideEffects ?? null, warnings: data.warnings ?? null,

@@ -40,7 +40,10 @@ export async function createOrder(req: AuthenticatedRequest, res: Response) {
     const orderNumber = `JUM-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const productIds = data.items.map((i) => i.productId);
-    const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      include: { category: true },
+    });
     const productMap = new Map(products.map((p) => [p.id, p]));
 
     for (const item of data.items) {
@@ -55,8 +58,17 @@ export async function createOrder(req: AuthenticatedRequest, res: Response) {
       }
     }
 
-    // Strict Prescription Gating: Check database records for prescription requirements
-    const rxRequiredProducts = products.filter((p) => p.requiresPrescription === true);
+    // Strict Prescription Gating: Check database records and categories
+    const rxRequiredProducts = products.filter((p) => {
+      if (p.requiresPrescription === true) return true;
+      if (p.category) {
+        const catSlug = p.category.slug?.toLowerCase() || "";
+        const catName = p.category.name?.toLowerCase() || "";
+        if (catSlug.includes("prescription") || catName.includes("prescription")) return true;
+      }
+      return false;
+    });
+
     if (rxRequiredProducts.length > 0 && !data.prescriptionId && !data.prescriptionUrl) {
       return res.status(400).json({
         message: `Strict Prescription Gating: Prescription required for: ${rxRequiredProducts.map((p) => p.name).join(", ")}. Please upload a valid doctor's prescription before proceeding to payment.`,
