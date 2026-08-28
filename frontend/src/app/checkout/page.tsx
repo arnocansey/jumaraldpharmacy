@@ -67,11 +67,25 @@ export default function CheckoutPage() {
   const [previewRxModal, setPreviewRxModal] = useState(false);
 
   const requiresRx = useMemo(() => {
-    return items.some((item) => item.product?.requiresPrescription);
+    return items.some((item) =>
+      Boolean(
+        item.product?.requiresPrescription === true ||
+        String(item.product?.requiresPrescription).toLowerCase() === "true" ||
+        (item.product as any)?.isPrescription === true ||
+        (item.product as any)?.requires_prescription === true
+      )
+    );
   }, [items]);
 
   const rxItems = useMemo(() => {
-    return items.filter((item) => item.product?.requiresPrescription);
+    return items.filter((item) =>
+      Boolean(
+        item.product?.requiresPrescription === true ||
+        String(item.product?.requiresPrescription).toLowerCase() === "true" ||
+        (item.product as any)?.isPrescription === true ||
+        (item.product as any)?.requires_prescription === true
+      )
+    );
   }, [items]);
 
   const handlePrescriptionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -300,6 +314,17 @@ export default function CheckoutPage() {
   };
 
   const handleCompleteOrder = async () => {
+    if (requiresRx && !prescriptionUrl) {
+      toast.error("Doctor's Prescription Mandatory: You cannot proceed to payment without uploading a valid doctor's prescription.");
+      setStep("address");
+      setTimeout(() => {
+        const rxSection = document.getElementById("rx-upload-section");
+        if (rxSection) rxSection.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+      setIsProcessing(false);
+      return;
+    }
+
     setIsProcessing(true);
     toast.info("Initializing Paystack transaction...");
 
@@ -790,6 +815,21 @@ export default function CheckoutPage() {
             <>
               {/* Payment Method */}
               <Card className="p-6 space-y-6">
+                {requiresRx && !prescriptionUrl && (
+                  <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 border-2 border-red-400 text-red-800 dark:text-red-200 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <ShieldAlert className="h-6 w-6 text-red-600 shrink-0" />
+                      <div className="text-xs">
+                        <p className="font-bold text-red-900 dark:text-red-100">Payment Blocked: Doctor&apos;s Prescription Required</p>
+                        <p className="text-[11px] text-red-700 dark:text-red-300">You must upload your prescription document before payment can be processed.</p>
+                      </div>
+                    </div>
+                    <Button variant="secondary" size="sm" onClick={() => setStep("address")} className="shrink-0 bg-red-600 text-white hover:bg-red-700">
+                      Upload Now
+                    </Button>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-emerald-600" /> Paystack Ghana Payment Gateway
@@ -895,12 +935,20 @@ export default function CheckoutPage() {
                   <Button
                     variant="primary"
                     size="lg"
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 font-extrabold text-white h-12"
+                    className={`flex-1 font-extrabold text-white h-12 ${
+                      requiresRx && !prescriptionUrl
+                        ? "bg-slate-400 dark:bg-slate-700 text-slate-200 cursor-not-allowed"
+                        : "bg-emerald-600 hover:bg-emerald-700"
+                    }`}
                     onClick={handleCompleteOrder}
-                    disabled={isProcessing}
+                    disabled={isProcessing || (requiresRx && !prescriptionUrl)}
                     isLoading={isProcessing}
                   >
-                    {isProcessing ? "Processing..." : `Pay ${formatCurrency(grandTotal)} with Paystack`}
+                    {requiresRx && !prescriptionUrl
+                      ? "🔒 Doctor's Prescription Required to Pay"
+                      : isProcessing
+                      ? "Processing..."
+                      : `Pay ${formatCurrency(grandTotal)} with Paystack`}
                   </Button>
                 </div>
               </Card>

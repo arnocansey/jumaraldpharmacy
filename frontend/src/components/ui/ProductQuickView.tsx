@@ -26,13 +26,41 @@ interface Product {
   brand?: { name: string };
 }
 
+import { useCartStore } from "@/store/useCartStore";
+import { toast } from "sonner";
+
 export function ProductQuickView({ product, open, onClose }: { product: Product; open: boolean; onClose: () => void }) {
   const [currentImage, setCurrentImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const { addToCart } = useCartStore();
 
   if (!product) return null;
 
   const inStock = product.stockQuantity > 0;
+
+  const handleAddToCart = () => {
+    addToCart(
+      {
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        compareAtPrice: product.compareAtPrice,
+        stockQuantity: product.stockQuantity,
+        requiresPrescription: Boolean(
+          product.requiresPrescription === true ||
+          String(product.requiresPrescription).toLowerCase() === "true" ||
+          (product as any).isPrescription === true
+        ),
+        images: product.images || [],
+        category: product.category,
+        brand: product.brand,
+      },
+      quantity
+    );
+    toast.success(`${quantity}x ${product.name} added to cart!`);
+    onClose();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -109,7 +137,11 @@ export function ProductQuickView({ product, open, onClose }: { product: Product;
                 <span className="px-4 py-2 text-sm font-semibold">{quantity}</span>
                 <button onClick={() => setQuantity(quantity + 1)} className="px-3 py-2 hover:bg-slate-50">+</button>
               </div>
-              <button disabled={!inStock} className="flex-1 bg-emerald-600 text-white py-2.5 rounded-xl font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+              <button
+                onClick={handleAddToCart}
+                disabled={!inStock}
+                className="flex-1 bg-emerald-600 text-white py-2.5 rounded-xl font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
+              >
                 <ShoppingCart className="h-4 w-4" /> Add to Cart
               </button>
             </div>

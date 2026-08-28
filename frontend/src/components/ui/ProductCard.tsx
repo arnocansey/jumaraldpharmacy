@@ -27,14 +27,42 @@ interface ProductProps {
   brand?: { name: string };
 }
 
+import { useCartStore } from "@/store/useCartStore";
+import { toast } from "sonner";
+
 export function ProductCard({ product }: { product: ProductProps }) {
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
+  const { addToCart } = useCartStore();
 
   const inStock = product.stockQuantity > 0;
   const lowStock = product.stockQuantity > 0 && product.stockQuantity <= 10;
   const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;
   const discountPct = hasDiscount ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100) : 0;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    addToCart(
+      {
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        compareAtPrice: product.compareAtPrice,
+        stockQuantity: product.stockQuantity,
+        requiresPrescription: Boolean(
+          product.requiresPrescription === true ||
+          String(product.requiresPrescription).toLowerCase() === "true" ||
+          (product as any).isPrescription === true
+        ),
+        images: product.images || [],
+        category: product.category,
+        brand: product.brand,
+      },
+      1
+    );
+    toast.success(`${product.name} added to cart!`);
+  };
 
   return (
     <>
@@ -86,8 +114,9 @@ export function ProductCard({ product }: { product: ProductProps }) {
 
           <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
+              onClick={handleAddToCart}
               disabled={!inStock}
-              className="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
             >
               <ShoppingCart className="h-4 w-4" />
               {inStock ? "Add to Cart" : "Out of Stock"}

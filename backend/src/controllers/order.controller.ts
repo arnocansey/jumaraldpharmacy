@@ -55,6 +55,16 @@ export async function createOrder(req: AuthenticatedRequest, res: Response) {
       }
     }
 
+    // Strict Prescription Gating: Check database records for prescription requirements
+    const rxRequiredProducts = products.filter((p) => p.requiresPrescription === true);
+    if (rxRequiredProducts.length > 0 && !data.prescriptionId && !data.prescriptionUrl) {
+      return res.status(400).json({
+        message: `Strict Prescription Gating: Prescription required for: ${rxRequiredProducts.map((p) => p.name).join(", ")}. Please upload a valid doctor's prescription before proceeding to payment.`,
+        requiresPrescription: true,
+        rxProductNames: rxRequiredProducts.map((p) => p.name),
+      });
+    }
+
     let customerUserId = req.user?.id;
     if (!customerUserId) {
       const email = (req.body.email || `customer-${Date.now()}@jumaraldpharmacy.com`).toLowerCase();

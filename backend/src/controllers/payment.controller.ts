@@ -26,9 +26,21 @@ export async function initializePayment(req: AuthenticatedRequest, res: Response
       return res.status(400).json({ message: "orderId, email, and amount are required" });
     }
 
-    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { orderItems: { include: { product: true } } },
+    });
     if (!order) return res.status(404).json({ message: "Order not found" });
-    if (order.userId !== req.user!.id) return res.status(403).json({ message: "Unauthorized" });
+    if (req.user && order.userId !== req.user.id) return res.status(403).json({ message: "Unauthorized" });
+
+    // Strict Prescription Gating: Block payment if prescription is required but not attached
+    const hasRx = order.orderItems.some((item) => item.product.requiresPrescription === true);
+    if (hasRx && !order.prescriptionId) {
+      return res.status(400).json({
+        message: "Payment Blocked: A doctor's prescription is mandatory for prescription medicines in this order. Please upload your prescription before proceeding to payment.",
+        requiresPrescription: true,
+      });
+    }
 
     const reference = `JUM-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
 

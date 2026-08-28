@@ -71,8 +71,15 @@ export function useCartStore() {
   };
 
   const totalItemCount = items.reduce((acc, item) => acc + item.quantity, 0);
-  const subtotalAmount = items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-  const requiresPrescription = items.some((item) => item.product.requiresPrescription);
+  const subtotalAmount = items.reduce((acc, item) => acc + (Number(item.product?.price) || 0) * item.quantity, 0);
+  const requiresPrescription = items.some((item) =>
+    Boolean(
+      item.product?.requiresPrescription === true ||
+      String(item.product?.requiresPrescription).toLowerCase() === "true" ||
+      (item.product as any)?.isPrescription === true ||
+      (item.product as any)?.requires_prescription === true
+    )
+  );
 
   return {
     items,
