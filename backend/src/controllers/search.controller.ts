@@ -185,14 +185,194 @@ export async function getSearchSuggestions(req: any, res: Response) {
         OR: [
           { name: { contains: q, mode: "insensitive" } },
           { activeIngredients: { contains: q, mode: "insensitive" } },
+          { sku: { contains: q, mode: "insensitive" } },
+          { manufacturer: { contains: q, mode: "insensitive" } },
         ],
       },
-      select: { id: true, name: true, slug: true, price: true, images: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        price: true,
+        images: true,
+        sku: true,
+        manufacturer: true,
+        dosageForm: true,
+        strength: true,
+        activeIngredients: true,
+        usageInstructions: true,
+        category: { select: { id: true, name: true } },
+      },
       take: 8,
     });
 
     return res.json(suggestions);
   } catch {
     return res.status(500).json({ message: "Failed to fetch suggestions" });
+  }
+}
+
+const POPULAR_MANUFACTURERS = [
+  "Ernest Chemists Ltd",
+  "Tobinco Pharmaceuticals Ltd",
+  "Danadams Pharmaceuticals",
+  "Kinapharma Limited",
+  "Phyto-Riker (GIHOC) Pharmaceuticals",
+  "Entrance Pharmaceuticals & Research Centre",
+  "M&G Pharmaceuticals Ltd",
+  "Ayrton Drug Manufacturing Ltd",
+  "Kama Industries Limited",
+  "Letap Pharmaceuticals Ltd",
+  "Guaco Pharmaceuticals",
+  "Starwin Products Ltd",
+  "Godo Laboratories",
+  "Pharmanova Ltd",
+  "Intravenous Infusions PLC",
+  "GlaxoSmithKline (GSK)",
+  "Pfizer Inc.",
+  "Sanofi",
+  "Novartis AG",
+  "AstraZeneca",
+  "Cipla Limited",
+  "Sun Pharmaceutical Industries",
+  "Dr. Reddy's Laboratories",
+  "Torrent Pharmaceuticals",
+  "Lupin Pharmaceuticals",
+  "Teva Pharmaceutical Industries",
+  "Abbott Laboratories",
+  "F. Hoffmann-La Roche Ltd",
+  "Bayer AG",
+  "Johnson & Johnson",
+  "Merck & Co.",
+  "Boehringer Ingelheim",
+  "Viatris",
+  "Aurobindo Pharma",
+  "Zydus Lifesciences",
+  "Cadila Pharmaceuticals",
+  "Mankind Pharma",
+  "Emzor Pharmaceuticals",
+];
+
+export async function getManufacturerSuggestions(req: any, res: Response) {
+  try {
+    const q = (req.query.q as string || "").trim().toLowerCase();
+
+    // Query distinct manufacturers from DB
+    const dbManufacturers = await prisma.product.findMany({
+      where: { manufacturer: { not: null } },
+      select: { manufacturer: true },
+      distinct: ["manufacturer"],
+      take: 50,
+    });
+
+    const combinedSet = new Set<string>();
+    POPULAR_MANUFACTURERS.forEach((m) => combinedSet.add(m));
+    dbManufacturers.forEach((p) => {
+      if (p.manufacturer && p.manufacturer.trim()) {
+        combinedSet.add(p.manufacturer.trim());
+      }
+    });
+
+    let list = Array.from(combinedSet);
+    if (q) {
+      list = list.filter((m) => m.toLowerCase().includes(q));
+    }
+
+    return res.json(list.slice(0, 15));
+  } catch {
+    return res.json(POPULAR_MANUFACTURERS.slice(0, 15));
+  }
+}
+
+export async function globalAdminSearch(req: any, res: Response) {
+  try {
+    const q = (req.query.q as string || "").trim();
+    if (!q || q.length < 1) {
+      return res.json({ products: [], orders: [], prescriptions: [], users: [] });
+    }
+
+    const [products, orders, prescriptions, users] = await Promise.all([
+      prisma.product.findMany({
+        where: {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { sku: { contains: q, mode: "insensitive" } },
+            { barcode: { contains: q, mode: "insensitive" } },
+            { manufacturer: { contains: q, mode: "insensitive" } },
+            { activeIngredients: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          barcode: true,
+          price: true,
+          stockQuantity: true,
+          images: true,
+          category: { select: { name: true } },
+          manufacturer: true,
+        },
+        take: 6,
+      }),
+      prisma.order.findMany({
+        where: {
+          OR: [
+            { orderNumber: { contains: q, mode: "insensitive" } },
+            { user: { name: { contains: q, mode: "insensitive" } } },
+            { user: { email: { contains: q, mode: "insensitive" } } },
+            { user: { phone: { contains: q, mode: "insensitive" } } },
+          ],
+        },
+        select: {
+          id: true,
+          orderNumber: true,
+          totalAmount: true,
+          status: true,
+          createdAt: true,
+          user: { select: { name: true, email: true, phone: true } },
+        },
+        take: 6,
+      }),
+      prisma.prescription.findMany({
+        where: {
+          OR: [
+            { prescriptionNumber: { contains: q, mode: "insensitive" } },
+            { patientName: { contains: q, mode: "insensitive" } },
+            { doctorName: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        select: {
+          id: true,
+          prescriptionNumber: true,
+          patientName: true,
+          doctorName: true,
+          status: true,
+          createdAt: true,
+        },
+        take: 6,
+      }),
+      prisma.user.findMany({
+        where: {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { email: { contains: q, mode: "insensitive" } },
+            { phone: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+        },
+        take: 6,
+      }),
+    ]);
+
+    return res.json({ products, orders, prescriptions, users });
+  } catch (err: any) {
+    return res.status(500).json({ message: "Global search failed", error: err.message });
   }
 }

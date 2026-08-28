@@ -4,15 +4,15 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Bell, Search, LogOut, Sun, Moon, Monitor, X } from "lucide-react";
+import { Bell, Search, LogOut, Sun, Moon, Monitor, X, Command } from "lucide-react";
+import GlobalSearchModal from "@/components/GlobalSearchModal";
 
 export function AdminHeader() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -69,50 +69,34 @@ export function AdminHeader() {
         </Link>
       </div>
 
-      {/* Desktop Search Bar (Hidden on mobile) */}
-      <div className="hidden md:flex items-center gap-2.5 w-80">
-        <Search className="h-4 w-4 text-emerald-500 shrink-0" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search products, orders, patients..."
-          className="w-full h-9 px-3 rounded-xl text-xs bg-emerald-500/10 dark:bg-slate-900/60 border border-emerald-500/20 dark:border-white/10 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 placeholder:text-slate-400 dark:placeholder:text-slate-500 backdrop-blur-md transition-all"
-        />
+      {/* Desktop Global Search Bar (Trigger command palette) */}
+      <div
+        onClick={() => setGlobalSearchOpen(true)}
+        className="hidden md:flex items-center justify-between gap-2.5 w-80 h-9 px-3 rounded-xl text-xs bg-emerald-500/10 dark:bg-slate-900/60 border border-emerald-500/20 dark:border-white/10 text-slate-800 dark:text-slate-100 cursor-pointer hover:border-emerald-500/50 transition-all backdrop-blur-md"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Search className="h-4 w-4 text-emerald-500 shrink-0" />
+          <span className="text-slate-400 dark:text-slate-500 truncate">
+            Search products, orders, patients...
+          </span>
+        </div>
+        <kbd className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-white/80 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 shadow-sm shrink-0">
+          Ctrl K
+        </kbd>
       </div>
 
-      {/* Mobile Search Overlay / Expandable Bar */}
-      {mobileSearchOpen && (
-        <div className="absolute inset-x-0 inset-y-0 bg-white dark:bg-slate-900 px-4 flex items-center gap-2 z-30 md:hidden animate-in fade-in duration-150">
-          <Search className="h-4 w-4 text-emerald-500 shrink-0" />
-          <input
-            type="text"
-            autoFocus
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search products, orders, patients..."
-            className="w-full h-10 px-3 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 border-none text-slate-800 dark:text-slate-100 focus:outline-none placeholder:text-slate-400"
-          />
-          <button
-            type="button"
-            onClick={() => setMobileSearchOpen(false)}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      )}
+      <GlobalSearchModal isOpen={globalSearchOpen} onClose={() => setGlobalSearchOpen(false)} />
 
       {/* Right Controls */}
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Mobile Search Trigger Button */}
         <button
           type="button"
-          onClick={() => setMobileSearchOpen(true)}
-          className="md:hidden p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          title="Search"
+          onClick={() => setGlobalSearchOpen(true)}
+          className="md:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          title="Open Search"
         >
-          <Search className="h-4 w-4" />
+          <Search className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
         </button>
 
         {/* Theme Switcher */}

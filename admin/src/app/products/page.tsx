@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload, Download, Loader2, Image as ImageIcon, Scan, Barcode, Sparkles, Mic, BookOpen, Layers, Zap, ChevronDown, ChevronUp, FileText, Camera } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload, Download, Loader2, Image as ImageIcon, Scan, Barcode, Sparkles, Mic, BookOpen, Layers, Zap, ChevronDown, ChevronUp, FileText, Camera, Building2, Pill } from "lucide-react";
 import { apiFetch, apiUpload } from "@/lib/api";
 import { toast } from "sonner";
 import ProductImportModal from "@/components/ProductImportModal";
@@ -11,6 +11,47 @@ import ContinuousScannerModal from "@/components/ContinuousScannerModal";
 import InvoiceOcrModal from "@/components/InvoiceOcrModal";
 import StandardFormularyModal from "@/components/StandardFormularyModal";
 import LiveCameraModal from "@/components/LiveCameraModal";
+import { STANDARD_FORMULARY, FormularyDrug } from "@/data/standardFormulary";
+
+const POPULAR_MANUFACTURERS = [
+  "Ernest Chemists Ltd",
+  "Tobinco Pharmaceuticals Ltd",
+  "Danadams Pharmaceuticals",
+  "Kinapharma Limited",
+  "Phyto-Riker (GIHOC) Pharmaceuticals",
+  "Entrance Pharmaceuticals & Research Centre",
+  "M&G Pharmaceuticals Ltd",
+  "Ayrton Drug Manufacturing Ltd",
+  "Kama Industries Limited",
+  "Letap Pharmaceuticals Ltd",
+  "Guaco Pharmaceuticals",
+  "Starwin Products Ltd",
+  "Pharmanova Ltd",
+  "Intravenous Infusions PLC",
+  "GlaxoSmithKline (GSK)",
+  "Pfizer Inc.",
+  "Sanofi",
+  "Novartis AG",
+  "AstraZeneca",
+  "Cipla Limited",
+  "Sun Pharmaceutical Industries",
+  "Dr. Reddy's Laboratories",
+  "Torrent Pharmaceuticals",
+  "Lupin Pharmaceuticals",
+  "Teva Pharmaceutical Industries",
+  "Abbott Laboratories",
+  "F. Hoffmann-La Roche Ltd",
+  "Bayer AG",
+  "Johnson & Johnson",
+  "Merck & Co.",
+  "Boehringer Ingelheim",
+  "Viatris",
+  "Aurobindo Pharma",
+  "Zydus Lifesciences",
+  "Cadila Pharmaceuticals",
+  "Mankind Pharma",
+  "Emzor Pharmaceuticals",
+];
 
 interface Product {
   id: string; name: string; slug: string; sku: string; barcode?: string; price: number; compareAtPrice?: number;
@@ -64,6 +105,84 @@ export default function ProductsPage() {
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
   const [showLiveCamera, setShowLiveCamera] = useState(false);
   const [cameraTarget, setCameraTarget] = useState<"product" | "category">("product");
+
+  // Autocomplete & Suggestions States
+  const [nameSuggestions, setNameSuggestions] = useState<FormularyDrug[]>([]);
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false);
+  const [mfgSuggestions, setMfgSuggestions] = useState<string[]>([]);
+  const [showMfgSuggestions, setShowMfgSuggestions] = useState(false);
+
+  const handleNameChange = (val: string) => {
+    setForm((prev) => ({ ...prev, name: val }));
+    if (!val || val.trim().length < 2) {
+      setNameSuggestions([]);
+      setShowNameSuggestions(false);
+      return;
+    }
+    const q = val.toLowerCase().trim();
+    const matches = STANDARD_FORMULARY.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        d.genericName.toLowerCase().includes(q) ||
+        d.activeIngredients.toLowerCase().includes(q)
+    ).slice(0, 6);
+    setNameSuggestions(matches);
+    setShowNameSuggestions(matches.length > 0);
+  };
+
+  const handleSelectNameSuggestion = (drug: FormularyDrug) => {
+    let matchedCatId = "";
+    if (drug.category) {
+      const found = categories.find(
+        (c) =>
+          c.name.toLowerCase().includes(drug.category.toLowerCase()) ||
+          drug.category.toLowerCase().includes(c.name.toLowerCase())
+      );
+      if (found) matchedCatId = found.id;
+    }
+
+    const cleanName = drug.name.replace(/[^a-zA-Z0-9\s]/g, "").trim().split(/\s+/);
+    const prefix = cleanName.slice(0, 2).map((w) => w.slice(0, 3).toUpperCase()).join("-");
+    const autoSku = `${prefix || "MED"}-${drug.strength.replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+
+    setForm((prev) => ({
+      ...prev,
+      name: drug.name,
+      sku: prev.sku || autoSku,
+      dosageForm: drug.dosageForm || prev.dosageForm,
+      strength: drug.strength || prev.strength,
+      activeIngredients: drug.activeIngredients || prev.activeIngredients,
+      manufacturer: drug.manufacturer || prev.manufacturer,
+      description: drug.description || prev.description,
+      usageInstructions: drug.usageInstructions || prev.usageInstructions,
+      sideEffects: drug.sideEffects || prev.sideEffects,
+      warnings: drug.warnings || prev.warnings,
+      requiresPrescription: drug.requiresPrescription,
+      price: prev.price || (drug.typicalPrice ? String(drug.typicalPrice) : ""),
+      categoryId: matchedCatId || prev.categoryId,
+      newCategoryName: !matchedCatId && drug.category ? drug.category : prev.newCategoryName,
+    }));
+    setShowNameSuggestions(false);
+    toast.success(`Applied template: ${drug.name}`);
+  };
+
+  const handleMfgChange = (val: string) => {
+    setForm((prev) => ({ ...prev, manufacturer: val }));
+    const q = val.toLowerCase().trim();
+    if (!q) {
+      setMfgSuggestions(POPULAR_MANUFACTURERS.slice(0, 8));
+      setShowMfgSuggestions(true);
+      return;
+    }
+    const matches = POPULAR_MANUFACTURERS.filter((m) => m.toLowerCase().includes(q)).slice(0, 8);
+    setMfgSuggestions(matches);
+    setShowMfgSuggestions(matches.length > 0);
+  };
+
+  const handleSelectMfg = (mfg: string) => {
+    setForm((prev) => ({ ...prev, manufacturer: mfg }));
+    setShowMfgSuggestions(false);
+  };
 
   async function handleImageFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -622,14 +741,22 @@ export default function ProductsPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              {/* Product Name with Voice & Barcode buttons built right in */}
-              <div>
-                <label className={labelClass}>Product Name *</label>
+              {/* Product Name with Voice, Barcode & Clinical Template Autocomplete */}
+              <div className="relative">
+                <div className="flex items-center justify-between mb-1">
+                  <label className={labelClass}>Product Name *</label>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" /> Live Formulary Suggestions Active
+                  </span>
+                </div>
                 <div className="relative">
                   <input
-                    placeholder="e.g. Amoxicillin 500mg Capsules or Paracetamol"
+                    placeholder="e.g. Amoxicillin 500mg, Paracetamol, Coartem..."
                     value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    onFocus={() => {
+                      if (form.name.trim().length >= 2) handleNameChange(form.name);
+                    }}
                     className={`${inputClass} pr-20`}
                     required
                   />
@@ -656,6 +783,50 @@ export default function ProductsPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Name Autocomplete Dropdown */}
+                {showNameSuggestions && nameSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl z-50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 animate-in fade-in slide-in-from-top-1">
+                    <div className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-emerald-500" /> Standard Formulary (Click to Auto-Fill All Details)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowNameSuggestions(false)}
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    {nameSuggestions.map((drug) => (
+                      <div
+                        key={drug.id}
+                        onClick={() => handleSelectNameSuggestion(drug)}
+                        className="p-3 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40 cursor-pointer flex items-center justify-between gap-3 transition-colors group"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 flex items-center justify-center shrink-0 font-bold">
+                            <Pill className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 truncate">
+                              {drug.name}
+                            </h4>
+                            <p className="text-[10px] text-slate-400 truncate">
+                              {drug.activeIngredients || drug.genericName} {drug.manufacturer ? `• ${drug.manufacturer}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                            {drug.strength}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Price & Stock Grid */}
@@ -678,8 +849,8 @@ export default function ProductsPage() {
                 </div>
               </div>
 
-              {/* Category selector */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Category & Manufacturer Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className={labelClass}>Category</label>
                   <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value, newCategoryName: "" })} className={inputClass}>
@@ -690,6 +861,51 @@ export default function ProductsPage() {
                 <div>
                   <label className={labelClass}>Or Create New Category</label>
                   <input placeholder="New category name" value={form.newCategoryName} onChange={(e) => setForm({ ...form, newCategoryName: e.target.value, categoryId: "" })} className={inputClass} disabled={!!form.categoryId} />
+                </div>
+
+                {/* Manufacturer with Autocomplete */}
+                <div className="relative">
+                  <label className={labelClass}>Manufacturer Name</label>
+                  <div className="relative">
+                    <input
+                      placeholder="e.g. Ernest Chemists Ltd, Tobinco..."
+                      value={form.manufacturer}
+                      onChange={(e) => handleMfgChange(e.target.value)}
+                      onFocus={() => {
+                        if (!form.manufacturer) handleMfgChange("");
+                      }}
+                      className={`${inputClass} pr-8`}
+                    />
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                      <Building2 className="h-4 w-4" />
+                    </div>
+                  </div>
+
+                  {/* Manufacturer Autocomplete Dropdown */}
+                  {showMfgSuggestions && mfgSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl z-50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 animate-in fade-in slide-in-from-top-1 max-h-48 overflow-y-auto">
+                      <div className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                        <span>Top Manufacturers</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowMfgSuggestions(false)}
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {mfgSuggestions.map((mfg, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => handleSelectMfg(mfg)}
+                          className="px-3.5 py-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 cursor-pointer flex items-center gap-2 transition-colors"
+                        >
+                          <Building2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <span>{mfg}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -774,9 +990,48 @@ export default function ProductsPage() {
                         </button>
                       </div>
                     </div>
-                    <div>
+                    <div className="relative">
                       <label className={labelClass}>Manufacturer</label>
-                      <input placeholder="e.g. GSK Pharmaceuticals" value={form.manufacturer} onChange={(e) => setForm({ ...form, manufacturer: e.target.value })} className={inputClass} />
+                      <div className="relative">
+                        <input
+                          placeholder="e.g. Ernest Chemists Ltd, GSK..."
+                          value={form.manufacturer}
+                          onChange={(e) => handleMfgChange(e.target.value)}
+                          onFocus={() => {
+                            if (!form.manufacturer) handleMfgChange("");
+                          }}
+                          className={`${inputClass} pr-8`}
+                        />
+                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                          <Building2 className="h-4 w-4" />
+                        </div>
+                      </div>
+
+                      {/* Detailed Mode Manufacturer Autocomplete */}
+                      {showMfgSuggestions && mfgSuggestions.length > 0 && (
+                        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl z-50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 animate-in fade-in slide-in-from-top-1 max-h-48 overflow-y-auto">
+                          <div className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                            <span>Top Manufacturers</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowMfgSuggestions(false)}
+                              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          {mfgSuggestions.map((mfg, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleSelectMfg(mfg)}
+                              className="px-3.5 py-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-xs font-semibold text-slate-700 dark:text-slate-200 cursor-pointer flex items-center gap-2 transition-colors"
+                            >
+                              <Building2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                              <span>{mfg}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
