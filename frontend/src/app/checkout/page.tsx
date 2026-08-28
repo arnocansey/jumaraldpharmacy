@@ -23,6 +23,7 @@ import {
   Pill,
   Eye,
   Check,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
