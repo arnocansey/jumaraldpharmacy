@@ -22,8 +22,8 @@ interface Product {
   dosageForm?: string;
   strength?: string;
   activeIngredients?: string;
-  category: { name: string };
-  brand?: { name: string };
+  category: { id?: string; name: string; slug?: string } | string;
+  brand?: { id?: string; name: string; slug?: string } | string;
 }
 
 import { useCartStore } from "@/store/useCartStore";

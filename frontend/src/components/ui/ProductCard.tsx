@@ -23,8 +23,8 @@ interface ProductProps {
   dosageForm?: string;
   strength?: string;
   activeIngredients?: string;
-  category: { name: string };
-  brand?: { name: string };
+  category: { id?: string; name: string; slug?: string } | string;
+  brand?: { id?: string; name: string; slug?: string } | string;
 }
 
 import { useCartStore } from "@/store/useCartStore";
@@ -125,12 +125,18 @@ export function ProductCard({ product }: { product: ProductProps }) {
         </div>
 
         <div className="p-4">
-          <p className="text-xs text-emerald-600 font-medium mb-1">{product.category?.name}</p>
+          <p className="text-xs text-emerald-600 font-medium mb-1">
+            {typeof product.category === "string" ? product.category : product.category?.name}
+          </p>
           <h3 className="font-bold text-slate-800 mb-1 line-clamp-2 group-hover:text-emerald-700 transition-colors">
             {product.name}
           </h3>
 
-          {product.brand && <p className="text-xs text-slate-500 mb-2">{product.brand.name}</p>}
+          {product.brand && (
+            <p className="text-xs text-slate-500 mb-2">
+              {typeof product.brand === "string" ? product.brand : product.brand?.name}
+            </p>
+          )}
 
           <div className="flex items-center gap-1 mb-2">
             {[1, 2, 3, 4, 5].map((s) => (
