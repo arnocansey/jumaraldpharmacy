@@ -25,32 +25,32 @@ router.post(
 // 2. Download .qwc file for QBWC setup
 router.get("/qwc", downloadQwcFile);
 
-// 3. Admin endpoints (Protected)
+// 3. Admin & Inventory Clerk endpoints (Protected)
 router.get(
   "/settings",
   authenticateToken,
-  requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]),
+  requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]),
   getSettings
 );
 
 router.put(
   "/settings",
   authenticateToken,
-  requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN]),
+  requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.INVENTORY_CLERK]),
   updateSettings
 );
 
 router.get(
   "/sync-status",
   authenticateToken,
-  requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]),
+  requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]),
   getSyncStatus
 );
 
 router.post(
   "/sync-now",
   authenticateToken,
-  requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]),
+  requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]),
   triggerSyncNow
 );
 
@@ -64,7 +64,7 @@ router.post(
 router.get(
   "/export-iif",
   authenticateToken,
-  requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]),
+  requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]),
   exportIifFile
 );
 

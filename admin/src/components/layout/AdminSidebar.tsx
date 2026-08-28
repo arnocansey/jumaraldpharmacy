@@ -87,10 +87,10 @@ export function AdminSidebar() {
   };
 
   const roleAllowedHrefs: Record<string, string[]> = {
-    INVENTORY_CLERK: ["/", "/products", "/inventory"],
-    PHARMACIST: ["/", "/products", "/inventory", "/prescriptions", "/copilot", "/ai-knowledge"],
+    INVENTORY_CLERK: ["/", "/products", "/inventory", "/quickbooks"],
+    PHARMACIST: ["/", "/products", "/inventory", "/quickbooks", "/prescriptions", "/copilot", "/ai-knowledge"],
     DOCTOR: ["/", "/prescriptions", "/telehealth", "/copilot", "/ai-knowledge"],
-    BRANCH_MANAGER: ["/", "/products", "/inventory", "/orders", "/branches", "/reports"],
+    BRANCH_MANAGER: ["/", "/products", "/inventory", "/quickbooks", "/orders", "/branches", "/reports"],
     DELIVERY_DRIVER: ["/", "/orders", "/deliveries", "/notifications"],
   };
 
