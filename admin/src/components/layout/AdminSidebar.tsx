@@ -115,7 +115,7 @@ export function AdminSidebar() {
   }).filter((sec) => sec.items.length > 0);
 
   return (
-    <aside className="w-64 shrink-0 glass-sidebar flex flex-col h-screen sticky top-0 p-4 z-20">
+    <aside className="hidden md:flex w-64 shrink-0 glass-sidebar flex-col h-screen sticky top-0 p-4 z-20">
       <div className="flex flex-col h-full">
         <Link href="/" className="block px-2 shrink-0">
           <div className="bg-white/95 p-3 rounded-2xl border border-white/20 shadow-xl shadow-emerald-950/20 backdrop-blur-md">

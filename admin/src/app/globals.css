@@ -91,3 +91,25 @@
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: rgba(16, 185, 129, 0.6);
 }
+
+.glass-bottom-nav {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(16, 185, 129, 0.18);
+  box-shadow: 0 -4px 25px rgba(5, 150, 105, 0.08);
+}
+
+.dark .glass-bottom-nav {
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(52, 211, 153, 0.2);
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.5);
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

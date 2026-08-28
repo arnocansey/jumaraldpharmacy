@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { AdminHeader } from "@/components/layout/AdminHeader";
+import { AdminBottomNav } from "@/components/layout/AdminBottomNav";
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -47,10 +48,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden z-10">
         <AdminHeader />
-        <main id="admin-main" className="flex-1 overflow-y-auto p-4 lg:p-6 scrollbar-thin">
+        <main id="admin-main" className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 pb-24 md:pb-6 scrollbar-thin">
           {children}
         </main>
       </div>
+
+      <AdminBottomNav />
     </div>
   );
 }
