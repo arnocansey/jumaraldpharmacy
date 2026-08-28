@@ -89,11 +89,17 @@ export function ProductQuickView({ product, open, onClose }: { product: Product;
 
           <div className="p-6">
             <div className="mb-1">
-              <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{product.category?.name}</span>
+              <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                {typeof product.category === "string" ? product.category : product.category?.name}
+              </span>
             </div>
             <h2 className="text-xl font-bold text-slate-800 mb-2">{product.name}</h2>
 
-            {product.brand && <p className="text-sm text-slate-500 mb-3">{product.brand.name}</p>}
+            {product.brand && (
+              <p className="text-sm text-slate-500 mb-3">
+                {typeof product.brand === "string" ? product.brand : product.brand?.name}
+              </p>
+            )}
 
             <div className="flex items-center gap-2 mb-3">
               <div className="flex">
