@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload, Download, Loader2, Image as ImageIcon, Scan, Barcode, Sparkles, Mic, BookOpen, Layers, Zap, ChevronDown, ChevronUp, FileText, Camera, Building2, Pill } from "lucide-react";
 import { apiFetch, apiUpload } from "@/lib/api";
 import { toast } from "sonner";
@@ -12,6 +12,29 @@ import InvoiceOcrModal from "@/components/InvoiceOcrModal";
 import StandardFormularyModal from "@/components/StandardFormularyModal";
 import LiveCameraModal from "@/components/LiveCameraModal";
 import { STANDARD_FORMULARY, FormularyDrug } from "@/data/standardFormulary";
+
+interface UnifiedSuggestion {
+  id: string;
+  name: string;
+  source: "inventory" | "formulary";
+  sku?: string;
+  barcode?: string;
+  price?: number | string;
+  compareAtPrice?: number | string;
+  stockQuantity?: number;
+  manufacturer?: string;
+  dosageForm?: string;
+  strength?: string;
+  activeIngredients?: string;
+  description?: string;
+  usageInstructions?: string;
+  sideEffects?: string;
+  warnings?: string;
+  requiresPrescription?: boolean;
+  categoryName?: string;
+  categoryId?: string;
+  images?: string[];
+}
 
 const POPULAR_MANUFACTURERS = [
   "Ernest Chemists Ltd",
@@ -107,76 +130,224 @@ export default function ProductsPage() {
   const [cameraTarget, setCameraTarget] = useState<"product" | "category">("product");
 
   // Autocomplete & Suggestions States
-  const [nameSuggestions, setNameSuggestions] = useState<FormularyDrug[]>([]);
+  const [nameSuggestions, setNameSuggestions] = useState<UnifiedSuggestion[]>([]);
   const [showNameSuggestions, setShowNameSuggestions] = useState(false);
   const [mfgSuggestions, setMfgSuggestions] = useState<string[]>([]);
   const [showMfgSuggestions, setShowMfgSuggestions] = useState(false);
 
+  const nameSearchTimer = useRef<NodeJS.Timeout | null>(null);
+  const mfgSearchTimer = useRef<NodeJS.Timeout | null>(null);
+
   const handleNameChange = (val: string) => {
     setForm((prev) => ({ ...prev, name: val }));
-    if (!val || val.trim().length < 2) {
+    if (!val || val.trim().length < 1) {
       setNameSuggestions([]);
       setShowNameSuggestions(false);
       return;
     }
+
     const q = val.toLowerCase().trim();
-    const matches = STANDARD_FORMULARY.filter(
+
+    // 1. Instant match in-memory currently loaded products
+    const inMemoryMatches: UnifiedSuggestion[] = products
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.sku && p.sku.toLowerCase().includes(q)) ||
+          (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+          (p.manufacturer && p.manufacturer.toLowerCase().includes(q)) ||
+          (p.activeIngredients && p.activeIngredients.toLowerCase().includes(q))
+      )
+      .slice(0, 4)
+      .map((p) => ({
+        id: `inv-${p.id}`,
+        name: p.name,
+        source: "inventory",
+        sku: p.sku,
+        barcode: p.barcode,
+        price: p.price,
+        compareAtPrice: p.compareAtPrice,
+        stockQuantity: p.stockQuantity,
+        manufacturer: p.manufacturer,
+        dosageForm: p.dosageForm,
+        strength: p.strength,
+        activeIngredients: p.activeIngredients,
+        description: p.description,
+        usageInstructions: p.usageInstructions,
+        sideEffects: p.sideEffects,
+        warnings: p.warnings,
+        requiresPrescription: p.requiresPrescription,
+        categoryId: p.category?.id,
+        categoryName: p.category?.name,
+        images: p.images,
+      }));
+
+    // 2. Instant match standard Ghanaian formulary
+    const formularyMatches: UnifiedSuggestion[] = STANDARD_FORMULARY.filter(
       (d) =>
         d.name.toLowerCase().includes(q) ||
         d.genericName.toLowerCase().includes(q) ||
-        d.activeIngredients.toLowerCase().includes(q)
-    ).slice(0, 6);
-    setNameSuggestions(matches);
-    setShowNameSuggestions(matches.length > 0);
+        d.activeIngredients.toLowerCase().includes(q) ||
+        (d.manufacturer && d.manufacturer.toLowerCase().includes(q))
+    )
+      .slice(0, 4)
+      .map((d) => ({
+        id: `form-${d.id}`,
+        name: d.name,
+        source: "formulary",
+        price: d.typicalPrice,
+        dosageForm: d.dosageForm,
+        strength: d.strength,
+        activeIngredients: d.activeIngredients,
+        manufacturer: d.manufacturer,
+        description: d.description,
+        usageInstructions: d.usageInstructions,
+        sideEffects: d.sideEffects,
+        warnings: d.warnings,
+        requiresPrescription: d.requiresPrescription,
+        categoryName: d.category,
+      }));
+
+    const immediate = [...inMemoryMatches, ...formularyMatches];
+    setNameSuggestions(immediate);
+    setShowNameSuggestions(immediate.length > 0);
+
+    // 3. Search all live uploaded products from backend database
+    if (nameSearchTimer.current) clearTimeout(nameSearchTimer.current);
+    nameSearchTimer.current = setTimeout(async () => {
+      try {
+        const dbItems = await apiFetch<any[]>(`/search/suggestions?q=${encodeURIComponent(q)}`);
+        if (Array.isArray(dbItems) && dbItems.length > 0) {
+          const dbSuggestions: UnifiedSuggestion[] = dbItems.map((p) => ({
+            id: `db-${p.id}`,
+            name: p.name,
+            source: "inventory",
+            sku: p.sku,
+            barcode: p.barcode,
+            price: p.price,
+            compareAtPrice: p.compareAtPrice,
+            stockQuantity: p.stockQuantity,
+            manufacturer: p.manufacturer,
+            dosageForm: p.dosageForm,
+            strength: p.strength,
+            activeIngredients: p.activeIngredients,
+            description: p.description,
+            usageInstructions: p.usageInstructions,
+            sideEffects: p.sideEffects,
+            warnings: p.warnings,
+            requiresPrescription: p.requiresPrescription,
+            categoryId: p.category?.id,
+            categoryName: p.category?.name,
+            images: p.images,
+          }));
+
+          const seen = new Set<string>();
+          const combined: UnifiedSuggestion[] = [];
+
+          dbSuggestions.forEach((item) => {
+            if (!seen.has(item.name.toLowerCase())) {
+              seen.add(item.name.toLowerCase());
+              combined.push(item);
+            }
+          });
+
+          formularyMatches.forEach((item) => {
+            if (!seen.has(item.name.toLowerCase())) {
+              seen.add(item.name.toLowerCase());
+              combined.push(item);
+            }
+          });
+
+          setNameSuggestions(combined.slice(0, 8));
+          setShowNameSuggestions(combined.length > 0);
+        }
+      } catch {}
+    }, 150);
   };
 
-  const handleSelectNameSuggestion = (drug: FormularyDrug) => {
-    let matchedCatId = "";
-    if (drug.category) {
+  const handleSelectNameSuggestion = (item: UnifiedSuggestion) => {
+    let matchedCatId = item.categoryId || "";
+    if (!matchedCatId && item.categoryName) {
       const found = categories.find(
         (c) =>
-          c.name.toLowerCase().includes(drug.category.toLowerCase()) ||
-          drug.category.toLowerCase().includes(c.name.toLowerCase())
+          c.name.toLowerCase().includes(item.categoryName!.toLowerCase()) ||
+          item.categoryName!.toLowerCase().includes(c.name.toLowerCase())
       );
       if (found) matchedCatId = found.id;
     }
 
-    const cleanName = drug.name.replace(/[^a-zA-Z0-9\s]/g, "").trim().split(/\s+/);
+    const cleanName = item.name.replace(/[^a-zA-Z0-9\s]/g, "").trim().split(/\s+/);
     const prefix = cleanName.slice(0, 2).map((w) => w.slice(0, 3).toUpperCase()).join("-");
-    const autoSku = `${prefix || "MED"}-${drug.strength.replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+    const autoSku = item.sku || `${prefix || "MED"}-${(item.strength || "GEN").replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
 
     setForm((prev) => ({
       ...prev,
-      name: drug.name,
+      name: item.name,
       sku: prev.sku || autoSku,
-      dosageForm: drug.dosageForm || prev.dosageForm,
-      strength: drug.strength || prev.strength,
-      activeIngredients: drug.activeIngredients || prev.activeIngredients,
-      manufacturer: drug.manufacturer || prev.manufacturer,
-      description: drug.description || prev.description,
-      usageInstructions: drug.usageInstructions || prev.usageInstructions,
-      sideEffects: drug.sideEffects || prev.sideEffects,
-      warnings: drug.warnings || prev.warnings,
-      requiresPrescription: drug.requiresPrescription,
-      price: prev.price || (drug.typicalPrice ? String(drug.typicalPrice) : ""),
+      barcode: item.barcode || prev.barcode,
+      dosageForm: item.dosageForm || prev.dosageForm,
+      strength: item.strength || prev.strength,
+      activeIngredients: item.activeIngredients || prev.activeIngredients,
+      manufacturer: item.manufacturer || prev.manufacturer,
+      description: item.description || prev.description,
+      usageInstructions: item.usageInstructions || prev.usageInstructions,
+      sideEffects: item.sideEffects || prev.sideEffects,
+      warnings: item.warnings || prev.warnings,
+      requiresPrescription: item.requiresPrescription ?? prev.requiresPrescription,
+      price: item.price ? String(item.price) : prev.price,
+      compareAtPrice: item.compareAtPrice ? String(item.compareAtPrice) : prev.compareAtPrice,
+      stockQuantity: item.source === "inventory" && item.stockQuantity !== undefined ? String(item.stockQuantity) : prev.stockQuantity,
       categoryId: matchedCatId || prev.categoryId,
-      newCategoryName: !matchedCatId && drug.category ? drug.category : prev.newCategoryName,
+      newCategoryName: !matchedCatId && item.categoryName ? item.categoryName : prev.newCategoryName,
+      images: item.images && item.images.length > 0 ? item.images.join(", ") : prev.images,
     }));
+
     setShowNameSuggestions(false);
-    toast.success(`Applied template: ${drug.name}`);
+    if (item.source === "inventory") {
+      toast.success(`Loaded details from uploaded product: ${item.name}`);
+    } else {
+      toast.success(`Applied clinical template: ${item.name}`);
+    }
   };
 
   const handleMfgChange = (val: string) => {
     setForm((prev) => ({ ...prev, manufacturer: val }));
     const q = val.toLowerCase().trim();
-    if (!q) {
-      setMfgSuggestions(POPULAR_MANUFACTURERS.slice(0, 8));
-      setShowMfgSuggestions(true);
-      return;
+
+    const liveProductMfgs = products
+      .map((p) => p.manufacturer?.trim())
+      .filter((m): m is string => Boolean(m && m.length > 0));
+
+    const combinedSet = new Set<string>();
+    liveProductMfgs.forEach((m) => combinedSet.add(m));
+    POPULAR_MANUFACTURERS.forEach((m) => combinedSet.add(m));
+
+    let immediateList = Array.from(combinedSet);
+    if (q) {
+      immediateList = immediateList.filter((m) => m.toLowerCase().includes(q));
     }
-    const matches = POPULAR_MANUFACTURERS.filter((m) => m.toLowerCase().includes(q)).slice(0, 8);
-    setMfgSuggestions(matches);
-    setShowMfgSuggestions(matches.length > 0);
+    setMfgSuggestions(immediateList.slice(0, 8));
+    setShowMfgSuggestions(immediateList.length > 0);
+
+    if (mfgSearchTimer.current) clearTimeout(mfgSearchTimer.current);
+    mfgSearchTimer.current = setTimeout(async () => {
+      try {
+        const backendMfgs = await apiFetch<string[]>(`/search/manufacturers?q=${encodeURIComponent(q)}`);
+        if (Array.isArray(backendMfgs) && backendMfgs.length > 0) {
+          const mergedSet = new Set<string>();
+          backendMfgs.forEach((m) => mergedSet.add(m));
+          liveProductMfgs.forEach((m) => mergedSet.add(m));
+          POPULAR_MANUFACTURERS.forEach((m) => mergedSet.add(m));
+
+          let fullList = Array.from(mergedSet);
+          if (q) {
+            fullList = fullList.filter((m) => m.toLowerCase().includes(q));
+          }
+          setMfgSuggestions(fullList.slice(0, 12));
+          setShowMfgSuggestions(fullList.length > 0);
+        }
+      } catch {}
+    }, 150);
   };
 
   const handleSelectMfg = (mfg: string) => {
@@ -784,12 +955,12 @@ export default function ProductsPage() {
                   </div>
                 </div>
 
-                {/* Name Autocomplete Dropdown */}
+                {/* Unified Suggestions Dropdown: Live Uploaded Products + Formulary */}
                 {showNameSuggestions && nameSuggestions.length > 0 && (
-                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl z-50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 animate-in fade-in slide-in-from-top-1">
+                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl z-50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 animate-in fade-in slide-in-from-top-1 max-h-72 overflow-y-auto">
                     <div className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
                       <span className="flex items-center gap-1.5">
-                        <Sparkles className="h-3.5 w-3.5 text-emerald-500" /> Standard Formulary (Click to Auto-Fill All Details)
+                        <Sparkles className="h-3.5 w-3.5 text-emerald-500" /> Live Inventory &amp; Formulary References ({nameSuggestions.length})
                       </span>
                       <button
                         type="button"
@@ -799,29 +970,61 @@ export default function ProductsPage() {
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                    {nameSuggestions.map((drug) => (
+                    {nameSuggestions.map((item) => (
                       <div
-                        key={drug.id}
-                        onClick={() => handleSelectNameSuggestion(drug)}
-                        className="p-3 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40 cursor-pointer flex items-center justify-between gap-3 transition-colors group"
+                        key={item.id}
+                        onClick={() => handleSelectNameSuggestion(item)}
+                        className={`p-3 cursor-pointer flex items-center justify-between gap-3 transition-colors group ${
+                          item.source === "inventory"
+                            ? "hover:bg-blue-50/70 dark:hover:bg-blue-950/40 bg-blue-50/20 dark:bg-blue-950/10"
+                            : "hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40"
+                        }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 flex items-center justify-center shrink-0 font-bold">
-                            <Pill className="h-4 w-4" />
+                          <div
+                            className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 font-bold ${
+                              item.source === "inventory"
+                                ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600"
+                                : "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600"
+                            }`}
+                          >
+                            {item.source === "inventory" ? <Package className="h-4 w-4" /> : <Pill className="h-4 w-4" />}
                           </div>
                           <div className="min-w-0">
-                            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 truncate">
-                              {drug.name}
-                            </h4>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 truncate">
+                                {item.name}
+                              </h4>
+                              {item.source === "inventory" ? (
+                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                                  Currently Uploaded
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300">
+                                  Formulary Template
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[10px] text-slate-400 truncate">
-                              {drug.activeIngredients || drug.genericName} {drug.manufacturer ? `• ${drug.manufacturer}` : ""}
+                              {item.activeIngredients || item.description || "General Medicine"} {item.manufacturer ? `• ${item.manufacturer}` : ""} {item.sku ? `(SKU: ${item.sku})` : ""}
                             </p>
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                            {drug.strength}
-                          </span>
+                          {item.price && (
+                            <span className="text-xs font-extrabold text-slate-800 dark:text-slate-100 block">
+                              GHS {Number(item.price).toFixed(2)}
+                            </span>
+                          )}
+                          {item.source === "inventory" && item.stockQuantity !== undefined ? (
+                            <span className="text-[9px] text-slate-400 font-semibold block">
+                              {item.stockQuantity} in stock
+                            </span>
+                          ) : item.strength ? (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                              {item.strength}
+                            </span>
+                          ) : null}
                         </div>
                       </div>
                     ))}

@@ -177,15 +177,15 @@ export async function getPopularSearches(req: any, res: Response) {
 export async function getSearchSuggestions(req: any, res: Response) {
   try {
     const q = (req.query.q as string || "").trim();
-    if (q.length < 2) return res.json([]);
+    if (q.length < 1) return res.json([]);
 
     const suggestions = await prisma.product.findMany({
       where: {
-        isActive: true,
         OR: [
           { name: { contains: q, mode: "insensitive" } },
           { activeIngredients: { contains: q, mode: "insensitive" } },
           { sku: { contains: q, mode: "insensitive" } },
+          { barcode: { contains: q, mode: "insensitive" } },
           { manufacturer: { contains: q, mode: "insensitive" } },
         ],
       },
@@ -194,16 +194,25 @@ export async function getSearchSuggestions(req: any, res: Response) {
         name: true,
         slug: true,
         price: true,
+        compareAtPrice: true,
+        stockQuantity: true,
         images: true,
         sku: true,
+        barcode: true,
         manufacturer: true,
         dosageForm: true,
         strength: true,
         activeIngredients: true,
+        description: true,
         usageInstructions: true,
-        category: { select: { id: true, name: true } },
+        sideEffects: true,
+        warnings: true,
+        requiresPrescription: true,
+        category: { select: { id: true, name: true, slug: true } },
+        createdAt: true,
       },
-      take: 8,
+      orderBy: [{ createdAt: "desc" }, { stockQuantity: "desc" }],
+      take: 12,
     });
 
     return res.json(suggestions);
