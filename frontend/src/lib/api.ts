@@ -28,10 +28,6 @@ export async function apiFetch<T>(
 
     const data = await res.json();
 
-    if (!res.ok) {
-      throw new Error(data.message || "API request failed");
-    }
-
     return data as T;
   } catch (err: any) {
     if (typeof window === "undefined") {
@@ -41,3 +37,32 @@ export async function apiFetch<T>(
     throw err;
   }
 }
+
+export async function apiUpload<T = { url: string; filename: string }>(file: File): Promise<T> {
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("jumarald_token") || localStorage.getItem("jumarald_admin_token")
+      : null;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_URL}/upload`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "Upload failed");
+  }
+
+  return data as T;
+}
+

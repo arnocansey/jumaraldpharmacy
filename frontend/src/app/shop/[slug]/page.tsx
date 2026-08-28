@@ -16,6 +16,9 @@ import {
   Truck,
   Package,
   Info,
+  ZoomIn,
+  Maximize2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -238,6 +241,8 @@ export default function ProductDetailPage() {
     toast.success(`${quantity}x ${product.name} added to cart!`);
   };
 
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
   return (
     <div className="w-full px-4 sm:px-8 lg:px-12 py-10 space-y-10">
       <Link href="/shop" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-600 hover:text-brand-700">
@@ -245,37 +250,98 @@ export default function ProductDetailPage() {
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        {/* Full Image Gallery with Lightbox Zoom */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md">
+          <div
+            onClick={() => setIsLightboxOpen(true)}
+            className="group relative overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 shadow-md cursor-pointer flex items-center justify-center"
+          >
             <Image
               src={product.images[selectedImage] || product.images[0] || "/placeholder.png"}
               alt={product.name}
               width={600}
-              height={384}
-              quality={85}
+              height={500}
+              quality={90}
               placeholder="blur"
               blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+"
-              className="h-96 w-full object-cover"
+              className="h-96 sm:h-[430px] w-full object-contain p-4 transition-transform duration-300 group-hover:scale-105"
             />
+            <div className="absolute bottom-3 right-3 bg-slate-900/75 hover:bg-slate-900 text-white text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 backdrop-blur-md transition-all shadow-lg opacity-90 group-hover:opacity-100">
+              <Maximize2 className="h-3.5 w-3.5" /> View Full Picture / Zoom
+            </div>
           </div>
+
           {product.images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-2">
               {product.images.map((img, i) => (
                 <button
                   key={i}
                   onClick={() => setSelectedImage(i)}
-                  className={`shrink-0 h-16 w-16 rounded-xl overflow-hidden border-2 transition-all ${
+                  className={`shrink-0 h-16 w-16 rounded-xl overflow-hidden border-2 transition-all bg-white dark:bg-slate-900 ${
                     i === selectedImage
                       ? "border-brand-600 ring-2 ring-brand-200"
                       : "border-slate-200 dark:border-slate-700 opacity-60 hover:opacity-100"
                   }`}
                 >
-                  <Image src={img} alt="" width={64} height={64} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="h-full w-full object-cover" />
+                  <Image src={img} alt="" width={64} height={64} quality={80} placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+" className="h-full w-full object-contain p-1" />
                 </button>
               ))}
             </div>
           )}
         </div>
+
+        {/* Full-Screen Lightbox Modal */}
+        {isLightboxOpen && (
+          <div
+            className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in"
+            onClick={() => setIsLightboxOpen(false)}
+          >
+            <div className="absolute top-4 right-4 flex items-center gap-3">
+              <span className="text-xs text-slate-300 font-medium hidden sm:inline">Press anywhere or ESC to close</span>
+              <button
+                type="button"
+                onClick={() => setIsLightboxOpen(false)}
+                className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                title="Close Lightbox"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div
+              className="relative max-w-4xl max-h-[85vh] w-full flex items-center justify-center p-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Image
+                src={product.images[selectedImage] || product.images[0] || "/placeholder.png"}
+                alt={product.name}
+                width={1200}
+                height={1000}
+                quality={100}
+                className="max-h-[75vh] w-auto object-contain rounded-2xl shadow-2xl bg-white/5 p-2"
+              />
+            </div>
+
+            {product.images.length > 1 && (
+              <div
+                className="flex gap-2 mt-4 overflow-x-auto p-2 bg-slate-900/80 rounded-2xl border border-white/10"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {product.images.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedImage(i)}
+                    className={`h-14 w-14 rounded-xl overflow-hidden border-2 bg-white/10 transition-all ${
+                      i === selectedImage ? "border-emerald-400 ring-2 ring-emerald-400/50" : "border-transparent opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <Image src={img} alt="" width={56} height={56} className="h-full w-full object-contain p-1" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="lg:col-span-7 space-y-6">
           <div className="space-y-2">

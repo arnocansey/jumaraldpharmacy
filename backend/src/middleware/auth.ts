@@ -39,6 +39,30 @@ export async function authenticateToken(req: AuthenticatedRequest, res: Response
   }
 }
 
+export async function optionalAuthenticateToken(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, env.JWT_SECRET) as { id: string; email: string; role: RoleName };
+    const dbUser = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, email: true, role: true, isActive: true },
+    });
+
+    if (dbUser && dbUser.isActive) {
+      req.user = { id: dbUser.id, email: dbUser.email, role: dbUser.role };
+    }
+  } catch {
+    // Continue as guest if token is invalid or expired
+  }
+  next();
+}
+
 export function requireRole(allowedRoles: RoleName[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {

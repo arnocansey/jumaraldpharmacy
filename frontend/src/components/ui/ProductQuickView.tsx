@@ -42,7 +42,7 @@ export function ProductQuickView({ product, open, onClose }: { product: Product;
           <div className="bg-slate-50 p-6">
             <div className="aspect-square rounded-xl overflow-hidden mb-3">
               {product.images[currentImage] ? (
-                <Image src={product.images[currentImage]} alt={product.name} fill sizes="(max-width: 768px) 100vw, 50vw" quality={85} placeholder="blur" blurDataURL={BLUR_DATA} className="object-cover" />
+                <Image src={product.images[currentImage]} alt={product.name} fill sizes="(max-width: 768px) 100vw, 50vw" quality={85} placeholder="blur" blurDataURL={BLUR_DATA} className="object-contain p-2" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-slate-400">No image</div>
               )}
@@ -51,8 +51,8 @@ export function ProductQuickView({ product, open, onClose }: { product: Product;
               <div className="flex gap-2">
                 {product.images.map((img, i) => (
                   <button key={i} onClick={() => setCurrentImage(i)}
-                    className={`w-16 h-16 rounded-lg overflow-hidden border-2 ${i === currentImage ? "border-emerald-500" : "border-transparent"}`}>
-                    <Image src={img} alt="" fill sizes="64px" quality={80} placeholder="blur" blurDataURL={BLUR_DATA} className="object-cover" />
+                    className={`w-16 h-16 rounded-lg overflow-hidden border-2 bg-white ${i === currentImage ? "border-emerald-500" : "border-slate-200"}`}>
+                    <Image src={img} alt="" fill sizes="64px" quality={80} placeholder="blur" blurDataURL={BLUR_DATA} className="object-contain p-1" />
                   </button>
                 ))}
               </div>

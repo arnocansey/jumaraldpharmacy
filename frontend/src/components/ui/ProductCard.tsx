@@ -52,7 +52,7 @@ export function ProductCard({ product }: { product: ProductProps }) {
               quality={80}
               placeholder="blur"
               blurDataURL={BLUR_DATA}
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-300">

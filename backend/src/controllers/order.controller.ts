@@ -22,6 +22,9 @@ const createOrderSchema = z.object({
     country: z.string().default("Ghana"),
   }),
   prescriptionId: z.string().nullable().optional(),
+  prescriptionUrl: z.string().nullable().optional(),
+  doctorName: z.string().nullable().optional(),
+  patientNotes: z.string().nullable().optional(),
   totalAmount: z.number().positive(),
   shippingFee: z.number().min(0).optional().default(0),
   taxAmount: z.number().min(0).optional().default(0),
@@ -52,6 +55,24 @@ export async function createOrder(req: AuthenticatedRequest, res: Response) {
       }
     }
 
+    let customerUserId = req.user?.id;
+    if (!customerUserId) {
+      const email = (req.body.email || `customer-${Date.now()}@jumaraldpharmacy.com`).toLowerCase();
+      let customer = await prisma.user.findFirst({ where: { email } });
+      if (!customer) {
+        customer = await prisma.user.create({
+          data: {
+            email,
+            name: "Customer",
+            role: "PATIENT",
+            passwordHash: "GUEST_ORDER",
+            isActive: true,
+          },
+        });
+      }
+      customerUserId = customer.id;
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       for (const item of data.items) {
         await tx.product.update({
@@ -60,9 +81,23 @@ export async function createOrder(req: AuthenticatedRequest, res: Response) {
         });
       }
 
+      let linkedPrescriptionId = data.prescriptionId || null;
+      if (!linkedPrescriptionId && data.prescriptionUrl) {
+        const createdRx = await tx.prescription.create({
+          data: {
+            userId: customerUserId,
+            documentUrl: data.prescriptionUrl,
+            doctorName: data.doctorName || null,
+            patientNotes: data.patientNotes || "Attached during checkout",
+            status: "SUBMITTED",
+          },
+        });
+        linkedPrescriptionId = createdRx.id;
+      }
+
       const newAddress = await tx.address.create({
         data: {
-          userId: req.user!.id,
+          userId: customerUserId,
           fullAddress: data.address.fullAddress,
           city: data.address.city,
           state: data.address.state,
@@ -73,14 +108,22 @@ export async function createOrder(req: AuthenticatedRequest, res: Response) {
 
       return tx.order.create({
         data: {
-          orderNumber, userId: req.user!.id, addressId: newAddress.id,
-          prescriptionId: data.prescriptionId || null,
-          totalAmount: data.totalAmount, shippingFee: data.shippingFee, taxAmount: data.taxAmount,
-          status: data.prescriptionId ? OrderStatus.PRESCRIPTION_CHECK : OrderStatus.PENDING,
-          orderItems: { create: data.items.map((item) => ({
-            productId: item.productId, quantity: item.quantity,
-            unitPrice: item.price, total: item.price * item.quantity,
-          })) },
+          orderNumber,
+          userId: customerUserId,
+          addressId: newAddress.id,
+          prescriptionId: linkedPrescriptionId,
+          totalAmount: data.totalAmount,
+          shippingFee: data.shippingFee,
+          taxAmount: data.taxAmount,
+          status: linkedPrescriptionId ? OrderStatus.PRESCRIPTION_CHECK : OrderStatus.PENDING,
+          orderItems: {
+            create: data.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.price,
+              total: item.price * item.quantity,
+            })),
+          },
         },
         include: { orderItems: { include: { product: true } }, user: { select: { email: true, name: true } } },
       });

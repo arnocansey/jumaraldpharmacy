@@ -15,8 +15,14 @@ import {
   Percent,
   Gift,
   X,
-  MapPin,
   Package,
+  FileText,
+  Camera,
+  UploadCloud,
+  ShieldAlert,
+  Pill,
+  Eye,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -24,7 +30,7 @@ import { Card } from "@/components/ui/Card";
 import { useCartStore } from "@/store/useCartStore";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
-import { API_URL } from "@/lib/api";
+import { API_URL, apiUpload } from "@/lib/api";
 
 const FREE_DELIVERY_THRESHOLD = 200;
 const DELIVERY_FEE = 25;
@@ -51,6 +57,41 @@ export default function CheckoutPage() {
   const [confirmedOrderNumber, setConfirmedOrderNumber] = useState<string>("");
 
   const [isVerifying, setIsVerifying] = useState(false);
+
+  // Prescription states
+  const [prescriptionUrl, setPrescriptionUrl] = useState("");
+  const [prescriptionFilename, setPrescriptionFilename] = useState("");
+  const [doctorName, setDoctorName] = useState("");
+  const [patientNotes, setPatientNotes] = useState("");
+  const [uploadingRx, setUploadingRx] = useState(false);
+  const [previewRxModal, setPreviewRxModal] = useState(false);
+
+  const requiresRx = useMemo(() => {
+    return items.some((item) => item.product?.requiresPrescription);
+  }, [items]);
+
+  const rxItems = useMemo(() => {
+    return items.filter((item) => item.product?.requiresPrescription);
+  }, [items]);
+
+  const handlePrescriptionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingRx(true);
+    try {
+      const res = await apiUpload(file);
+      if (res && res.url) {
+        setPrescriptionUrl(res.url);
+        setPrescriptionFilename(file.name);
+        toast.success("Doctor's prescription uploaded successfully!");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload prescription. Please try again.");
+    } finally {
+      setUploadingRx(false);
+    }
+  };
 
   // Address state
   const [address, setAddress] = useState({
@@ -246,6 +287,14 @@ export default function CheckoutPage() {
 
   const handleContinueToPayment = () => {
     if (!validateAddress()) return;
+    if (requiresRx && !prescriptionUrl) {
+      toast.error("Doctor's Prescription Required: Please upload your prescription document before proceeding to payment.");
+      const rxSection = document.getElementById("rx-upload-section");
+      if (rxSection) {
+        rxSection.scrollIntoView({ behavior: "smooth" });
+      }
+      return;
+    }
     setStep("payment");
     fetchLoyaltyPoints();
   };
@@ -267,6 +316,9 @@ export default function CheckoutPage() {
         address: deliveryOption === "pickup"
           ? { fullAddress: "Store Pickup — Jumarald Pharmacy", city: "Accra", state: "Greater Accra", postalCode: "00233", country: "Ghana" }
           : { fullAddress: address.street, city: address.city, state: address.region, postalCode: "00233", country: "Ghana" },
+        prescriptionUrl: prescriptionUrl || undefined,
+        doctorName: doctorName || undefined,
+        patientNotes: patientNotes || undefined,
         totalAmount: grandTotal,
         shippingFee: deliveryFee,
         deliveryOption,
@@ -542,10 +594,197 @@ export default function CheckoutPage() {
                     </>
                   )}
                 </div>
-                <Button variant="primary" size="lg" className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={handleContinueToPayment}>
-                  Continue to Payment
+
+                {/* Prescription Required (Rx) Upload Section */}
+                {requiresRx && (
+                  <div
+                    id="rx-upload-section"
+                    className="p-5 rounded-2xl border-2 border-amber-400/80 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20 space-y-4 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md font-bold text-base">
+                          Rx
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                            Doctor&apos;s Prescription Required <Badge variant="amber">Mandatory to Proceed</Badge>
+                          </h4>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                            By Ghana Health Service regulations, the following medicine(s) in your cart require a verified doctor&apos;s prescription:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {rxItems.map((item) => (
+                              <span
+                                key={item.product.id}
+                                className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 flex items-center gap-1"
+                              >
+                                <Pill className="h-3 w-3" /> {item.product.name} ({item.quantity}x)
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {!prescriptionUrl ? (
+                      <div className="space-y-3 pt-2">
+                        <div className="border-2 border-dashed border-amber-300 dark:border-amber-700/80 rounded-2xl p-6 bg-white/90 dark:bg-slate-900/80 text-center hover:bg-white transition-colors">
+                          {uploadingRx ? (
+                            <div className="flex flex-col items-center justify-center py-4 space-y-2">
+                              <Loader2 className="h-8 w-8 text-amber-600 animate-spin" />
+                              <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                Uploading and encrypting prescription document...
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center space-y-3">
+                              <div className="h-12 w-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 flex items-center justify-center">
+                                <UploadCloud className="h-6 w-6" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                                  Upload Doctor&apos;s Prescription Slip or Hospital Note
+                                </p>
+                                <p className="text-[11px] text-slate-500">
+                                  Take a picture with your phone camera, or select a JPG, PNG, or PDF file (Max 10MB)
+                                </p>
+                              </div>
+                              <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md cursor-pointer transition-all hover:scale-105">
+                                <Camera className="h-4 w-4" /> Snap Photo / Choose File
+                                <input
+                                  type="file"
+                                  accept="image/*,application/pdf"
+                                  onChange={handlePrescriptionUpload}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                              Prescribing Doctor / Hospital (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Dr. Mensah, Korle-Bu Hospital"
+                              value={doctorName}
+                              onChange={(e) => setDoctorName(e.target.value)}
+                              className="w-full p-2.5 rounded-xl border bg-white dark:bg-slate-800 text-xs font-medium text-slate-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                              Patient Notes for Pharmacist (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Allergies, current dosage, or instructions"
+                              value={patientNotes}
+                              onChange={(e) => setPatientNotes(e.target.value)}
+                              className="w-full p-2.5 rounded-xl border bg-white dark:bg-slate-800 text-xs font-medium text-slate-900 dark:text-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-10 w-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+                            <Check className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <h5 className="text-xs font-bold text-emerald-900 dark:text-emerald-200 truncate flex items-center gap-1.5">
+                              Prescription Attached Successfully
+                            </h5>
+                            <p className="text-[11px] text-emerald-700 dark:text-emerald-400 truncate">
+                              {prescriptionFilename || "prescription-document.jpg"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewRxModal(true)}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 flex items-center gap-1"
+                          >
+                            <Eye className="h-3.5 w-3.5" /> View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPrescriptionUrl("");
+                              setPrescriptionFilename("");
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 hover:bg-red-200"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <Button
+                  variant="primary"
+                  size="lg"
+                  disabled={requiresRx && !prescriptionUrl}
+                  className={`w-full ${
+                    requiresRx && !prescriptionUrl
+                      ? "bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  }`}
+                  onClick={handleContinueToPayment}
+                >
+                  {requiresRx && !prescriptionUrl
+                    ? "🔒 Upload Prescription to Proceed to Payment"
+                    : "Continue to Payment"}
                 </Button>
               </Card>
+
+              {/* Prescription Preview Modal */}
+              {previewRxModal && prescriptionUrl && (
+                <div
+                  className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+                  onClick={() => setPreviewRxModal(false)}
+                >
+                  <div
+                    className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-emerald-600" /> Attached Prescription Document
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewRxModal(false)}
+                        className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div className="rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border flex items-center justify-center max-h-[60vh]">
+                      {prescriptionUrl.toLowerCase().endsWith(".pdf") ? (
+                        <iframe src={prescriptionUrl} className="w-full h-80 border-0" title="Prescription PDF" />
+                      ) : (
+                        <img src={prescriptionUrl} alt="Prescription" className="max-h-[60vh] w-auto object-contain" />
+                      )}
+                    </div>
+
+                    <div className="text-right">
+                      <Button variant="primary" size="sm" onClick={() => setPreviewRxModal(false)}>
+                        Done
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <>
