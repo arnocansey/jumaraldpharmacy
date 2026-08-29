@@ -260,9 +260,9 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {product.images.length > 1 && (
+          {product.images?.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-2">
-              {product.images.map((img, i) => (
+              {product.images.map((img: string, i: number) => (
                 <button
                   key={i}
                   onClick={() => setSelectedImage(i)}
@@ -311,12 +311,12 @@ export default function ProductDetailPage() {
               />
             </div>
 
-            {product.images.length > 1 && (
+            {product.images?.length > 1 && (
               <div
                 className="flex gap-2 mt-4 overflow-x-auto p-2 bg-slate-900/80 rounded-2xl border border-white/10"
                 onClick={(e) => e.stopPropagation()}
               >
-                {product.images.map((img, i) => (
+                {product.images.map((img: string, i: number) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
