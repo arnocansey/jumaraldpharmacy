@@ -123,6 +123,7 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<"details" | "warnings" | "reviews">("details");
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -264,8 +265,6 @@ export default function ProductDetailPage() {
     );
     toast.success(`${quantity}x ${product.name} added to cart!`);
   };
-
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   return (
     <div className="w-full px-4 sm:px-8 lg:px-12 py-10 space-y-10">
