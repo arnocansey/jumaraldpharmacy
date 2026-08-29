@@ -505,7 +505,7 @@ export default function ProductDetailPage() {
             >
               {tab === "details" && "Clinical Specifications & Dosage"}
               {tab === "warnings" && "Contraindications & Side Effects"}
-              {tab === "reviews" && `Patient Reviews (${product.reviewCount})`}
+              {tab === "reviews" && `Patient Reviews (${product.reviewCount ?? 0})`}
             </button>
           ))}
         </div>
@@ -569,7 +569,7 @@ export default function ProductDetailPage() {
               {!product.warnings && !product.sideEffects && (
                 <div className="flex items-center gap-3 text-slate-400 py-8 justify-center">
                   <Info className="h-5 w-5" />
-                  <p>No contraindications or side effects information available.</p>
+                  <p>No specific contraindications recorded for this product.</p>
                 </div>
               )}
             </div>
@@ -579,7 +579,7 @@ export default function ProductDetailPage() {
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 text-sm font-semibold">
-                  ⭐ {product.rating.toFixed(1)} out of 5 based on {product.reviewCount} verified reviews
+                  ⭐ {Number(product.rating || 0).toFixed(1)} out of 5 based on {product.reviewCount ?? 0} verified reviews
                 </div>
                 <Button
                   variant={showReviewForm ? "secondary" : "primary"}
