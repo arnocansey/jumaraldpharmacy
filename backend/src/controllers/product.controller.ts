@@ -12,10 +12,14 @@ const productQuerySchema = z.object({
   category: z.string().optional(),
   brand: z.string().optional(),
   requiresPrescription: z.string().optional(),
+  prescription: z.string().optional(),
+  prescriptionOnly: z.string().optional(),
   inStockOnly: z.string().optional(),
+  inStock: z.string().optional(),
   minPrice: z.string().optional(),
   maxPrice: z.string().optional(),
-  sortBy: z.enum(["price_asc", "price_desc", "rating", "name"]).optional(),
+  sortBy: z.string().optional(),
+  sort: z.string().optional(),
   page: z.string().optional().default("1"),
   limit: z.string().optional().default("20"),
 });
@@ -113,19 +117,26 @@ export async function getProducts(req: any, res: Response) {
     }
     if (category) where.category = { slug: category };
     if (brand) where.brand = { slug: brand };
-    if (requiresPrescription !== undefined) where.requiresPrescription = requiresPrescription === "true";
-    if (inStockOnly === "true") where.stockQuantity = { gt: 0 };
+    const isRx = requiresPrescription ?? query.prescription ?? query.prescriptionOnly;
+    if (isRx !== undefined && isRx !== "") where.requiresPrescription = isRx === "true";
+    
+    const isInStock = inStockOnly ?? query.inStock;
+    if (isInStock === "true") where.stockQuantity = { gt: 0 };
+
     if (minPrice || maxPrice) {
       where.price = {};
       if (minPrice) where.price.gte = Number(minPrice);
       if (maxPrice) where.price.lte = Number(maxPrice);
     }
 
+    const effectiveSortBy = sortBy || query.sort || "featured";
     let orderBy: any = { createdAt: "desc" };
-    if (sortBy === "price_asc") orderBy = { price: "asc" };
-    if (sortBy === "price_desc") orderBy = { price: "desc" };
-    if (sortBy === "rating") orderBy = { rating: "desc" };
-    if (sortBy === "name") orderBy = { name: "asc" };
+    if (effectiveSortBy === "price_asc") orderBy = { price: "asc" };
+    if (effectiveSortBy === "price_desc") orderBy = { price: "desc" };
+    if (effectiveSortBy === "rating") orderBy = { rating: "desc" };
+    if (effectiveSortBy === "name") orderBy = { name: "asc" };
+    if (effectiveSortBy === "featured") orderBy = [{ isFeatured: "desc" }, { createdAt: "desc" }];
+    if (effectiveSortBy === "newest" || effectiveSortBy === "createdAt") orderBy = { createdAt: "desc" };
 
     const take = Number(limit);
     const skip = (Number(page) - 1) * take;

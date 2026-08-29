@@ -245,7 +245,11 @@ export default function ShopPage() {
                           </h3>
                         </Link>
 
-                        {product.brand && <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold">{product.brand.name}</p>}
+                        {product.brand && (
+                          <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold">
+                            {typeof product.brand === "string" ? product.brand : product.brand.name}
+                          </p>
+                        )}
                         <p className="text-xs text-slate-500 line-clamp-2">{product.description}</p>
 
                         {Boolean(product.rating && product.rating > 0) && (
