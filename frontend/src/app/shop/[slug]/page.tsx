@@ -28,6 +28,9 @@ import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/useCartStore";
 import { toast } from "sonner";
 
+import { useQueryClient } from "@tanstack/react-query";
+import { useProductBySlugQuery, useProductAlternativesQuery } from "@/hooks/useShopQueries";
+
 interface Product {
   id: string;
   name: string;
@@ -117,7 +120,8 @@ function ProductDetailError() {
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const slug = params?.slug as string;
+  const slug = (params?.slug as string) || "";
+  const queryClient = useQueryClient();
 
   const { addToCart } = useCartStore();
   const [quantity, setQuantity] = useState(1);
@@ -125,12 +129,12 @@ export default function ProductDetailPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // TanStack Query for Product & Alternatives
+  const { data: productData, isLoading: loading, error: queryError } = useProductBySlugQuery(slug);
+  const product = productData as any;
 
-  const [alternatives, setAlternatives] = useState<Product[]>([]);
-  const [alternativesLoading, setAlternativesLoading] = useState(false);
+  const { data: alternativesData, isLoading: alternativesLoading } = useProductAlternativesQuery(product?.id);
+  const alternatives = alternativesData || [];
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -145,7 +149,7 @@ export default function ProductDetailPage() {
   const [submittingReview, setSubmittingReview] = useState(false);
 
   const fetchReviews = () => {
-    if (!product) return;
+    if (!product?.id) return;
     setReviewsLoading(true);
     apiFetch<{ reviews: Review[]; hasMore: boolean }>(`/reviews/product/${product.id}?page=${reviewsPage}&limit=10`)
       .then((data) => {
@@ -159,51 +163,13 @@ export default function ProductDetailPage() {
   };
 
   useEffect(() => {
-    if (!slug) return;
-
-    setLoading(true);
-    setError(null);
-
-    const cleanSlug = typeof slug === "string" ? slug.trim() : "";
-    apiFetch<Product>(`/products/${encodeURIComponent(cleanSlug)}`)
-      .then((data) => {
-        if (!data || !data.id) {
-          setError("Product not found");
-        } else {
-          setProduct(data);
-          setSelectedImage(0);
-          setQuantity(1);
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to load product details:", err);
-        setError(err.message || "Failed to load product");
-        setLoading(false);
-      });
-  }, [slug]);
-
-  useEffect(() => {
-    if (!product) return;
-    setAlternativesLoading(true);
-    apiFetch<Product[]>(`/search/alternatives/${product.id}`)
-      .then((data) => {
-        setAlternatives(data || []);
-        setAlternativesLoading(false);
-      })
-      .catch(() => {
-        setAlternativesLoading(false);
-      });
-  }, [product]);
-
-  useEffect(() => {
-    if (!product || activeTab !== "reviews") return;
+    if (!product?.id || activeTab !== "reviews") return;
     fetchReviews();
-  }, [product, activeTab, reviewsPage]);
+  }, [product?.id, activeTab, reviewsPage]);
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!product) return;
+    if (!product?.id) return;
     if (!newComment.trim()) {
       toast.error("Please enter a review comment.");
       return;
@@ -224,7 +190,7 @@ export default function ProductDetailPage() {
       setNewComment("");
       setShowReviewForm(false);
       fetchReviews();
-      apiFetch<Product>(`/products/${slug}`).then(setProduct);
+      queryClient.invalidateQueries({ queryKey: ["product", slug] });
     } catch (err: any) {
       toast.error(err.message || "Failed to submit review. Please ensure you are logged in.");
     } finally {
@@ -233,7 +199,7 @@ export default function ProductDetailPage() {
   };
 
   if (loading) return <ProductDetailSkeleton />;
-  if (error || !product) return <ProductDetailError />;
+  if (queryError || !product) return <ProductDetailError />;
 
   const inStock = product.stockQuantity > 0;
   const lowStock = inStock && product.stockQuantity <= (product.minStockAlert || 10);

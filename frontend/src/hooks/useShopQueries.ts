@@ -83,3 +83,22 @@ export function useProductsQuery(params: {
     staleTime: 2 * 60 * 1000,
   });
 }
+
+export function useProductBySlugQuery(slug?: string) {
+  const cleanSlug = typeof slug === "string" ? slug.trim() : "";
+  return useQuery<Product>({
+    queryKey: ["product", cleanSlug],
+    queryFn: () => apiFetch<Product>(`/products/${encodeURIComponent(cleanSlug)}`),
+    enabled: Boolean(cleanSlug),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useProductAlternativesQuery(productId?: string) {
+  return useQuery<Product[]>({
+    queryKey: ["product-alternatives", productId],
+    queryFn: () => apiFetch<Product[]>(`/search/alternatives/${productId}`),
+    enabled: Boolean(productId),
+    staleTime: 5 * 60 * 1000,
+  });
+}
