@@ -280,8 +280,25 @@ export async function getBrands(req: any, res: Response) {
 
 export async function getProductBySlug(req: any, res: Response) {
   try {
-    const product = await prisma.product.findUnique({
-      where: { slug: req.params.slug },
+    const rawSlug = req.params.slug;
+    if (!rawSlug) return res.status(400).json({ message: "Product slug or ID is required" });
+
+    let decoded = rawSlug;
+    try {
+      decoded = decodeURIComponent(rawSlug).trim();
+    } catch {}
+
+    const product = await prisma.product.findFirst({
+      where: {
+        OR: [
+          { slug: rawSlug },
+          { slug: decoded },
+          { slug: decoded.toLowerCase() },
+          { id: rawSlug },
+          { sku: rawSlug },
+          { sku: decoded },
+        ],
+      },
       include: {
         category: true,
         brand: true,
@@ -303,7 +320,7 @@ export async function getProductBySlug(req: any, res: Response) {
       ...product,
       requiresPrescription: isRx,
     });
-  } catch {
+  } catch (err: any) {
     return res.status(500).json({ message: "Failed to fetch product details" });
   }
 }

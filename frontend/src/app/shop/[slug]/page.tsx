@@ -32,7 +32,7 @@ interface Product {
   id: string;
   name: string;
   slug: string;
-  sku: string;
+  sku?: string;
   price: number;
   compareAtPrice?: number;
   stockQuantity: number;
@@ -48,11 +48,11 @@ interface Product {
   sideEffects?: string;
   warnings?: string;
   manufacturer?: string;
-  category: { id: string; name: string; slug: string };
-  brand?: { id: string; name: string; slug: string };
-  rating: number;
-  reviewCount: number;
-  purchaseCount: number;
+  category?: { id?: string; name: string; slug?: string } | string | any;
+  brand?: { id?: string; name: string; slug?: string } | string | any;
+  rating?: number;
+  reviewCount?: number;
+  purchaseCount?: number;
 }
 
 interface Review {
@@ -163,15 +163,21 @@ export default function ProductDetailPage() {
     setLoading(true);
     setError(null);
 
-    apiFetch<Product>(`/products/${slug}`)
+    const cleanSlug = typeof slug === "string" ? slug.trim() : "";
+    apiFetch<Product>(`/products/${encodeURIComponent(cleanSlug)}`)
       .then((data) => {
-        setProduct(data);
-        setSelectedImage(0);
-        setQuantity(1);
+        if (!data || !data.id) {
+          setError("Product not found");
+        } else {
+          setProduct(data);
+          setSelectedImage(0);
+          setQuantity(1);
+        }
         setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
+        console.error("Failed to load product details:", err);
+        setError(err.message || "Failed to load product");
         setLoading(false);
       });
   }, [slug]);
@@ -237,7 +243,25 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (!inStock) return;
-    addToCart(product, quantity);
+    addToCart(
+      {
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        compareAtPrice: product.compareAtPrice,
+        stockQuantity: product.stockQuantity,
+        requiresPrescription: Boolean(
+          product.requiresPrescription === true ||
+          String(product.requiresPrescription).toLowerCase() === "true" ||
+          (product as any).isPrescription === true
+        ),
+        images: product.images || [],
+        category: typeof product.category === "string" ? product.category : product.category?.name || "General",
+        brand: typeof product.brand === "string" ? product.brand : product.brand?.name || "",
+      },
+      quantity
+    );
     toast.success(`${quantity}x ${product.name} added to cart!`);
   };
 
@@ -346,8 +370,8 @@ export default function ProductDetailPage() {
         <div className="lg:col-span-7 space-y-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3 flex-wrap">
-              <Badge variant="emerald">{product.brand?.name || "Generic"}</Badge>
-              <Badge variant="blue">{product.category?.name}</Badge>
+              <Badge variant="emerald">{typeof product.brand === "string" ? product.brand : product.brand?.name || "Generic"}</Badge>
+              <Badge variant="blue">{typeof product.category === "string" ? product.category : product.category?.name || "General"}</Badge>
               {product.requiresPrescription && <Badge variant="amber">Prescription Required</Badge>}
               {hasDiscount && <Badge variant="red">-{discountPct}% OFF</Badge>}
             </div>
@@ -357,16 +381,16 @@ export default function ProductDetailPage() {
                 {[1, 2, 3, 4, 5].map((s) => (
                   <Star
                     key={s}
-                    className={`h-4 w-4 ${s <= Math.round(product.rating) ? "fill-amber-400 text-amber-400" : "text-slate-300"}`}
+                    className={`h-4 w-4 ${s <= Math.round(product.rating || 0) ? "fill-amber-400 text-amber-400" : "text-slate-300"}`}
                   />
                 ))}
-                <span className="ml-1 font-bold text-slate-900 dark:text-white">{product.rating.toFixed(1)}</span>
+                <span className="ml-1 font-bold text-slate-900 dark:text-white">{Number(product.rating || 0).toFixed(1)}</span>
               </div>
               <span className="text-slate-400">|</span>
-              <span className="text-slate-500">{product.reviewCount} Reviews</span>
+              <span className="text-slate-500">{product.reviewCount ?? 0} Reviews</span>
               <span className="text-slate-400">|</span>
               <span className="text-emerald-600 font-semibold flex items-center gap-1">
-                <CheckCircle className="h-4 w-4" /> {product.stockQuantity} in Stock
+                <CheckCircle className="h-4 w-4" /> {product.stockQuantity ?? 0} in Stock
               </span>
             </div>
             {product.sku && (
@@ -719,7 +743,9 @@ export default function ProductDetailPage() {
                     />
                   </div>
                   <div>
-                    <p className="text-xs text-emerald-600 font-medium">{alt.category?.name}</p>
+                    <p className="text-xs text-emerald-600 font-medium">
+                      {typeof alt.category === "string" ? alt.category : alt.category?.name || "General"}
+                    </p>
                     <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 line-clamp-2 group-hover:text-emerald-700 transition-colors">
                       {alt.name}
                     </h3>
@@ -728,7 +754,7 @@ export default function ProductDetailPage() {
                         <Star
                           key={s}
                           className={`h-3 w-3 ${
-                            s <= Math.round(alt.rating) ? "fill-amber-400 text-amber-400" : "text-slate-300"
+                            s <= Math.round(alt.rating || 0) ? "fill-amber-400 text-amber-400" : "text-slate-300"
                           }`}
                         />
                       ))}
