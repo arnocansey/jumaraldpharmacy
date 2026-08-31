@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+﻿import { GoogleGenerativeAI } from "@google/generative-ai";
 import { generateSkuFromName } from "./scanner.service";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || "";
@@ -46,8 +46,24 @@ async function callInvoiceVisionAI(base64Image: string, mimeType: string, prompt
   const cleanBase64 = base64Image.replace(/^data:[^;]+;base64,/, "");
   const isPdf = mimeType === "application/pdf";
 
-  if (OPENAI_API_KEY && !isPdf) {
-    // OpenAI Vision does not natively support PDF inline — if PDF, fall through to Gemini
+  if (OPENAI_API_KEY) {
+    // GPT-4o supports PDFs via the "file" content type (data URL form)
+    // Images use the standard "image_url" content type
+    const fileContent = isPdf
+      ? {
+          type: "file" as const,
+          file: {
+            filename: "invoice.pdf",
+            file_data: `data:application/pdf;base64,${cleanBase64}`,
+          },
+        }
+      : {
+          type: "image_url" as const,
+          image_url: {
+            url: `data:${mimeType || "image/jpeg"};base64,${cleanBase64}`,
+          },
+        };
+
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -55,18 +71,15 @@ async function callInvoiceVisionAI(base64Image: string, mimeType: string, prompt
         Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
+        model: isPdf
+          ? (process.env.OPENAI_PDF_MODEL || "gpt-4o")
+          : (process.env.OPENAI_VISION_MODEL || "gpt-4o-mini"),
         messages: [
           {
             role: "user",
             content: [
               { type: "text", text: prompt },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${mimeType || "image/jpeg"};base64,${cleanBase64}`,
-                },
-              },
+              fileContent,
             ],
           },
         ],
@@ -77,7 +90,7 @@ async function callInvoiceVisionAI(base64Image: string, mimeType: string, prompt
 
     const data: any = await res.json();
     if (!res.ok) {
-      throw new Error(data?.error?.message || "OpenAI Vision invoice request failed");
+      throw new Error(data?.error?.message || "OpenAI invoice request failed");
     }
     return data.choices?.[0]?.message?.content || "";
   }
