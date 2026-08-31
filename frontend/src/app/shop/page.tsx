@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Search, Filter, Star, Plus, ArrowUpDown, Package, ChevronLeft, ChevronRight } from "lucide-react";
@@ -24,6 +24,7 @@ export default function ShopPage() {
   const [page, setPage] = useState(1);
   const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({ min: "", max: "" });
   const [inStockOnly, setInStockOnly] = useState(false);
+  const productsRef = useRef<HTMLDivElement>(null);
 
   const { data: categoriesData } = useCategoriesQuery();
   const categories = categoriesData || [];
@@ -50,6 +51,16 @@ export default function ShopPage() {
     setPage(1);
   }, [search, selectedCategory, rxOnly, sortBy, priceRange, inStockOnly]);
 
+  // On mobile: smooth scroll to products when category changes
+  const handleCategorySelect = (slug: string) => {
+    setSelectedCategory(slug);
+    if (window.innerWidth < 1024 && productsRef.current) {
+      setTimeout(() => {
+        productsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
+  };
+
   const getStockStatus = (qty: number) => {
     if (qty === 0) return { label: "Out of Stock", color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-950/30" };
     if (qty <= 5) return { label: `Only ${qty} left`, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" };
@@ -73,6 +84,40 @@ export default function ShopPage() {
         </Link>
       </div>
 
+      {/* Mobile-only: Horizontal scrollable category pills */}
+      <div className="flex lg:hidden gap-2 overflow-x-auto pb-1 -mx-1 px-1 scroll-smooth">
+        <button
+          onClick={() => handleCategorySelect("all")}
+          className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap border ${
+            selectedCategory === "all"
+              ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20"
+              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400"
+          }`}
+        >
+          All Products
+        </button>
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => handleCategorySelect(cat.slug)}
+            className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap border flex items-center gap-1.5 ${
+              selectedCategory === cat.slug
+                ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20"
+                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400"
+            }`}
+          >
+            {cat.name}
+            {cat._count?.products !== undefined && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                selectedCategory === cat.slug ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-500"
+              }`}>
+                {cat._count.products}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Sidebar Filters */}
         <div className="space-y-6">
@@ -81,7 +126,8 @@ export default function ShopPage() {
               <Filter className="h-4 w-4 text-emerald-700 dark:text-emerald-400" /> Filters & Categories
             </h3>
 
-            <div className="space-y-2">
+            {/* Category list — hidden on mobile, shown on desktop */}
+            <div className="hidden lg:block space-y-2">
               <label className="text-xs font-semibold uppercase text-slate-400">Category</label>
               <div className="space-y-1 text-sm">
                 <button
@@ -145,7 +191,7 @@ export default function ShopPage() {
         </div>
 
         {/* Product Grid */}
-        <div className="lg:col-span-3 space-y-6">
+        <div ref={productsRef} className="lg:col-span-3 space-y-6" style={{ scrollMarginTop: "80px" }}>
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />

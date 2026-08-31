@@ -56,6 +56,7 @@ export default function InvoiceOcrModal({
 }: InvoiceOcrModalProps) {
   const [activeTab, setActiveTab] = useState<"upload" | "camera">("upload");
   const [imageFile, setImageFile] = useState<string | null>(null);
+  const [fileType, setFileType] = useState<"image" | "pdf">("image");
   const [isDragging, setIsDragging] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -125,9 +126,17 @@ export default function InvoiceOcrModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const isPdf = file.type === "application/pdf";
+    const isImage = file.type.startsWith("image/");
+    if (!isPdf && !isImage) {
+      toast.error("Please upload an image (PNG, JPG, WebP) or a PDF document.");
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       setImageFile(reader.result as string);
+      setFileType(isPdf ? "pdf" : "image");
     };
     reader.readAsDataURL(file);
     e.target.value = "";
@@ -137,11 +146,19 @@ export default function InvoiceOcrModal({
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = () => setImageFile(reader.result as string);
-      reader.readAsDataURL(file);
+    if (!file) return;
+    const isPdf = file.type === "application/pdf";
+    const isImage = file.type.startsWith("image/");
+    if (!isPdf && !isImage) {
+      toast.error("Only image or PDF files are supported.");
+      return;
     }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageFile(reader.result as string);
+      setFileType(isPdf ? "pdf" : "image");
+    };
+    reader.readAsDataURL(file);
   }
 
   // Generate a realistic demo invoice image on canvas for testing
@@ -249,7 +266,7 @@ export default function InvoiceOcrModal({
         method: "POST",
         body: JSON.stringify({
           imageBase64: imageFile,
-          mimeType: "image/jpeg",
+          mimeType: fileType === "pdf" ? "application/pdf" : "image/jpeg",
         }),
       });
 
@@ -444,16 +461,41 @@ export default function InvoiceOcrModal({
                 <div>
                   {imageFile ? (
                     <div className="space-y-4">
-                      <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-md bg-slate-900/10 max-h-80 flex items-center justify-center">
-                        <img src={imageFile} alt="Selected Invoice" className="max-h-80 object-contain" />
-                        <button
-                          type="button"
-                          onClick={() => setImageFile(null)}
-                          className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-black/70 hover:bg-black/90 text-white text-xs font-semibold backdrop-blur-sm transition-all"
-                        >
-                          Change Photo
-                        </button>
-                      </div>
+                      {fileType === "pdf" ? (
+                        <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-md bg-slate-900/10 flex flex-col items-center justify-center gap-4 py-8">
+                          <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-500">
+                            <FileText className="h-10 w-10" />
+                          </div>
+                          <div className="text-center space-y-1">
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">PDF Document Loaded</p>
+                            <p className="text-xs text-slate-400">Ready to extract medicines via AI document analysis</p>
+                          </div>
+                          <iframe
+                            src={imageFile ?? ""}
+                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white"
+                            style={{ height: "220px" }}
+                            title="PDF preview"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => { setImageFile(null); setFileType("image"); }}
+                            className="px-3 py-1.5 rounded-xl bg-black/70 hover:bg-black/90 text-white text-xs font-semibold backdrop-blur-sm transition-all"
+                          >
+                            Remove & Change File
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-md bg-slate-900/10 max-h-80 flex items-center justify-center">
+                          <img src={imageFile!} alt="Selected Invoice" className="max-h-80 object-contain" />
+                          <button
+                            type="button"
+                            onClick={() => setImageFile(null)}
+                            className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-black/70 hover:bg-black/90 text-white text-xs font-semibold backdrop-blur-sm transition-all"
+                          >
+                            Change Photo
+                          </button>
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between pt-2">
                         <span className="text-xs text-slate-500">Document ready for OCR</span>
@@ -497,10 +539,10 @@ export default function InvoiceOcrModal({
                         </div>
                         <div className="space-y-1">
                           <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                            Click to upload or drag & drop invoice image
+                            Click to upload or drag & drop invoice
                           </p>
                           <p className="text-xs text-slate-400">
-                            PNG, JPG, JPEG, WebP • Clear photo of receipt or delivery slip
+                            PNG, JPG, JPEG, WebP or <span className="font-semibold text-red-500">PDF</span> • Receipt, delivery slip, or supplier document
                           </p>
                         </div>
                         <span className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 hover:bg-emerald-700 transition-colors">
@@ -508,7 +550,7 @@ export default function InvoiceOcrModal({
                         </span>
                         <input
                           type="file"
-                          accept="image/*"
+                          accept="image/*,application/pdf"
                           onChange={handleFileSelect}
                           className="hidden"
                         />

@@ -42,9 +42,12 @@ export interface VoiceParsedProduct {
  * Universal Vision AI helper for invoice OCR (supports OpenAI Vision and Gemini Vision)
  */
 async function callInvoiceVisionAI(base64Image: string, mimeType: string, prompt: string): Promise<string> {
-  const cleanBase64 = base64Image.replace(/^data:image\/[a-zA-Z0-9.+]+;base64,/, "");
+  // Strip any data-URL prefix for both images and PDFs
+  const cleanBase64 = base64Image.replace(/^data:[^;]+;base64,/, "");
+  const isPdf = mimeType === "application/pdf";
 
-  if (OPENAI_API_KEY) {
+  if (OPENAI_API_KEY && !isPdf) {
+    // OpenAI Vision does not natively support PDF inline — if PDF, fall through to Gemini
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -80,13 +83,14 @@ async function callInvoiceVisionAI(base64Image: string, mimeType: string, prompt
   }
 
   if (genAI) {
+    // Gemini 1.5 natively supports application/pdf and all image types via inlineData
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent([
       prompt,
       {
         inlineData: {
           data: cleanBase64,
-          mimeType: mimeType || "image/jpeg",
+          mimeType: (mimeType || "image/jpeg") as any,
         },
       },
     ]);

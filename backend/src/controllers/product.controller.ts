@@ -655,12 +655,12 @@ export async function scanInvoiceImage(req: any, res: Response) {
 
     if (req.file) {
       base64Image = req.file.buffer.toString("base64");
-      mimeType = req.file.mimetype;
+      mimeType = req.file.mimetype; // supports image/* and application/pdf
     } else if (req.body.imageBase64) {
       base64Image = req.body.imageBase64;
       mimeType = req.body.mimeType || "image/jpeg";
     } else {
-      return res.status(400).json({ message: "No image provided. Please upload an image or provide imageBase64." });
+      return res.status(400).json({ message: "No file provided. Please upload an image or PDF invoice." });
     }
 
     const result = await parseWholesalerInvoice(base64Image, mimeType);
