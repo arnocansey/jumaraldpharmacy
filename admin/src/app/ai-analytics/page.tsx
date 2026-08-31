@@ -40,32 +40,32 @@ export default function AIAnalyticsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="glass-panel p-5 rounded-2xl space-y-2">
-            <p className="text-xs font-bold text-slate-400">Total Conversations</p>
-            <p className="text-3xl font-black text-white">{analytics?.totalConversations || 0}</p>
-            <p className="text-[11px] text-emerald-400 flex items-center gap-1">
-              <ArrowUpRight className="h-3 w-3" /> Active patient sessions
+            <p className="text-xs font-bold text-slate-600 dark:text-slate-400">Total Conversations</p>
+            <p className="text-3xl font-black text-slate-900 dark:text-white">{analytics?.totalConversations || 0}</p>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+              <ArrowUpRight className="h-3.5 w-3.5" /> Active patient sessions
             </p>
           </div>
 
           <div className="glass-panel p-5 rounded-2xl space-y-2">
-            <p className="text-xs font-bold text-slate-400">Total Messages Processed</p>
-            <p className="text-3xl font-black text-white">{analytics?.totalMessages || 0}</p>
-            <p className="text-[11px] text-emerald-400 flex items-center gap-1">
-              <MessageSquare className="h-3 w-3" /> Multi-turn intent interactions
+            <p className="text-xs font-bold text-slate-600 dark:text-slate-400">Total Messages Processed</p>
+            <p className="text-3xl font-black text-slate-900 dark:text-white">{analytics?.totalMessages || 0}</p>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+              <MessageSquare className="h-3.5 w-3.5" /> Multi-turn intent interactions
             </p>
           </div>
 
           <div className="glass-panel p-5 rounded-2xl space-y-2">
-            <p className="text-xs font-bold text-slate-400">AI Resolution Rate</p>
-            <p className="text-3xl font-black text-emerald-400">{analytics?.activeResolutionRate || "100%"}</p>
-            <p className="text-[11px] text-slate-400">Resolved without human escalation</p>
+            <p className="text-xs font-bold text-slate-600 dark:text-slate-400">AI Resolution Rate</p>
+            <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{analytics?.activeResolutionRate || "100%"}</p>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Resolved without human escalation</p>
           </div>
 
           <div className="glass-panel p-5 rounded-2xl space-y-2">
-            <p className="text-xs font-bold text-slate-400">Pharmacist Escalations</p>
-            <p className="text-3xl font-black text-amber-400">{analytics?.totalEscalations || 0}</p>
-            <p className="text-[11px] text-rose-400 flex items-center gap-1">
-              <ShieldAlert className="h-3 w-3" /> Safety guardrail handoffs
+            <p className="text-xs font-bold text-slate-600 dark:text-slate-400">Pharmacist Escalations</p>
+            <p className="text-3xl font-black text-amber-500 dark:text-amber-400">{analytics?.totalEscalations || 0}</p>
+            <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1">
+              <ShieldAlert className="h-3.5 w-3.5" /> Safety guardrail handoffs
             </p>
           </div>
         </div>

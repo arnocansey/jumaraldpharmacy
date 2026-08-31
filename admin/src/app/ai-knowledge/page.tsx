@@ -67,49 +67,49 @@ export default function AIKnowledgePage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Document Ingestion Form */}
         <div className="glass-panel rounded-2xl p-6 space-y-4">
-          <h2 className="text-base font-extrabold text-white flex items-center gap-2">
-            <Plus className="h-4 w-4 text-emerald-400" /> Ingest Clinical Document
+          <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+            <Plus className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Ingest Clinical Document
           </h2>
 
           <div>
-            <label className="text-xs font-bold text-slate-300 block mb-1">Document Title</label>
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Document Title</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Ghana Standard Treatment Guidelines: Malaria"
-              className="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs text-white placeholder:text-slate-500"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1">Category</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Category</label>
               <input
                 type="text"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs text-white"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1">Source / Attribution</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Source / Attribution</label>
               <input
                 type="text"
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
-                className="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs text-white"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-300 block mb-1">Full Document Text</label>
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Full Document Text</label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Paste clinical text, dosage protocols, or FAQ content..."
-              className="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-xs text-white placeholder:text-slate-500 font-mono"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
               rows={6}
             />
           </div>
@@ -117,7 +117,7 @@ export default function AIKnowledgePage() {
           <button
             onClick={handleIngest}
             disabled={ingesting}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all"
           >
             <Sparkles className="h-4 w-4" />
             {ingesting ? "Generating Embeddings & Ingesting..." : "Ingest into Vector Store"}
@@ -126,10 +126,10 @@ export default function AIKnowledgePage() {
 
         {/* Semantic Vector Search Test */}
         <div className="glass-panel rounded-2xl p-6 space-y-4">
-          <h2 className="text-base font-extrabold text-white flex items-center gap-2">
-            <Search className="h-4 w-4 text-emerald-400" /> Vector Similarity Test
+          <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+            <Search className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Vector Similarity Test
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-600 dark:text-slate-400">
             Query the vector database to test Cosine Similarity document retrieval for Dr. Jumarald AI.
           </p>
 
@@ -139,12 +139,12 @@ export default function AIKnowledgePage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Enter search term or symptom..."
-              className="flex-1 bg-slate-900 border border-white/10 rounded-xl p-3 text-xs text-white"
+              className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
             />
             <button
               onClick={handleSearch}
               disabled={searching}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-3 rounded-xl font-bold text-xs"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-3 rounded-xl font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
             >
               {searching ? "Searching..." : "Search"}
             </button>
@@ -152,14 +152,14 @@ export default function AIKnowledgePage() {
 
           <div className="space-y-3">
             {searchResults.map((res, i) => (
-              <div key={i} className="p-3 rounded-xl bg-slate-950 border border-white/10 space-y-1 text-xs">
-                <div className="flex justify-between items-center text-emerald-400 font-bold">
+              <div key={i} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 space-y-1 text-xs shadow-sm">
+                <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-bold">
                   <span>{res.documentTitle}</span>
-                  <span className="text-[11px] bg-emerald-500/20 px-2 py-0.5 rounded">
+                  <span className="text-[11px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">
                     Score: {(res.score * 100).toFixed(1)}%
                   </span>
                 </div>
-                <p className="text-slate-300 line-clamp-3 font-mono text-[11px]">{res.content}</p>
+                <p className="text-slate-700 dark:text-slate-300 line-clamp-3 font-mono text-[11px]">{res.content}</p>
               </div>
             ))}
           </div>

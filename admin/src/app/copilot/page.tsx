@@ -127,8 +127,8 @@ export default function PharmacistCopilotPage() {
                   </span>
                   <span className="text-xs text-slate-400">{new Date(esc.createdAt).toLocaleDateString()}</span>
                 </div>
-                <h3 className="font-bold text-white text-base mb-1">{esc.reason}</h3>
-                <p className="text-xs text-slate-300 line-clamp-2">&ldquo;{esc.summary}&rdquo;</p>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base mb-1">{esc.reason}</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">&ldquo;{esc.summary}&rdquo;</p>
               </div>
             ))
           )}
@@ -137,10 +137,10 @@ export default function PharmacistCopilotPage() {
         {/* Right Column: AI Pharmacist Copilot Tool */}
         <div className="space-y-4">
           <h2 className="text-base font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-            <Bot className="h-5 w-5 text-emerald-400" /> Superintendent AI Assistant
+            <Bot className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /> Superintendent AI Assistant
           </h2>
-          <div className="bg-slate-950 border border-white/10 p-5 rounded-2xl space-y-4">
-            <p className="text-xs text-slate-400">
+          <div className="glass-panel p-5 rounded-2xl space-y-4">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Ask Dr. Jumarald AI clinical reference questions, drug substitution rules, or inventory lookup.
             </p>
 
@@ -148,22 +148,22 @@ export default function PharmacistCopilotPage() {
               value={copilotQuery}
               onChange={(e) => setCopilotQuery(e.target.value)}
               placeholder="e.g. Find alternatives for Amoxicillin 500mg in stock..."
-              className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-xs text-white placeholder:text-slate-500 outline-none focus:border-emerald-400"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-xs text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
               rows={3}
             />
 
             <button
               onClick={handleAskCopilot}
               disabled={askingCopilot || !copilotQuery.trim()}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30"
+              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all"
             >
               <Sparkles className="h-4 w-4" />
               {askingCopilot ? "Reasoning..." : "Ask Clinical Copilot"}
             </button>
 
             {copilotReply && (
-              <div className="p-4 rounded-xl bg-slate-900 border border-emerald-500/30 text-xs text-slate-200 space-y-2">
-                <p className="font-bold text-emerald-400">Clinical Copilot Response:</p>
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-emerald-500/30 text-xs text-slate-800 dark:text-slate-200 space-y-2 shadow-sm">
+                <p className="font-bold text-emerald-600 dark:text-emerald-400">Clinical Copilot Response:</p>
                 <p className="whitespace-pre-wrap">{copilotReply}</p>
               </div>
             )}
