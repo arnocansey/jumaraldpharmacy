@@ -7,6 +7,7 @@ import { cacheGet, cacheSet, cacheDel } from "../lib/cache";
 import { lookupBarcode, scanProductPackagingImage } from "../services/scanner.service";
 import { parseWholesalerInvoice, parseVoiceTranscriptToProduct } from "../services/invoice.service";
 import { generatePharmaceuticalProductPhoto } from "../services/image-generator.service";
+import { searchWebProductImages, saveWebImageToCdn } from "../services/web-image-search.service";
 
 const productQuerySchema = z.object({
   search: z.string().optional(),
@@ -1077,6 +1078,76 @@ export async function generateBulkMissingImagesHandler(req: any, res: Response) 
     return res.status(500).json({ message: error.message || "Bulk image generation failed" });
   }
 }
+
+/**
+ * Search the web for authentic manufacturer medication images
+ */
+export async function searchWebImagesHandler(req: any, res: Response) {
+  try {
+    const q = req.query.q as string;
+    const name = req.query.name as string;
+    const manufacturer = req.query.manufacturer as string;
+    const strength = req.query.strength as string;
+    const dosageForm = req.query.dosageForm as string;
+
+    const results = await searchWebProductImages({
+      q,
+      name,
+      manufacturer,
+      strength,
+      dosageForm,
+    });
+
+    return res.json({
+      status: "success",
+      count: results.length,
+      images: results,
+    });
+  } catch (error: any) {
+    console.error("searchWebImagesHandler error:", error);
+    return res.status(500).json({ message: error.message || "Web image search failed" });
+  }
+}
+
+/**
+ * Save selected web image to Cloudinary CDN and optionally update product
+ */
+export async function saveSelectedWebImageHandler(req: any, res: Response) {
+  try {
+    const { imageUrl, productName, productId, saveToProduct } = req.body;
+
+    if (!imageUrl) {
+      return res.status(400).json({ message: "imageUrl is required" });
+    }
+
+    const cdnUrl = await saveWebImageToCdn(imageUrl, productName || "medicine");
+
+    if (productId && saveToProduct !== false) {
+      const prod = await prisma.product.findUnique({ where: { id: productId } });
+      if (prod) {
+        const currentImages = Array.isArray(prod.images) ? prod.images : [];
+        await prisma.product.update({
+          where: { id: productId },
+          data: {
+            images: [cdnUrl, ...currentImages.filter((img) => img && img !== "/placeholder.png")],
+          },
+        });
+        await cacheDel("products:*");
+        await cacheDel(`product:${prod.slug}`);
+      }
+    }
+
+    return res.json({
+      status: "success",
+      cdnUrl,
+      imageUrl: cdnUrl,
+    });
+  } catch (error: any) {
+    console.error("saveSelectedWebImageHandler error:", error);
+    return res.status(500).json({ message: error.message || "Failed to save selected web image to CDN" });
+  }
+}
+
 
 
 

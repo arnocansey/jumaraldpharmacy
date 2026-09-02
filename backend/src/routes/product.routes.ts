@@ -6,6 +6,7 @@ import {
   getProductBySlug, createProduct, updateProduct, deleteProduct, importProducts,
   scanProductBarcode, scanProductImage, scanInvoiceImage, parseVoicePromptHandler, createBatchProducts,
   getMissingImagesStats, generateSingleProductImageHandler, generateBulkMissingImagesHandler,
+  searchWebImagesHandler, saveSelectedWebImageHandler,
 } from "../controllers/product.controller";
 import { upload } from "../controllers/upload.controller";
 
@@ -17,6 +18,10 @@ router.post("/categories", authenticateToken, requireRole([RoleName.SUPER_ADMIN,
 router.put("/categories/:id", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), updateCategory);
 router.delete("/categories/:id", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), deleteCategory);
 router.get("/brands", getBrands);
+
+// Web Image Search & Save Endpoints
+router.get("/web-images/search", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), searchWebImagesHandler);
+router.post("/web-images/save", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), saveSelectedWebImageHandler);
 
 // AI Image Generation Endpoints
 router.get("/ai-images/missing", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), getMissingImagesStats);

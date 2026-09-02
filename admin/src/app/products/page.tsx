@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload, Download, Loader2, Image as ImageIcon, Scan, Barcode, Sparkles, Mic, BookOpen, Layers, Zap, ChevronDown, ChevronUp, FileText, Camera, Building2, Pill } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye, Package, AlertTriangle, CheckCircle, XCircle, X, Tag, Upload, Download, Loader2, Image as ImageIcon, Scan, Barcode, Sparkles, Mic, BookOpen, Layers, Zap, ChevronDown, ChevronUp, FileText, Camera, Building2, Pill, Globe } from "lucide-react";
 import { apiFetch, apiUpload } from "@/lib/api";
 import { toast } from "sonner";
 import ProductImportModal from "@/components/ProductImportModal";
@@ -12,6 +12,7 @@ import InvoiceOcrModal from "@/components/InvoiceOcrModal";
 import StandardFormularyModal from "@/components/StandardFormularyModal";
 import LiveCameraModal from "@/components/LiveCameraModal";
 import { BulkImageGeneratorModal } from "@/components/BulkImageGeneratorModal";
+import { WebImageSearchModal } from "@/components/WebImageSearchModal";
 import { STANDARD_FORMULARY, FormularyDrug } from "@/data/standardFormulary";
 
 interface UnifiedSuggestion {
@@ -132,6 +133,7 @@ export default function ProductsPage() {
 
   // AI Image Generation States
   const [showBulkImageModal, setShowBulkImageModal] = useState(false);
+  const [showWebImageModal, setShowWebImageModal] = useState(false);
   const [generatingSingleAiPhoto, setGeneratingSingleAiPhoto] = useState(false);
   const [missingImagesCount, setMissingImagesCount] = useState<number>(0);
 
@@ -1345,9 +1347,8 @@ export default function ProductsPage() {
               <div className="space-y-3">
                 <label className={labelClass}>Product Images</label>
                 
-                {/* Image Upload Dropzone & Button */}
-                {/* Dual Image Input: Live Desktop/Mobile Camera + File Selector */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* 4-Way Image Input Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {/* Option 1: Live Webcam / Phone Camera Capture */}
                   <button
                     type="button"
@@ -1355,39 +1356,39 @@ export default function ProductsPage() {
                       setCameraTarget("product");
                       setShowLiveCamera(true);
                     }}
-                    className="cursor-pointer flex items-center justify-center gap-3 border-2 border-emerald-500/40 bg-emerald-50/80 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 p-3.5 rounded-2xl transition-all shadow-sm group"
+                    className="cursor-pointer flex items-center gap-3 border-2 border-emerald-500/40 bg-emerald-50/80 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 p-3 rounded-2xl transition-all shadow-sm group text-left"
                   >
-                    <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/30 group-hover:scale-105 transition-transform">
-                      <Camera className="h-5 w-5" />
+                    <div className="h-8 w-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/30 group-hover:scale-105 transition-transform shrink-0">
+                      <Camera className="h-4 w-4" />
                     </div>
-                    <div className="text-left">
+                    <div>
                       <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 block">
-                        Take Live Picture
+                        Live Camera
                       </span>
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
-                        Use PC Webcam or Phone Cam
+                        Snap packaging photo
                       </span>
                     </div>
                   </button>
 
                   {/* Option 2: Choose File from Disk */}
-                  <label className="cursor-pointer flex items-center justify-center gap-3 border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 p-3.5 rounded-2xl transition-all shadow-sm group">
+                  <label className="cursor-pointer flex items-center gap-3 border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 p-3 rounded-2xl transition-all shadow-sm group text-left">
                     {uploadingImage ? (
                       <>
-                        <Loader2 className="h-5 w-5 animate-spin text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Uploading File(s)...</span>
+                        <Loader2 className="h-4 w-4 animate-spin text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Uploading...</span>
                       </>
                     ) : (
                       <>
-                        <div className="h-9 w-9 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center group-hover:scale-105 transition-transform">
-                          <Upload className="h-5 w-5" />
+                        <div className="h-8 w-8 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+                          <Upload className="h-4 w-4" />
                         </div>
-                        <div className="text-left">
+                        <div>
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
-                            Choose from Files
+                            Upload File
                           </span>
                           <span className="text-[10px] text-slate-400 block">
-                            Upload PNG, JPG, WebP from PC
+                            PNG, JPG, WebP
                           </span>
                         </div>
                       </>
@@ -1402,22 +1403,42 @@ export default function ProductsPage() {
                     />
                   </label>
 
-                  {/* AI Studio Image Generator Button */}
+                  {/* Option 3: Find Authentic Photo on Web */}
+                  <button
+                    type="button"
+                    disabled={!form.name.trim()}
+                    onClick={() => setShowWebImageModal(true)}
+                    className="flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed border-blue-300 dark:border-blue-700/60 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/50 dark:hover:bg-blue-900/30 transition-all text-left group disabled:opacity-50"
+                  >
+                    <div className="h-8 w-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+                      <Globe className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block">
+                        🔍 Find on Web
+                      </span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                        Google &amp; brand photos
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Option 4: AI Studio Image Generator */}
                   <button
                     type="button"
                     disabled={generatingSingleAiPhoto || !form.name.trim()}
                     onClick={handleGenerateSingleAiPhoto}
-                    className="flex-1 flex items-center gap-3 p-3.5 rounded-2xl border-2 border-dashed border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 transition-all text-left group disabled:opacity-50"
+                    className="flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 transition-all text-left group disabled:opacity-50"
                   >
-                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform shrink-0">
-                      {generatingSingleAiPhoto ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+                    <div className="h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+                      {generatingSingleAiPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     </div>
                     <div>
                       <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block">
-                        {generatingSingleAiPhoto ? "Generating Studio Photo..." : "✨ Generate AI Photo"}
+                        {generatingSingleAiPhoto ? "Generating..." : "✨ AI Studio"}
                       </span>
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
-                        DALL-E 3 authentic packaging
+                        DALL-E 3 authentic 3D
                       </span>
                     </div>
                   </button>
@@ -1896,6 +1917,25 @@ export default function ProductsPage() {
         onCompleted={() => {
           loadProducts();
           fetchMissingCount();
+        }}
+      />
+      {/* ========== WEB IMAGE SEARCH MODAL ========== */}
+      <WebImageSearchModal
+        isOpen={showWebImageModal}
+        onClose={() => setShowWebImageModal(false)}
+        productDetails={{
+          name: form.name,
+          manufacturer: form.manufacturer,
+          strength: form.strength,
+          dosageForm: form.dosageForm,
+          productId: editingId || undefined,
+        }}
+        onImageSelected={(cdnUrl) => {
+          const currentList = form.images
+            ? form.images.split(",").map((s) => s.trim()).filter(Boolean)
+            : [];
+          const updatedList = [cdnUrl, ...currentList];
+          setForm((prev) => ({ ...prev, images: updatedList.join(", ") }));
         }}
       />
     </div>
