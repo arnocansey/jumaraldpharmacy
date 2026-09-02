@@ -5,6 +5,7 @@ import {
   getProducts, getCategories, createCategory, updateCategory, deleteCategory, getBrands,
   getProductBySlug, createProduct, updateProduct, deleteProduct, importProducts,
   scanProductBarcode, scanProductImage, scanInvoiceImage, parseVoicePromptHandler, createBatchProducts,
+  getMissingImagesStats, generateSingleProductImageHandler, generateBulkMissingImagesHandler,
 } from "../controllers/product.controller";
 import { upload } from "../controllers/upload.controller";
 
@@ -16,6 +17,11 @@ router.post("/categories", authenticateToken, requireRole([RoleName.SUPER_ADMIN,
 router.put("/categories/:id", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), updateCategory);
 router.delete("/categories/:id", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST]), deleteCategory);
 router.get("/brands", getBrands);
+
+// AI Image Generation Endpoints
+router.get("/ai-images/missing", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), getMissingImagesStats);
+router.post("/ai-images/generate-single", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), generateSingleProductImageHandler);
+router.post("/ai-images/generate-bulk", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), generateBulkMissingImagesHandler);
 
 // Scanning, OCR, Voice & Batch Endpoints (must be registered before :slug route)
 router.get("/scan/barcode/:barcode", authenticateToken, requireRole([RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.PHARMACIST, RoleName.INVENTORY_CLERK]), scanProductBarcode);

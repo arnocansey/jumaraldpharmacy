@@ -64,6 +64,7 @@ export default function InvoiceOcrModal({
   const [invoiceNumber, setInvoiceNumber] = useState<string>("");
   const [items, setItems] = useState<ExtractedInvoiceItem[]>([]);
   const [markupPercent, setMarkupPercent] = useState<number>(25);
+  const [autoGenerateImages, setAutoGenerateImages] = useState<boolean>(true);
 
   // Camera state
   const [cameraActive, setCameraActive] = useState(false);
@@ -341,7 +342,7 @@ export default function InvoiceOcrModal({
 
       const res = await apiFetch<{ status: string; createdCount: number }>("/products/batch", {
         method: "POST",
-        body: JSON.stringify({ products: payload }),
+        body: JSON.stringify({ products: payload, autoGenerateImages }),
       });
 
       toast.success(`Successfully imported ${res.createdCount} products into inventory!`);
@@ -797,6 +798,21 @@ export default function InvoiceOcrModal({
                     </tbody>
                   </table>
                 </div>
+              </div>
+
+              {/* Auto Generate AI Photos Toggle */}
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/20">
+                <input
+                  type="checkbox"
+                  id="auto-gen-images-invoice"
+                  checked={autoGenerateImages}
+                  onChange={(e) => setAutoGenerateImages(e.target.checked)}
+                  className="h-4 w-4 rounded accent-emerald-600 cursor-pointer"
+                />
+                <label htmlFor="auto-gen-images-invoice" className="text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Automatically generate authentic AI studio packaging photos for imported medicines (DALL-E 3)</span>
+                </label>
               </div>
 
               {/* Bottom Actions */}

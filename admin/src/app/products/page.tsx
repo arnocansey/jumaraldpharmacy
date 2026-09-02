@@ -11,6 +11,7 @@ import ContinuousScannerModal from "@/components/ContinuousScannerModal";
 import InvoiceOcrModal from "@/components/InvoiceOcrModal";
 import StandardFormularyModal from "@/components/StandardFormularyModal";
 import LiveCameraModal from "@/components/LiveCameraModal";
+import { BulkImageGeneratorModal } from "@/components/BulkImageGeneratorModal";
 import { STANDARD_FORMULARY, FormularyDrug } from "@/data/standardFormulary";
 
 interface UnifiedSuggestion {
@@ -128,6 +129,11 @@ export default function ProductsPage() {
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
   const [showLiveCamera, setShowLiveCamera] = useState(false);
   const [cameraTarget, setCameraTarget] = useState<"product" | "category">("product");
+
+  // AI Image Generation States
+  const [showBulkImageModal, setShowBulkImageModal] = useState(false);
+  const [generatingSingleAiPhoto, setGeneratingSingleAiPhoto] = useState(false);
+  const [missingImagesCount, setMissingImagesCount] = useState<number>(0);
 
   // Autocomplete & Suggestions States
   const [nameSuggestions, setNameSuggestions] = useState<UnifiedSuggestion[]>([]);
@@ -421,8 +427,52 @@ export default function ProductsPage() {
     }
   }
 
-  useEffect(() => { loadProducts(); }, [page, search]);
+  useEffect(() => { loadProducts(); fetchMissingCount(); }, [page, search]);
   useEffect(() => { loadCategories(); }, []);
+
+  async function fetchMissingCount() {
+    try {
+      const res = await apiFetch<{ status: string; count: number }>("/products/ai-images/missing");
+      setMissingImagesCount(res.count || 0);
+    } catch {}
+  }
+
+  async function handleGenerateSingleAiPhoto() {
+    if (!form.name.trim()) {
+      toast.warning("Please enter the Product Name first before generating a photo.");
+      return;
+    }
+    setGeneratingSingleAiPhoto(true);
+    try {
+      const selectedCat = categories.find((c) => c.id === form.categoryId);
+      const res = await apiFetch<{ status: string; imageUrl: string }>("/products/ai-images/generate-single", {
+        method: "POST",
+        body: JSON.stringify({
+          name: form.name,
+          dosageForm: form.dosageForm,
+          strength: form.strength,
+          manufacturer: form.manufacturer,
+          categoryName: selectedCat?.name || form.newCategoryName,
+          saveToProduct: false,
+        }),
+      });
+
+      if (res.imageUrl) {
+        const currentList = form.images
+          ? form.images.split(",").map((s) => s.trim()).filter(Boolean)
+          : [];
+        const updatedList = [res.imageUrl, ...currentList];
+        setForm((prev) => ({ ...prev, images: updatedList.join(", ") }));
+        toast.success("✨ Generated realistic pharmaceutical studio photo via DALL-E 3!");
+      } else {
+        throw new Error("No image generated");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to generate AI photo");
+    } finally {
+      setGeneratingSingleAiPhoto(false);
+    }
+  }
 
   async function loadCategories() {
     try {
@@ -836,16 +886,29 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-6 w-fit">
-        <button onClick={() => setTab("products")}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${tab === "products" ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"}`}>
-          <Package className="h-4 w-4" /> Products
-        </button>
-        <button onClick={() => setTab("categories")}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${tab === "categories" ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"}`}>
-          <Tag className="h-4 w-4" /> Categories
-        </button>
+      {/* Tabs & Missing Images Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 w-fit">
+          <button onClick={() => setTab("products")}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${tab === "products" ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"}`}>
+            <Package className="h-4 w-4" /> Products
+          </button>
+          <button onClick={() => setTab("categories")}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${tab === "categories" ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"}`}>
+            <Tag className="h-4 w-4" /> Categories
+          </button>
+        </div>
+
+        {tab === "products" && missingImagesCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowBulkImageModal(true)}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center gap-2 transition-all transform hover:-translate-y-0.5"
+          >
+            <Sparkles className="h-4 w-4 text-emerald-200 animate-pulse" />
+            <span>Generate Missing Photos ({missingImagesCount})</span>
+          </button>
+        )}
       </div>
 
       {/* ========== PRODUCT FORM MODAL ========== */}
@@ -1338,6 +1401,26 @@ export default function ProductsPage() {
                       className="hidden"
                     />
                   </label>
+
+                  {/* AI Studio Image Generator Button */}
+                  <button
+                    type="button"
+                    disabled={generatingSingleAiPhoto || !form.name.trim()}
+                    onClick={handleGenerateSingleAiPhoto}
+                    className="flex-1 flex items-center gap-3 p-3.5 rounded-2xl border-2 border-dashed border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 transition-all text-left group disabled:opacity-50"
+                  >
+                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform shrink-0">
+                      {generatingSingleAiPhoto ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block">
+                        {generatingSingleAiPhoto ? "Generating Studio Photo..." : "✨ Generate AI Photo"}
+                      </span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                        DALL-E 3 authentic packaging
+                      </span>
+                    </div>
+                  </button>
                 </div>
 
                 {/* Uploaded Image Thumbnails Grid */}
@@ -1804,6 +1887,15 @@ export default function ProductsPage() {
           } else {
             if (urls[0]) setCatImageUrl(urls[0]);
           }
+        }}
+      />
+      {/* ========== BULK AI IMAGE GENERATOR MODAL ========== */}
+      <BulkImageGeneratorModal
+        isOpen={showBulkImageModal}
+        onClose={() => setShowBulkImageModal(false)}
+        onCompleted={() => {
+          loadProducts();
+          fetchMissingCount();
         }}
       />
     </div>

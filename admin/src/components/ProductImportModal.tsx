@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, X, Download, FileText, CheckCircle, AlertTriangle, XCircle, Loader2 } from "lucide-react";
+import { Upload, X, Download, FileText, CheckCircle, AlertTriangle, XCircle, Loader2, Sparkles } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -203,6 +203,7 @@ export default function ProductImportModal({ open, onClose, onImported }: Props)
   const [parsed, setParsed] = useState<ParsedProduct[]>([]);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importing, setImporting] = useState(false);
+  const [autoGenerateImages, setAutoGenerateImages] = useState(true);
   const [jsonInput, setJsonInput] = useState("");
   const [inputError, setInputError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -314,7 +315,7 @@ export default function ProductImportModal({ open, onClose, onImported }: Props)
 
       const result = await apiFetch<ImportResult>("/products/import", {
         method: "POST",
-        body: JSON.stringify({ products }),
+        body: JSON.stringify({ products, autoGenerateImages }),
       });
 
       setImportResult(result);
@@ -534,6 +535,21 @@ export default function ProductImportModal({ open, onClose, onImported }: Props)
                   </div>
                 </div>
               )}
+
+              {/* Auto Generate Images Toggle */}
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/20">
+                <input
+                  type="checkbox"
+                  id="auto-gen-images-import"
+                  checked={autoGenerateImages}
+                  onChange={(e) => setAutoGenerateImages(e.target.checked)}
+                  className="h-4 w-4 rounded accent-emerald-600 cursor-pointer"
+                />
+                <label htmlFor="auto-gen-images-import" className="text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Auto-generate studio pharmaceutical photos for imported products missing images (DALL-E 3)</span>
+                </label>
+              </div>
 
               {/* Actions */}
               <div className="flex gap-3 pt-2">

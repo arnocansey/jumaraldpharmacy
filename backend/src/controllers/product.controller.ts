@@ -6,6 +6,7 @@ import { emitInventoryUpdate } from "../lib/socket";
 import { cacheGet, cacheSet, cacheDel } from "../lib/cache";
 import { lookupBarcode, scanProductPackagingImage } from "../services/scanner.service";
 import { parseWholesalerInvoice, parseVoiceTranscriptToProduct } from "../services/invoice.service";
+import { generatePharmaceuticalProductPhoto } from "../services/image-generator.service";
 
 const productQuerySchema = z.object({
   search: z.string().optional(),
@@ -561,7 +562,7 @@ export async function importProducts(req: any, res: Response) {
             if (cat) categoryId = cat.id;
           }
 
-          await prisma.product.create({
+          const newProduct = await prisma.product.create({
             data: {
               name: item.name,
               slug,
@@ -585,6 +586,29 @@ export async function importProducts(req: any, res: Response) {
             },
           });
           results.created++;
+
+          // If product has no images and autoGenerateImages is enabled, queue for generation
+          if (req.body.autoGenerateImages && (!newProduct.images || newProduct.images.length === 0)) {
+            (async () => {
+              try {
+                const imgUrl = await generatePharmaceuticalProductPhoto({
+                  name: newProduct.name,
+                  dosageForm: newProduct.dosageForm,
+                  strength: newProduct.strength,
+                  manufacturer: newProduct.manufacturer,
+                  categoryName: item.categoryName,
+                });
+                if (imgUrl) {
+                  await prisma.product.update({
+                    where: { id: newProduct.id },
+                    data: { images: [imgUrl] },
+                  });
+                }
+              } catch (err) {
+                console.warn(`[Auto-Image Import] Failed for ${newProduct.name}:`, err);
+              }
+            })().catch(console.error);
+          }
         }
       } catch (err: any) {
         results.errors.push(`${item.name || "Unknown"}: ${err.message}`);
@@ -809,6 +833,33 @@ export async function createBatchProducts(req: any, res: Response) {
       }
     }
 
+    // Optional background auto-image generation for created items without images (Option 3)
+    if (req.body.autoGenerateImages && created.length > 0) {
+      (async () => {
+        for (const prod of created) {
+          if (!prod.images || prod.images.length === 0) {
+            try {
+              const imgUrl = await generatePharmaceuticalProductPhoto({
+                name: prod.name,
+                dosageForm: prod.dosageForm,
+                strength: prod.strength,
+                categoryName: prod.category?.name,
+                manufacturer: prod.manufacturer,
+              });
+              if (imgUrl) {
+                await prisma.product.update({
+                  where: { id: prod.id },
+                  data: { images: [imgUrl] },
+                });
+              }
+            } catch (err) {
+              console.warn(`[Auto-Image] Failed for batch product ${prod.name}:`, err);
+            }
+          }
+        }
+      })().catch(console.error);
+    }
+
     return res.status(201).json({
       status: "success",
       createdCount: created.length,
@@ -820,5 +871,212 @@ export async function createBatchProducts(req: any, res: Response) {
     return res.status(500).json({ message: error.message || "Batch product creation failed" });
   }
 }
+
+/**
+ * Get count and list of products that currently have no photos
+ */
+export async function getMissingImagesStats(req: any, res: Response) {
+  try {
+    const productsWithoutImages = await prisma.product.findMany({
+      where: {
+        OR: [
+          { images: { equals: [] } },
+          { images: { equals: [""] } },
+          { images: { equals: ["/placeholder.png"] } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        sku: true,
+        price: true,
+        dosageForm: true,
+        strength: true,
+        manufacturer: true,
+        images: true,
+        category: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json({
+      status: "success",
+      count: productsWithoutImages.length,
+      products: productsWithoutImages,
+    });
+  } catch (error: any) {
+    console.error("getMissingImagesStats error:", error);
+    return res.status(500).json({ message: error.message || "Failed to fetch missing image statistics" });
+  }
+}
+
+/**
+ * Generate a single AI product photo on-the-fly (for Add/Edit Product Modal or direct product ID)
+ */
+export async function generateSingleProductImageHandler(req: any, res: Response) {
+  try {
+    const { productId, name, dosageForm, strength, manufacturer, categoryName, saveToProduct } = req.body;
+
+    let targetDetails = {
+      name: name || "",
+      dosageForm: dosageForm || "",
+      strength: strength || "",
+      manufacturer: manufacturer || "",
+      categoryName: categoryName || "",
+    };
+
+    let existingProduct: any = null;
+
+    if (productId) {
+      existingProduct = await prisma.product.findUnique({
+        where: { id: productId },
+        include: { category: true },
+      });
+
+      if (!existingProduct) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      targetDetails = {
+        name: existingProduct.name,
+        dosageForm: existingProduct.dosageForm || targetDetails.dosageForm,
+        strength: existingProduct.strength || targetDetails.strength,
+        manufacturer: existingProduct.manufacturer || targetDetails.manufacturer,
+        categoryName: existingProduct.category?.name || targetDetails.categoryName,
+      };
+    }
+
+    if (!targetDetails.name || !targetDetails.name.trim()) {
+      return res.status(400).json({ message: "Product name is required to generate an authentic image" });
+    }
+
+    const imageUrl = await generatePharmaceuticalProductPhoto(targetDetails);
+
+    // Save to product if requested or if productId was passed
+    if (productId && (saveToProduct !== false)) {
+      const currentImages = Array.isArray(existingProduct.images) ? existingProduct.images : [];
+      const updatedProduct = await prisma.product.update({
+        where: { id: productId },
+        data: {
+          images: [imageUrl, ...currentImages.filter((img: string) => img && img !== "/placeholder.png")],
+        },
+      });
+
+      // Clear product cache
+      await cacheDel(`products:*`);
+      await cacheDel(`product:${existingProduct.slug}`);
+
+      return res.json({
+        status: "success",
+        imageUrl,
+        product: updatedProduct,
+      });
+    }
+
+    return res.json({
+      status: "success",
+      imageUrl,
+    });
+  } catch (error: any) {
+    console.error("generateSingleProductImageHandler error:", error);
+    return res.status(500).json({ message: error.message || "Failed to generate AI product image" });
+  }
+}
+
+/**
+ * Bulk generate AI images for products without photos
+ */
+export async function generateBulkMissingImagesHandler(req: any, res: Response) {
+  try {
+    const { productIds, limit = 20 } = req.body;
+
+    let targetProducts: any[] = [];
+
+    if (Array.isArray(productIds) && productIds.length > 0) {
+      targetProducts = await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        include: { category: true },
+      });
+    } else {
+      targetProducts = await prisma.product.findMany({
+        where: {
+          OR: [
+            { images: { equals: [] } },
+            { images: { equals: [""] } },
+            { images: { equals: ["/placeholder.png"] } },
+          ],
+        },
+        include: { category: true },
+        take: Math.min(Number(limit) || 20, 50),
+        orderBy: { createdAt: "desc" },
+      });
+    }
+
+    if (targetProducts.length === 0) {
+      return res.json({
+        status: "success",
+        message: "No products currently need image generation",
+        totalProcessed: 0,
+        successful: 0,
+        failed: 0,
+        results: [],
+      });
+    }
+
+    const results: Array<{ productId: string; name: string; imageUrl?: string; success: boolean; error?: string }> = [];
+
+    for (const prod of targetProducts) {
+      try {
+        const imageUrl = await generatePharmaceuticalProductPhoto({
+          name: prod.name,
+          dosageForm: prod.dosageForm,
+          strength: prod.strength,
+          categoryName: prod.category?.name,
+          manufacturer: prod.manufacturer,
+        });
+
+        await prisma.product.update({
+          where: { id: prod.id },
+          data: {
+            images: [imageUrl],
+          },
+        });
+
+        results.push({
+          productId: prod.id,
+          name: prod.name,
+          imageUrl,
+          success: true,
+        });
+      } catch (err: any) {
+        console.error(`Failed to generate image for "${prod.name}":`, err?.message);
+        results.push({
+          productId: prod.id,
+          name: prod.name,
+          success: false,
+          error: err?.message || "Generation error",
+        });
+      }
+    }
+
+    // Invalidate product caches
+    await cacheDel("products:*");
+
+    const successfulCount = results.filter((r) => r.success).length;
+
+    return res.json({
+      status: "success",
+      totalProcessed: results.length,
+      successful: successfulCount,
+      failed: results.length - successfulCount,
+      results,
+    });
+  } catch (error: any) {
+    console.error("generateBulkMissingImagesHandler error:", error);
+    return res.status(500).json({ message: error.message || "Bulk image generation failed" });
+  }
+}
+
 
 
