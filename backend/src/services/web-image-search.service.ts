@@ -40,7 +40,8 @@ const MEDICAL_KEYWORDS = [
   "pharmaceutical", "pharmaceuticals", "medicine", "medicines",
   "medication", "medications", "drug", "drugs", "rx", "fda",
   "antibiotic", "antimalarial", "analgesic", "paracetamol", "cough", "cold",
-  "expectorant", "antihistamine", "antacid", "vitamin", "multivitamin", "suppository", "inhaler"
+  "expectorant", "antihistamine", "antacid", "vitamin", "multivitamin", "suppository", "inhaler",
+  "herbal", "mixture", "tincture", "balm", "oil", "liniment", "bitters", "rub", "gel", "jar", "tube"
 ];
 
 /**
@@ -83,8 +84,8 @@ function scoreAndFilterImage(img: WebImageResult, query: string): { keep: boolea
 
   // 4. Pharmacy / Medical domain bonus
   let domainScore = 0;
-  if (/pharmacy|chemist|pharma|drug|health|med|rx|clinic|hospital|bedita|scab|phyto-riker/i.test(img.source)) {
-    domainScore += 35;
+  if (/pharmacy|chemist|pharma|drug|health|med|rx|clinic|hospital|bedita|scab|beybee|vafy|swiftmedcare|countrymedical|caplet|phyto-riker/i.test(img.source)) {
+    domainScore += 40;
   }
 
   // Strict gating:
@@ -110,7 +111,7 @@ export function cleanSearchQuery(raw: string): string {
     .replace(/\bparacetemol\b/gi, "paracetamol")
     .replace(/\(.*?\)/g, " ") // remove (GIHOC) or parenthetical annotations
     .replace(/&/g, " ")
-    .replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc|centre|center|research)\b/gi, " ") // remove corporate suffixes
+    .replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc|centre|center|research|dependable|agency|distributors|distributor|enterprises|enterprise|supplies|supply|holdings|company|co|ventures|venture|ghana)\b/gi, " ")
     .replace(/[^\w\s'-]/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -124,14 +125,17 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
 
   if (!query) {
     const cleanMfg = params.manufacturer
-      ? params.manufacturer.replace(/\(.*?\)/g, "").replace(/&/g, " ").replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc|centre|center|research)\b/gi, "").trim()
+      ? params.manufacturer
+          .replace(/\(.*?\)/g, "")
+          .replace(/&/g, " ")
+          .replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc|centre|center|research|dependable|agency|distributors|distributor|enterprises|enterprise|supplies|supply|holdings|company|co|ventures|venture|ghana)\b/gi, "")
+          .trim()
       : "";
     const parts = [
       params.name,
       params.strength,
       params.dosageForm,
       cleanMfg,
-      "medicine",
     ].filter(Boolean);
     query = parts.join(" ");
   }
@@ -139,12 +143,37 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
   const cleanQ = cleanSearchQuery(query);
   console.log(`[WebImageSearch] Searching for cleanQ="${cleanQ}" (raw="${query}")`);
 
-  // Target packaging photos specifically
-  const searchEngineQuery = /\b(packaging|box|bottle|blister|strip)\b/i.test(cleanQ)
-    ? cleanQ
-    : `${cleanQ} packaging box`;
+  // 1. Check Serper.dev Google Images API if configured (Zero scraping, 100% cloud reliability)
+  if (process.env.SERPER_API_KEY) {
+    try {
+      const serperResults = await searchSerperImages(cleanQ);
+      if (serperResults.length > 0) {
+        console.log(`[WebImageSearch] Serper API returned ${serperResults.length} photos`);
+        return serperResults.slice(0, 32);
+      }
+    } catch (err: any) {
+      console.warn("[WebImageSearch] Serper API error:", err?.message);
+    }
+  }
 
-  // 1. Primary: Search Bing and DuckDuckGo in parallel
+  // 2. Check Google Custom Search API if configured
+  if (process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX) {
+    try {
+      const googleResults = await searchGoogleImages(cleanQ);
+      const filteredGoogle = googleResults.filter((it) => scoreAndFilterImage(it, cleanQ).keep);
+      if (filteredGoogle.length > 0) {
+        console.log(`[WebImageSearch] Google Custom Search returned ${filteredGoogle.length} photos`);
+        return filteredGoogle.slice(0, 24);
+      }
+    } catch (err: any) {
+      console.warn("[WebImageSearch] Google Custom Search error:", err?.message);
+    }
+  }
+
+  // 3. Search natural product query directly
+  const hasForm = /\b(ointment|syrup|cream|tablet|tablets|capsule|capsules|suspension|drops|lotion|balm|mixture|gel|injection|spray|inhaler|oil)\b/i.test(cleanQ);
+  const searchEngineQuery = hasForm ? cleanQ : `${cleanQ} medicine`;
+
   const [bingRes, ddgRes] = await Promise.allSettled([
     searchBingImages(searchEngineQuery),
     searchDuckDuckGoImages(searchEngineQuery),
@@ -184,9 +213,9 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
     return relevantResults.slice(0, 32);
   }
 
-  // 2. Retry with concise 2-3 word brand query if strict query returned 0
-  const simpleBrand = cleanQ.split(" ").slice(0, 2).join(" ") + " packaging box";
-  if (simpleBrand !== searchEngineQuery) {
+  // 4. Retry with concise 2-word brand query if full query returned 0
+  const simpleBrand = cleanQ.split(" ").slice(0, 2).join(" ");
+  if (simpleBrand && simpleBrand !== searchEngineQuery) {
     console.log(`[WebImageSearch] Retrying with concise brand query: "${simpleBrand}"`);
     try {
       const fallbackBing = await searchBingImages(simpleBrand);
@@ -206,20 +235,7 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
     }
   }
 
-  // 3. Fallback: Google Custom Search API if configured
-  if (process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX) {
-    try {
-      const googleResults = await searchGoogleImages(searchEngineQuery);
-      const filteredGoogle = googleResults.filter((it) => scoreAndFilterImage(it, cleanQ).keep);
-      if (filteredGoogle.length > 0) {
-        return filteredGoogle.slice(0, 16);
-      }
-    } catch (err: any) {
-      console.warn("Google image search error:", err?.message);
-    }
-  }
-
-  // 4. Fallback: OpenFDA Drug Database if it's a generic medication
+  // 5. Fallback: OpenFDA Drug Database if it's a generic medication
   if (params.name) {
     try {
       const fdaResults = await searchOpenFdaImages(params.name);
@@ -232,6 +248,43 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
   }
 
   return [];
+}
+
+/**
+ * Serper.dev Google Images Search API (Zero Scraping, Fast, 100% Reliable from any Cloud Host)
+ */
+async function searchSerperImages(query: string): Promise<WebImageResult[]> {
+  const apiKey = process.env.SERPER_API_KEY;
+  if (!apiKey) return [];
+
+  try {
+    const res = await fetch("https://google.serper.dev/images", {
+      method: "POST",
+      headers: {
+        "X-API-KEY": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ q: `${query} medicine packaging`, num: 20 }),
+    });
+
+    if (!res.ok) {
+      console.warn(`[SerperSearch] Serper returned HTTP ${res.status}`);
+      return [];
+    }
+
+    const data: any = await res.json();
+    const images = data?.images || [];
+
+    return images.map((it: any) => ({
+      title: it.title || query,
+      image: it.imageUrl,
+      thumbnail: it.thumbnailUrl || it.imageUrl,
+      source: it.source || it.domain || "Google Images",
+    }));
+  } catch (err: any) {
+    console.warn("[SerperSearch] Error:", err?.message);
+    return [];
+  }
 }
 
 /**
@@ -252,6 +305,7 @@ async function searchBingImages(query: string): Promise<WebImageResult[]> {
         Cookie: "SRCHHPGUSR=ADLT=OFF&NRSLT=50; _EDGE_S=mkt=en-US; MUID=3B6A2D1F5E8B6C0D2F4E3A1B5C7D9E0F",
         Referer: "https://www.bing.com/",
       },
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!res.ok) {
@@ -305,6 +359,7 @@ async function searchDuckDuckGoImages(query: string): Promise<WebImageResult[]> 
         "User-Agent": userAgent,
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
+      signal: AbortSignal.timeout(6000),
     });
 
     const tokenHtml = await tokenRes.text();
@@ -327,6 +382,7 @@ async function searchDuckDuckGoImages(query: string): Promise<WebImageResult[]> 
         Accept: "application/json, text/javascript, */*",
         Referer: "https://duckduckgo.com/",
       },
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!imgRes.ok) {
