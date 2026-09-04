@@ -51,6 +51,7 @@ export function WebImageSearchModal({
   const [selectedImage, setSelectedImage] = useState<WebImageItem | null>(null);
   const [saving, setSaving] = useState(false);
   const [previewZoom, setPreviewZoom] = useState<string | null>(null);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (isOpen) {
@@ -63,11 +64,12 @@ export function WebImageSearchModal({
         productDetails.name,
         productDetails.strength,
         cleanMfg,
-        "medicine",
+        "medicine packaging",
       ].filter(Boolean);
       const initialSearch = parts.join(" ").replace(/\s+/g, " ").trim();
       setQuery(initialSearch);
       setSelectedImage(null);
+      setFailedImages(new Set());
       handleSearch(initialSearch);
     }
   }, [isOpen, productDetails.name, productDetails.manufacturer, productDetails.strength]);
@@ -77,6 +79,7 @@ export function WebImageSearchModal({
     if (!q.trim()) return;
 
     setLoading(true);
+    setFailedImages(new Set());
     try {
       const res = await apiFetch<{ status: string; count: number; images: WebImageItem[] }>(
         `/products/web-images/search?q=${encodeURIComponent(q)}`,
@@ -85,7 +88,7 @@ export function WebImageSearchModal({
       const list = res.images || [];
       setImages(list);
       if (list.length === 0) {
-        toast.info("No matching web images found. Try refining your search keywords.");
+        toast.info("No matching pharmaceutical photos found. Try searching with just the brand name.");
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to search web images");
@@ -128,6 +131,8 @@ export function WebImageSearchModal({
 
   if (!isOpen) return null;
 
+  const validImages = images.filter((img) => !failedImages.has(img.image));
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
@@ -142,7 +147,7 @@ export function WebImageSearchModal({
                 Find Authentic Product Photo on Web
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Search Google &amp; medical databases for real-world manufacturer packaging photos
+                Search licensed pharmacy databases and manufacturer packaging catalogs
               </p>
             </div>
           </div>
@@ -219,23 +224,25 @@ export function WebImageSearchModal({
             <div className="py-20 text-center space-y-3">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Searching manufacturer websites and medical catalogs...
+                Searching verified pharmacy databases and manufacturer packaging catalogs...
               </p>
             </div>
-          ) : images.length === 0 ? (
+          ) : validImages.length === 0 ? (
             <div className="py-20 text-center space-y-3">
               <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 w-14 h-14 mx-auto flex items-center justify-center">
                 <ImageIcon className="h-7 w-7" />
               </div>
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">No Web Photos Found</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">No Verified Pharmacy Photos Found</p>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Try searching with just the brand name or generic drug name, or use the <strong>DALL-E 3 AI Studio Generator</strong>.
+                Try searching with just the medication name (e.g. <strong>{productDetails.name}</strong>) or generate a pristine studio packaging render with <strong>AI Studio Generator</strong>.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
-              {images.map((img, idx) => {
+              {validImages.map((img, idx) => {
                 const isSelected = selectedImage?.image === img.image;
+                const isPharmacySource = /pharmacy|chemist|pharma|drug|health|med|rx|dailymed|scab|bedita|phyto-riker/i.test(img.source);
+
                 return (
                   <div
                     key={idx}
@@ -253,7 +260,18 @@ export function WebImageSearchModal({
                         alt={img.title}
                         className="w-full h-full object-contain transition-transform group-hover:scale-105"
                         loading="lazy"
+                        onError={() => {
+                          setFailedImages((prev) => new Set(prev).add(img.image));
+                        }}
                       />
+
+                      {/* Pharmacy Verified Badge */}
+                      {isPharmacySource && (
+                        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-emerald-600/90 text-white text-[9px] font-bold tracking-tight shadow flex items-center gap-1">
+                          <Check className="h-2.5 w-2.5 stroke-[3]" />
+                          Pharmacy
+                        </div>
+                      )}
 
                       {/* Selection Check Indicator */}
                       {isSelected && (

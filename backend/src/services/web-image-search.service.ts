@@ -18,6 +18,89 @@ export interface WebImageSearchParams {
   dosageForm?: string;
 }
 
+// Unrelated categories to strictly exclude from pharmacy product results
+const BANNED_PATTERNS = [
+  /\b(ronaldo|messi|football|soccer|sports|premier league|nba|uefa|fifa)\b/i,
+  /\b(politics|politician|lawmaker|parliament|congress|senate|brussels|unicef|election|president)\b/i,
+  /\b(celebrity|actor|actress|hollywood|movie|cinema|singer|album|concert)\b/i,
+  /\b(car|automotive|toyota|honda|ford|bmw|mercedes|motorcycle|vehicle)\b/i,
+  /\b(clip art|clipart|vector|cartoon|anime|meme|wallpaper|coloring page|illustration)\b/i,
+  /\b(fashion|bikini|swimsuit|lingerie|nude|shirtless|dress|jewelry|shoes|clothing)\b/i,
+  /\b(furniture|kitchen|real estate|hotel|resort|vacation)\b/i,
+  /\b(accounting|rachunkowosc|homework|exam|degree|university|resume|curriculum)\b/i,
+  /\b(home remedies|home remedy|natural remedies|exercises|yoga|diet plan|fitness)\b/i,
+];
+
+// Positive medical & packaging indicator keywords
+const MEDICAL_KEYWORDS = [
+  "syrup", "tablet", "tablets", "capsule", "capsules", "suspension",
+  "injection", "cream", "ointment", "lotion", "drops", "solution", "elixir",
+  "bottle", "pack", "packaging", "box", "blister", "strip", "sachet", "ampoule", "vial",
+  "mg", "ml", "dosage", "dose", "pharmacy", "chemist", "pharma",
+  "pharmaceutical", "pharmaceuticals", "medicine", "medicines",
+  "medication", "medications", "drug", "drugs", "rx", "fda",
+  "antibiotic", "antimalarial", "analgesic", "paracetamol", "cough", "cold",
+  "expectorant", "antihistamine", "antacid", "vitamin", "multivitamin", "suppository", "inhaler"
+];
+
+/**
+ * Filter out non-medical junk and score authentic pharmaceutical packaging photos
+ */
+function scoreAndFilterImage(img: WebImageResult, query: string): { keep: boolean; score: number } {
+  const rawCombined = `${img.title} ${img.source} ${img.image}`;
+  const normalized = rawCombined.toLowerCase().replace(/[\+\-_/]|%20/g, " ");
+
+  // 1. Immediately drop banned / non-pharmaceutical categories
+  for (const pattern of BANNED_PATTERNS) {
+    if (pattern.test(normalized)) {
+      return { keep: false, score: -100 };
+    }
+  }
+
+  // 2. Query words matching (brand / drug name)
+  const queryWords = query
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !["medicine", "packaging", "photo", "pharmacy"].includes(w));
+
+  let brandMatched = false;
+  let wordScore = 0;
+  for (const w of queryWords) {
+    if (normalized.includes(w)) {
+      wordScore += 25;
+      brandMatched = true;
+    }
+  }
+
+  // 3. Medical keyword matching
+  let medicalScore = 0;
+  for (const med of MEDICAL_KEYWORDS) {
+    if (normalized.includes(med)) {
+      medicalScore += 10;
+    }
+  }
+
+  // 4. Pharmacy / Medical domain bonus
+  let domainScore = 0;
+  if (/pharmacy|chemist|pharma|drug|health|med|rx|clinic|hospital|bedita|scab|phyto-riker/i.test(img.source)) {
+    domainScore += 35;
+  }
+
+  // Strict gating:
+  // Must match either the brand/product name OR have a pharmacy domain + medical context
+  if (!brandMatched && domainScore === 0) {
+    return { keep: false, score: -50 };
+  }
+
+  if (medicalScore === 0 && domainScore === 0) {
+    return { keep: false, score: -50 };
+  }
+
+  const totalScore = wordScore + medicalScore + domainScore;
+  return { keep: totalScore >= 20, score: totalScore };
+}
+
 /**
  * Clean and normalize search query terms to maximize image search hits
  */
@@ -52,43 +135,63 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
 
   const cleanQ = cleanSearchQuery(query);
 
+  // Target packaging photos specifically
+  const searchEngineQuery = /\b(packaging|box|bottle|blister|strip)\b/i.test(cleanQ)
+    ? cleanQ
+    : `${cleanQ} packaging box`;
+
   // 1. Primary: Search Bing and DuckDuckGo in parallel
   const [bingRes, ddgRes] = await Promise.allSettled([
-    searchBingImages(cleanQ),
-    searchDuckDuckGoImages(cleanQ),
+    searchBingImages(searchEngineQuery),
+    searchDuckDuckGoImages(searchEngineQuery),
   ]);
 
   const bingList = bingRes.status === "fulfilled" ? bingRes.value : [];
   const ddgList = ddgRes.status === "fulfilled" ? ddgRes.value : [];
 
-  // Merge and deduplicate by image URL
-  const seenUrls = new Set<string>();
-  const combined: WebImageResult[] = [];
-
-  // Interleave Bing & DuckDuckGo results for rich diversity
+  // Interleave Bing & DuckDuckGo results
+  const rawCombined: WebImageResult[] = [];
   const maxLen = Math.max(bingList.length, ddgList.length);
   for (let i = 0; i < maxLen; i++) {
-    if (i < bingList.length && !seenUrls.has(bingList[i].image)) {
-      seenUrls.add(bingList[i].image);
-      combined.push(bingList[i]);
-    }
-    if (i < ddgList.length && !seenUrls.has(ddgList[i].image)) {
-      seenUrls.add(ddgList[i].image);
-      combined.push(ddgList[i]);
+    if (i < bingList.length) rawCombined.push(bingList[i]);
+    if (i < ddgList.length) rawCombined.push(ddgList[i]);
+  }
+
+  // Filter and score medical relevance
+  const seenUrls = new Set<string>();
+  const scoredItems: { item: WebImageResult; score: number }[] = [];
+
+  for (const it of rawCombined) {
+    if (!it.image || seenUrls.has(it.image)) continue;
+    seenUrls.add(it.image);
+
+    const { keep, score } = scoreAndFilterImage(it, cleanQ);
+    if (keep) {
+      scoredItems.push({ item: it, score });
     }
   }
 
-  if (combined.length > 0) {
-    return combined.slice(0, 32);
+  scoredItems.sort((a, b) => b.score - a.score);
+  const relevantResults = scoredItems.map((s) => s.item);
+
+  if (relevantResults.length > 0) {
+    return relevantResults.slice(0, 32);
   }
 
-  // 2. Retry with simplified brand query if full query returned 0
-  const simpleQuery = cleanQ.split(" ").slice(0, 3).join(" ");
-  if (simpleQuery && simpleQuery !== cleanQ) {
+  // 2. Retry with simplified brand query if strict query returned 0
+  const simpleBrand = cleanQ.split(" ").slice(0, 3).join(" ") + " medicine packaging";
+  if (simpleBrand !== searchEngineQuery) {
     try {
-      const fallbackBing = await searchBingImages(simpleQuery);
-      if (fallbackBing.length > 0) {
-        return fallbackBing.slice(0, 24);
+      const fallbackBing = await searchBingImages(simpleBrand);
+      const fallbackScored = fallbackBing
+        .filter((it) => !seenUrls.has(it.image))
+        .map((it) => ({ item: it, ...scoreAndFilterImage(it, cleanQ) }))
+        .filter((s) => s.keep)
+        .sort((a, b) => b.score - a.score)
+        .map((s) => s.item);
+
+      if (fallbackScored.length > 0) {
+        return fallbackScored.slice(0, 24);
       }
     } catch {
       // ignore
@@ -98,9 +201,10 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
   // 3. Fallback: Google Custom Search API if configured
   if (process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX) {
     try {
-      const googleResults = await searchGoogleImages(cleanQ);
-      if (googleResults.length > 0) {
-        return googleResults.slice(0, 16);
+      const googleResults = await searchGoogleImages(searchEngineQuery);
+      const filteredGoogle = googleResults.filter((it) => scoreAndFilterImage(it, cleanQ).keep);
+      if (filteredGoogle.length > 0) {
+        return filteredGoogle.slice(0, 16);
       }
     } catch (err: any) {
       console.warn("Google image search error:", err?.message);
