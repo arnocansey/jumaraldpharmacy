@@ -46,7 +46,6 @@ export async function generatePharmaceuticalProductPhoto(details: ProductImagePr
       n: 1,
       size: "1024x1024",
       quality: "standard",
-      response_format: "url",
     }),
   });
 
@@ -56,7 +55,7 @@ export async function generatePharmaceuticalProductPhoto(details: ProductImagePr
     throw new Error(data?.error?.message || "Failed to generate pharmaceutical product image via OpenAI DALL-E 3");
   }
 
-  const rawImageUrl = data?.data?.[0]?.url;
+  const rawImageUrl = data?.data?.[0]?.url || (data?.data?.[0]?.b64_json ? `data:image/png;base64,${data.data[0].b64_json}` : null);
   if (!rawImageUrl) {
     throw new Error("No image URL returned from OpenAI image generation API");
   }
@@ -85,6 +84,9 @@ export async function generatePharmaceuticalProductPhoto(details: ProductImagePr
   }
 
   // 2. Fallback: Download image and store as base64 data URI if Cloudinary is not configured
+  if (rawImageUrl.startsWith("data:")) {
+    return rawImageUrl;
+  }
   try {
     const imgRes = await fetch(rawImageUrl);
     if (imgRes.ok) {
