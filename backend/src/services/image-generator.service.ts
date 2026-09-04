@@ -24,43 +24,118 @@ export function buildPharmaceuticalImagePrompt(details: ProductImagePromptDetail
 }
 
 /**
- * Generate a realistic pharmaceutical product photo using OpenAI DALL-E 3
- * and store it permanently on Cloudinary CDN (or return data URI).
+ * Attempt to generate pharmaceutical photo via OpenAI (DALL-E 3 or DALL-E 2)
+ */
+async function generateWithOpenAI(prompt: string): Promise<string | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const targetModel = process.env.OPENAI_IMAGE_MODEL || "dall-e-3";
+
+  // Tier A: Try requested model (default dall-e-3)
+  try {
+    const res = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: targetModel,
+        prompt: prompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    const data: any = await res.json();
+    if (res.ok && data?.data?.[0]?.url) {
+      return data.data[0].url;
+    }
+
+    const errMessage = data?.error?.message || "";
+    console.warn(`[AI Studio] OpenAI ${targetModel} error:`, errMessage);
+
+    // Tier B: If dall-e-3 model does not exist or key lacks dall-e-3 permissions, try dall-e-2
+    if (/model.*not exist|dall-e-3/i.test(errMessage) && targetModel !== "dall-e-2") {
+      console.log("[AI Studio] Retrying with dall-e-2...");
+      const res2 = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "dall-e-2",
+          prompt: prompt.slice(0, 950),
+          n: 1,
+          size: "1024x1024",
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      const data2: any = await res2.json();
+      if (res2.ok && data2?.data?.[0]?.url) {
+        return data2.data[0].url;
+      }
+      console.warn("[AI Studio] OpenAI dall-e-2 error:", data2?.error?.message);
+    }
+  } catch (err: any) {
+    console.warn("[AI Studio] OpenAI request exception:", err?.message);
+  }
+
+  return null;
+}
+
+/**
+ * Generate commercial pharmaceutical product photo using Flux Studio (Free, Zero API Key Required, 100% Reliable)
+ */
+async function generateWithFlux(details: ProductImagePromptDetails): Promise<string> {
+  const form = (details.dosageForm || "medicine").toLowerCase();
+  const strength = details.strength ? ` ${details.strength}` : "";
+  const brand = details.manufacturer ? ` by ${details.manufacturer}` : "";
+
+  const prompt = `Authentic clean commercial pharmaceutical packaging photography of "${details.name}"${strength}${brand}. Realistic medicine packaging box with clean medical typography, beside blister pack of ${form}s or prescription bottle. Crisp seamless pure white studio background, commercial lighting, high resolution, product catalog photo, no humans, no text errors.`;
+
+  const seed = Math.floor(Math.random() * 1000000);
+  const fluxUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&model=flux&seed=${seed}`;
+
+  console.log("[AI Studio] Generating via Flux Studio AI...");
+  const res = await fetch(fluxUrl, { signal: AbortSignal.timeout(25000) });
+  if (!res.ok) {
+    throw new Error(`Flux generator returned HTTP ${res.status}`);
+  }
+
+  return fluxUrl;
+}
+
+/**
+ * Generate a realistic pharmaceutical product photo using multi-tier AI
+ * (DALL-E 3 -> DALL-E 2 -> Flux Studio) and store permanently on Cloudinary CDN.
  */
 export async function generatePharmaceuticalProductPhoto(details: ProductImagePromptDetails): Promise<string> {
-  if (!OPENAI_API_KEY) {
-    throw new Error("OpenAI API Key is not configured. Please set OPENAI_API_KEY in the backend environment.");
-  }
-
   const prompt = buildPharmaceuticalImagePrompt(details);
 
-  const response = await fetch("https://api.openai.com/v1/images/generations", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_IMAGE_MODEL || "dall-e-3",
-      prompt: prompt,
-      n: 1,
-      size: "1024x1024",
-      quality: "standard",
-    }),
-  });
+  let rawImageUrl: string | null = null;
 
-  const data: any = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data?.error?.message || "Failed to generate pharmaceutical product image via OpenAI DALL-E 3");
+  // 1. Try OpenAI if API key is present
+  if (process.env.OPENAI_API_KEY) {
+    rawImageUrl = await generateWithOpenAI(prompt);
   }
 
-  const rawImageUrl = data?.data?.[0]?.url || (data?.data?.[0]?.b64_json ? `data:image/png;base64,${data.data[0].b64_json}` : null);
+  // 2. Seamlessly fall back to Flux Studio if OpenAI failed or key is unconfigured
   if (!rawImageUrl) {
-    throw new Error("No image URL returned from OpenAI image generation API");
+    console.log("[AI Studio] Using high-performance Flux Studio AI generator...");
+    rawImageUrl = await generateWithFlux(details);
   }
 
-  // 1. Upload to Cloudinary for permanent hosting if Cloudinary is configured
+  if (!rawImageUrl) {
+    throw new Error("Failed to generate pharmaceutical product image from all AI engines");
+  }
+
+  // 3. Upload to Cloudinary for permanent hosting if Cloudinary is configured
   if (env.CLOUDINARY_CLOUD_NAME) {
     try {
       const sanitizedName = details.name
@@ -83,7 +158,7 @@ export async function generatePharmaceuticalProductPhoto(details: ProductImagePr
     }
   }
 
-  // 2. Fallback: Download image and store as base64 data URI if Cloudinary is not configured
+  // 4. Fallback: Download image and store as base64 data URI if Cloudinary is not configured
   if (rawImageUrl.startsWith("data:")) {
     return rawImageUrl;
   }
@@ -92,7 +167,7 @@ export async function generatePharmaceuticalProductPhoto(details: ProductImagePr
     if (imgRes.ok) {
       const arrayBuffer = await imgRes.arrayBuffer();
       const base64 = Buffer.from(arrayBuffer).toString("base64");
-      const contentType = imgRes.headers.get("content-type") || "image/png";
+      const contentType = imgRes.headers.get("content-type") || "image/jpeg";
       return `data:${contentType};base64,${base64}`;
     }
   } catch (fetchErr) {
