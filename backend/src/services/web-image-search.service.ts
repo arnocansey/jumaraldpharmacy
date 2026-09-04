@@ -19,38 +19,86 @@ export interface WebImageSearchParams {
 }
 
 /**
+ * Clean and normalize search query terms to maximize image search hits
+ */
+export function cleanSearchQuery(raw: string): string {
+  return raw
+    .replace(/\(.*?\)/g, " ") // remove (GIHOC) or parenthetical annotations
+    .replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc)\b/gi, " ") // remove corporate suffixes
+    .replace(/[^\w\s'-]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * Search the web for authentic medicine packaging photos
  */
 export async function searchWebProductImages(params: WebImageSearchParams): Promise<WebImageResult[]> {
   let query = params.q?.trim() || "";
 
   if (!query) {
+    const cleanMfg = params.manufacturer
+      ? params.manufacturer.replace(/\(.*?\)/g, "").replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc)\b/gi, "").trim()
+      : "";
     const parts = [
       params.name,
       params.strength,
       params.dosageForm,
-      params.manufacturer,
-      "medicine packaging",
+      cleanMfg,
+      "medicine",
     ].filter(Boolean);
     query = parts.join(" ");
   }
 
-  const results: WebImageResult[] = [];
+  const cleanQ = cleanSearchQuery(query);
 
-  // 1. Primary: DuckDuckGo Images Search (No API Key Required, Fast, High Res)
-  try {
-    const ddgResults = await searchDuckDuckGoImages(query);
-    if (ddgResults && ddgResults.length > 0) {
-      return ddgResults.slice(0, 16);
+  // 1. Primary: Search Bing and DuckDuckGo in parallel
+  const [bingRes, ddgRes] = await Promise.allSettled([
+    searchBingImages(cleanQ),
+    searchDuckDuckGoImages(cleanQ),
+  ]);
+
+  const bingList = bingRes.status === "fulfilled" ? bingRes.value : [];
+  const ddgList = ddgRes.status === "fulfilled" ? ddgRes.value : [];
+
+  // Merge and deduplicate by image URL
+  const seenUrls = new Set<string>();
+  const combined: WebImageResult[] = [];
+
+  // Interleave Bing & DuckDuckGo results for rich diversity
+  const maxLen = Math.max(bingList.length, ddgList.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < bingList.length && !seenUrls.has(bingList[i].image)) {
+      seenUrls.add(bingList[i].image);
+      combined.push(bingList[i]);
     }
-  } catch (err: any) {
-    console.warn("DuckDuckGo image search failed, trying fallback:", err?.message);
+    if (i < ddgList.length && !seenUrls.has(ddgList[i].image)) {
+      seenUrls.add(ddgList[i].image);
+      combined.push(ddgList[i]);
+    }
   }
 
-  // 2. Fallback: Google Custom Search API if configured
+  if (combined.length > 0) {
+    return combined.slice(0, 32);
+  }
+
+  // 2. Retry with simplified brand query if full query returned 0
+  const simpleQuery = cleanQ.split(" ").slice(0, 3).join(" ");
+  if (simpleQuery && simpleQuery !== cleanQ) {
+    try {
+      const fallbackBing = await searchBingImages(simpleQuery);
+      if (fallbackBing.length > 0) {
+        return fallbackBing.slice(0, 24);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // 3. Fallback: Google Custom Search API if configured
   if (process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX) {
     try {
-      const googleResults = await searchGoogleImages(query);
+      const googleResults = await searchGoogleImages(cleanQ);
       if (googleResults.length > 0) {
         return googleResults.slice(0, 16);
       }
@@ -59,19 +107,73 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
     }
   }
 
-  // 3. Fallback: OpenFDA Drug Database if it's a generic medication
+  // 4. Fallback: OpenFDA Drug Database if it's a generic medication
   if (params.name) {
     try {
       const fdaResults = await searchOpenFdaImages(params.name);
       if (fdaResults.length > 0) {
         return fdaResults;
       }
-    } catch (err) {
+    } catch {
       // Ignore openFDA error
     }
   }
 
-  return results;
+  return [];
+}
+
+/**
+ * Bing Image Search implementation (Fast, Reliable on Cloud Datacenter IPs, No API Key Required)
+ */
+async function searchBingImages(query: string): Promise<WebImageResult[]> {
+  const userAgent =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
+  const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&form=HDRSC2&first=1`;
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": userAgent,
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        Referer: "https://www.bing.com/",
+      },
+    });
+
+    if (!res.ok) {
+      return [];
+    }
+
+    const html = await res.text();
+    const regex = /m="?({[^"]*?&quot;murl&quot;:[^"]*?})"?/g;
+    let match;
+    const results: WebImageResult[] = [];
+    const seenUrls = new Set<string>();
+
+    while ((match = regex.exec(html)) !== null) {
+      try {
+        const jsonStr = match[1].replace(/&quot;/g, '"');
+        const data = JSON.parse(jsonStr);
+        if (data.murl && !data.murl.endsWith(".svg") && !seenUrls.has(data.murl)) {
+          seenUrls.add(data.murl);
+          results.push({
+            title: data.t || query,
+            image: data.murl,
+            thumbnail: data.turl || data.murl,
+            source: data.purl || "Bing Images",
+          });
+        }
+      } catch {
+        // ignore parse error on specific item
+      }
+    }
+
+    return results;
+  } catch (err: any) {
+    console.warn("Bing image search error:", err?.message);
+    return [];
+  }
 }
 
 /**
@@ -79,56 +181,61 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
  */
 async function searchDuckDuckGoImages(query: string): Promise<WebImageResult[]> {
   const userAgent =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-  // Step A: Get VQD token from search page
-  const tokenUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
-  const tokenRes = await fetch(tokenUrl, {
-    headers: {
-      "User-Agent": userAgent,
-      Accept: "text/html,application/xhtml+xml,application/xml",
-    },
-  });
+  try {
+    // Step A: Get VQD token from search page
+    const tokenUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+    const tokenRes = await fetch(tokenUrl, {
+      headers: {
+        "User-Agent": userAgent,
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+    });
 
-  const tokenHtml = await tokenRes.text();
-  const vqdMatch =
-    tokenHtml.match(/vqd=([0-9-]+)/) ||
-    tokenHtml.match(/vqd="([^"]+)"/) ||
-    tokenHtml.match(/vqd='([^']+)'/);
+    const tokenHtml = await tokenRes.text();
+    const vqdMatch =
+      tokenHtml.match(/vqd=([0-9-]+)/) ||
+      tokenHtml.match(/vqd="([^"]+)"/) ||
+      tokenHtml.match(/vqd='([^']+)'/);
 
-  if (!vqdMatch) {
+    if (!vqdMatch) {
+      return [];
+    }
+
+    const vqd = vqdMatch[1];
+
+    // Step B: Query DuckDuckGo JSON image endpoint
+    const imgUrl = `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,`;
+    const imgRes = await fetch(imgUrl, {
+      headers: {
+        "User-Agent": userAgent,
+        Accept: "application/json, text/javascript, */*",
+        Referer: "https://duckduckgo.com/",
+      },
+    });
+
+    if (!imgRes.ok) {
+      return [];
+    }
+
+    const imgData: any = await imgRes.json();
+    const items = imgData?.results || [];
+
+    return items
+      .filter((it: any) => it.image && !it.image.endsWith(".svg"))
+      .map((it: any) => ({
+        title: it.title || query,
+        image: it.image,
+        thumbnail: it.thumbnail || it.image,
+        source: it.source || it.url || "DuckDuckGo",
+        width: it.width,
+        height: it.height,
+      }));
+  } catch (err: any) {
+    console.warn("DuckDuckGo image search exception:", err?.message);
     return [];
   }
-
-  const vqd = vqdMatch[1];
-
-  // Step B: Query DuckDuckGo JSON image endpoint
-  const imgUrl = `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,`;
-  const imgRes = await fetch(imgUrl, {
-    headers: {
-      "User-Agent": userAgent,
-      Accept: "application/json, text/javascript, */*",
-      Referer: "https://duckduckgo.com/",
-    },
-  });
-
-  if (!imgRes.ok) {
-    return [];
-  }
-
-  const imgData: any = await imgRes.json();
-  const items = imgData?.results || [];
-
-  return items
-    .filter((it: any) => it.image && !it.image.endsWith(".svg"))
-    .map((it: any) => ({
-      title: it.title || query,
-      image: it.image,
-      thumbnail: it.thumbnail || it.image,
-      source: it.source || it.url || "Web",
-      width: it.width,
-      height: it.height,
-    }));
 }
 
 /**

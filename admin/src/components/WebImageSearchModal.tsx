@@ -54,13 +54,18 @@ export function WebImageSearchModal({
 
   useEffect(() => {
     if (isOpen) {
+      const cleanMfg = (productDetails.manufacturer || "")
+        .replace(/\(.*?\)/g, "")
+        .replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc)\b/gi, "")
+        .trim();
+
       const parts = [
         productDetails.name,
         productDetails.strength,
-        productDetails.manufacturer,
+        cleanMfg,
         "medicine",
       ].filter(Boolean);
-      const initialSearch = parts.join(" ");
+      const initialSearch = parts.join(" ").replace(/\s+/g, " ").trim();
       setQuery(initialSearch);
       setSelectedImage(null);
       handleSearch(initialSearch);
@@ -74,7 +79,8 @@ export function WebImageSearchModal({
     setLoading(true);
     try {
       const res = await apiFetch<{ status: string; count: number; images: WebImageItem[] }>(
-        `/products/web-images/search?q=${encodeURIComponent(q)}`
+        `/products/web-images/search?q=${encodeURIComponent(q)}`,
+        { skipCache: true }
       );
       const list = res.images || [];
       setImages(list);
@@ -183,10 +189,11 @@ export function WebImageSearchModal({
             <span className="text-slate-400 font-bold shrink-0">Refine:</span>
             {[
               "packaging box",
+              "syrup bottle",
               "blister pack",
               "amber bottle",
-              productDetails.manufacturer,
-              "Ghana FDA registered",
+              productDetails.manufacturer ? productDetails.manufacturer.replace(/\(.*?\)/g, "").trim().split(" ")[0] : "",
+              "Ghana pharmacy",
             ]
               .filter(Boolean)
               .map((tag, idx) => (
