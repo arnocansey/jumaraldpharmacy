@@ -55,17 +55,28 @@ export function WebImageSearchModal({
 
   useEffect(() => {
     if (isOpen) {
-      const cleanMfg = (productDetails.manufacturer || "")
-        .replace(/\(.*?\)/g, "")
-        .replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc)\b/gi, "")
+      // Fix common typos in product name (e.g. coough -> cough)
+      let cleanName = (productDetails.name || "")
+        .replace(/\bcoough\b/gi, "cough")
+        .replace(/\bparacetemol\b/gi, "paracetamol")
+        .replace(/\s+/g, " ")
         .trim();
 
+      const mfgWord = productDetails.manufacturer
+        ? productDetails.manufacturer
+            .replace(/\(.*?\)/g, "")
+            .replace(/&/g, " ")
+            .replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc|centre|center|research)\b/gi, "")
+            .trim()
+            .split(" ")[0]
+        : "";
+
       const parts = [
-        productDetails.name,
+        cleanName,
         productDetails.strength,
-        cleanMfg,
-        "medicine packaging",
+        mfgWord && !cleanName.toLowerCase().includes(mfgWord.toLowerCase()) ? mfgWord : "",
       ].filter(Boolean);
+
       const initialSearch = parts.join(" ").replace(/\s+/g, " ").trim();
       setQuery(initialSearch);
       setSelectedImage(null);

@@ -106,8 +106,11 @@ function scoreAndFilterImage(img: WebImageResult, query: string): { keep: boolea
  */
 export function cleanSearchQuery(raw: string): string {
   return raw
+    .replace(/\bcoough\b/gi, "cough") // fix common user typo
+    .replace(/\bparacetemol\b/gi, "paracetamol")
     .replace(/\(.*?\)/g, " ") // remove (GIHOC) or parenthetical annotations
-    .replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc)\b/gi, " ") // remove corporate suffixes
+    .replace(/&/g, " ")
+    .replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc|centre|center|research)\b/gi, " ") // remove corporate suffixes
     .replace(/[^\w\s'-]/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -121,7 +124,7 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
 
   if (!query) {
     const cleanMfg = params.manufacturer
-      ? params.manufacturer.replace(/\(.*?\)/g, "").replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc)\b/gi, "").trim()
+      ? params.manufacturer.replace(/\(.*?\)/g, "").replace(/&/g, " ").replace(/\b(ltd|limited|pharmaceuticals|pharma|inc|corp|plc|llc|centre|center|research)\b/gi, "").trim()
       : "";
     const parts = [
       params.name,
@@ -134,6 +137,7 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
   }
 
   const cleanQ = cleanSearchQuery(query);
+  console.log(`[WebImageSearch] Searching for cleanQ="${cleanQ}" (raw="${query}")`);
 
   // Target packaging photos specifically
   const searchEngineQuery = /\b(packaging|box|bottle|blister|strip)\b/i.test(cleanQ)
@@ -148,6 +152,7 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
 
   const bingList = bingRes.status === "fulfilled" ? bingRes.value : [];
   const ddgList = ddgRes.status === "fulfilled" ? ddgRes.value : [];
+  console.log(`[WebImageSearch] Raw hits: Bing=${bingList.length}, DDG=${ddgList.length}`);
 
   // Interleave Bing & DuckDuckGo results
   const rawCombined: WebImageResult[] = [];
@@ -175,12 +180,14 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
   const relevantResults = scoredItems.map((s) => s.item);
 
   if (relevantResults.length > 0) {
+    console.log(`[WebImageSearch] Returning ${relevantResults.length} scored medical photos for "${cleanQ}"`);
     return relevantResults.slice(0, 32);
   }
 
-  // 2. Retry with simplified brand query if strict query returned 0
-  const simpleBrand = cleanQ.split(" ").slice(0, 3).join(" ") + " medicine packaging";
+  // 2. Retry with concise 2-3 word brand query if strict query returned 0
+  const simpleBrand = cleanQ.split(" ").slice(0, 2).join(" ") + " packaging box";
   if (simpleBrand !== searchEngineQuery) {
+    console.log(`[WebImageSearch] Retrying with concise brand query: "${simpleBrand}"`);
     try {
       const fallbackBing = await searchBingImages(simpleBrand);
       const fallbackScored = fallbackBing
@@ -191,6 +198,7 @@ export async function searchWebProductImages(params: WebImageSearchParams): Prom
         .map((s) => s.item);
 
       if (fallbackScored.length > 0) {
+        console.log(`[WebImageSearch] Fallback concise search found ${fallbackScored.length} photos`);
         return fallbackScored.slice(0, 24);
       }
     } catch {
@@ -233,7 +241,7 @@ async function searchBingImages(query: string): Promise<WebImageResult[]> {
   const userAgent =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-  const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&form=HDRSC2&first=1`;
+  const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&form=HDRSC2&first=1&setmkt=en-US&setlang=en&cc=US`;
 
   try {
     const res = await fetch(url, {
@@ -241,11 +249,13 @@ async function searchBingImages(query: string): Promise<WebImageResult[]> {
         "User-Agent": userAgent,
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
+        Cookie: "SRCHHPGUSR=ADLT=OFF&NRSLT=50; _EDGE_S=mkt=en-US; MUID=3B6A2D1F5E8B6C0D2F4E3A1B5C7D9E0F",
         Referer: "https://www.bing.com/",
       },
     });
 
     if (!res.ok) {
+      console.warn(`[BingSearch] Bing returned HTTP ${res.status} for query="${query}"`);
       return [];
     }
 
@@ -275,7 +285,7 @@ async function searchBingImages(query: string): Promise<WebImageResult[]> {
 
     return results;
   } catch (err: any) {
-    console.warn("Bing image search error:", err?.message);
+    console.warn("[BingSearch] Bing image search error:", err?.message);
     return [];
   }
 }

@@ -1083,6 +1083,12 @@ export async function generateBulkMissingImagesHandler(req: any, res: Response) 
  * Search the web for authentic manufacturer medication images
  */
 export async function searchWebImagesHandler(req: any, res: Response) {
+  // Never cache search responses with 304 or stale bodies
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
+
   try {
     const q = req.query.q as string;
     const name = req.query.name as string;

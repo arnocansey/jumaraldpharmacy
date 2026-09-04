@@ -51,10 +51,16 @@ export async function apiFetch<T>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_URL}${endpoint}`, {
+  const fetchOptions: RequestInit = {
     ...options,
     headers,
-  });
+  };
+
+  if (options.skipCache) {
+    fetchOptions.cache = "no-store";
+  }
+
+  const res = await fetch(`${API_URL}${endpoint}`, fetchOptions);
 
   const data = await res.json();
 
