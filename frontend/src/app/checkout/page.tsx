@@ -164,7 +164,7 @@ export default function CheckoutPage() {
         if (data.status === "COMPLETED" || data.status === "SUCCESS") {
           toast.success("Payment verified successfully!");
           clearCart();
-          router.push(`/orders/${data.orderId || ""}`);
+          router.push(`/dashboard`);
         } else {
           toast.error(data.message || "Payment verification failed.");
         }
