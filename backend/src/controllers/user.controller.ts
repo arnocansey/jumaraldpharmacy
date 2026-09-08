@@ -270,12 +270,12 @@ export async function deleteUser(req: AuthenticatedRequest, res: Response) {
       }
     }
 
-    await prisma.user.update({ where: { id }, data: { isActive: false } });
+    await prisma.user.delete({ where: { id } });
 
     if (req.user?.id) {
       await createAuditLog(
         req.user.id,
-        "USER_DEACTIVATED",
+        "USER_DELETED",
         "User",
         id,
         { deletedUserEmail: targetUser.email, role: targetUser.role },

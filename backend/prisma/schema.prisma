@@ -429,7 +429,7 @@ model Order {
   id               String        @id @default(uuid())
   orderNumber      String        @unique
   userId           String
-  user             User          @relation(fields: [userId], references: [id])
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   branchId         String?
   branch           Branch?       @relation(fields: [branchId], references: [id])
   status           OrderStatus   @default(PENDING)
