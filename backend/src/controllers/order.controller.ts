@@ -151,7 +151,18 @@ export async function createOrder(req: AuthenticatedRequest, res: Response) {
       });
     });
 
-    const emailContent = buildOrderConfirmationEmail(orderNumber, data.totalAmount);
+    const emailContent = buildOrderConfirmationEmail(
+      orderNumber,
+      data.totalAmount,
+      result.orderItems.map((item) => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        total: item.total,
+      })),
+      { fullAddress: data.address.fullAddress, city: data.address.city, state: data.address.state, country: data.address.country },
+      { shippingFee: data.shippingFee, taxAmount: data.taxAmount, status: result.status }
+    );
     sendEmail({ to: result.user.email, subject: emailContent.subject, html: emailContent.html }).catch(() => {});
 
     for (const item of result.orderItems) {
@@ -163,10 +174,12 @@ export async function createOrder(req: AuthenticatedRequest, res: Response) {
     }
 
     emitToAdmins("order:created", { orderId: result.id, orderNumber: result.orderNumber, totalAmount: result.totalAmount });
-    emitOrderUpdate(req.user!.id, result);
-    createAuditLog(req.user!.id, "ORDER_CREATED", "order", result.id, { orderNumber, totalAmount: data.totalAmount });
+    if (req.user?.id) {
+      emitOrderUpdate(req.user.id, result);
+      createAuditLog(req.user.id, "ORDER_CREATED", "order", result.id, { orderNumber, totalAmount: data.totalAmount });
+    }
 
-    const userWithPhone = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { phone: true } });
+    const userWithPhone = await prisma.user.findUnique({ where: { id: customerUserId! }, select: { phone: true } });
     if (userWithPhone?.phone) {
       sendOrderConfirmationSms(userWithPhone.phone, orderNumber, data.totalAmount);
     }

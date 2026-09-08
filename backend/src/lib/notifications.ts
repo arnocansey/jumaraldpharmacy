@@ -101,18 +101,131 @@ export function buildPasswordResetEmail(resetUrl: string): { subject: string; ht
   };
 }
 
-export function buildOrderConfirmationEmail(orderNumber: string, totalAmount: number): { subject: string; html: string } {
+export function buildOrderConfirmationEmail(
+  orderNumber: string,
+  totalAmount: number,
+  items: { name: string; quantity: number; unitPrice: number; total: number }[],
+  address: { fullAddress: string; city: string; state: string; country: string },
+  options?: { shippingFee?: number; taxAmount?: number; dashboardUrl?: string; status?: string }
+): { subject: string; html: string } {
+  const frontendUrl = env.FRONTEND_URL || "https://jumaraldpharmacy.com";
+  const dashboardUrl = options?.dashboardUrl || `${frontendUrl}/orders`;
+  const shippingFee = options?.shippingFee || 0;
+  const taxAmount = options?.taxAmount || 0;
+  const subtotal = items.reduce((sum, i) => sum + i.total, 0);
+
+  const itemRows = items.map((item) => `
+    <tr>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 13px;">${item.name}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px; text-align: center;">${item.quantity}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 13px; text-align: right;">GHS ${item.unitPrice.toFixed(2)}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 13px; text-align: right; font-weight: 600;">GHS ${item.total.toFixed(2)}</td>
+    </tr>
+  `).join("");
+
   return {
     subject: `Order Confirmed — ${orderNumber}`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #059669; font-size: 22px;">Order Confirmed!</h1>
-        <p style="color: #475569; font-size: 14px;">Your order <strong>${orderNumber}</strong> has been placed successfully.</p>
-        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; text-align: center; margin: 16px 0;">
-          <p style="color: #166534; font-size: 20px; font-weight: bold; margin: 0;">GHS ${totalAmount.toFixed(2)}</p>
-          <p style="color: #16a34a; font-size: 12px; margin: 4px 0 0 0;">Total Amount</p>
+      <div style="font-family: Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #059669;">
+          <h1 style="color: #059669; font-size: 24px; margin: 0;">Jumarald Pharmacy</h1>
+          <p style="color: #94a3b8; font-size: 11px; margin: 4px 0 0 0;">FDA Ghana & Pharmacy Council Certified</p>
         </div>
-        <p style="color: #475569; font-size: 13px;">We'll notify you when your order ships. Track your order in the Jumarald app.</p>
+
+        <!-- Success Banner -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 24px;">
+          <div style="font-size: 36px; margin-bottom: 8px;">✅</div>
+          <h2 style="color: #15803d; font-size: 20px; margin: 0 0 4px 0;">Order Confirmed!</h2>
+          <p style="color: #166534; font-size: 13px; margin: 0;">Order <strong>${orderNumber}</strong> has been placed successfully</p>
+        </div>
+
+        <!-- Order Items -->
+        <div style="margin-bottom: 24px;">
+          <h3 style="color: #1e293b; font-size: 15px; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0;">Order Items</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="padding: 8px 12px; text-align: left; color: #64748b; font-size: 11px; font-weight: 600; text-transform: uppercase;">Item</th>
+                <th style="padding: 8px 12px; text-align: center; color: #64748b; font-size: 11px; font-weight: 600; text-transform: uppercase;">Qty</th>
+                <th style="padding: 8px 12px; text-align: right; color: #64748b; font-size: 11px; font-weight: 600; text-transform: uppercase;">Price</th>
+                <th style="padding: 8px 12px; text-align: right; color: #64748b; font-size: 11px; font-weight: 600; text-transform: uppercase;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemRows}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pricing Breakdown -->
+        <div style="background: #f8fafc; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; border: 1px solid #e2e8f0;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: #64748b; font-size: 13px;">Subtotal</span>
+            <span style="color: #334155; font-size: 13px;">GHS ${subtotal.toFixed(2)}</span>
+          </div>
+          ${shippingFee > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: #64748b; font-size: 13px;">Shipping</span>
+            <span style="color: #334155; font-size: 13px;">GHS ${shippingFee.toFixed(2)}</span>
+          </div>
+          ` : `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: #64748b; font-size: 13px;">Shipping</span>
+            <span style="color: #059669; font-size: 13px; font-weight: 600;">Free</span>
+          </div>
+          `}
+          ${taxAmount > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: #64748b; font-size: 13px;">Tax</span>
+            <span style="color: #334155; font-size: 13px;">GHS ${taxAmount.toFixed(2)}</span>
+          </div>
+          ` : ""}
+          <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 2px solid #e2e8f0;">
+            <span style="color: #1e293b; font-size: 15px; font-weight: bold;">Total</span>
+            <span style="color: #059669; font-size: 18px; font-weight: bold;">GHS ${totalAmount.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <!-- Delivery Address -->
+        <div style="margin-bottom: 24px;">
+          <h3 style="color: #1e293b; font-size: 15px; margin: 0 0 10px 0;">Delivery Address</h3>
+          <div style="background: #f8fafc; border-radius: 10px; padding: 14px 16px; border: 1px solid #e2e8f0;">
+            <p style="color: #334155; font-size: 13px; margin: 0; line-height: 1.5;">
+              ${address.fullAddress}<br/>
+              ${address.city}, ${address.state}<br/>
+              ${address.country}
+            </p>
+          </div>
+        </div>
+
+        <!-- Status -->
+        ${options?.status ? `
+        <div style="margin-bottom: 24px;">
+          <div style="background: ${options.status === "PENDING" ? "#fffbeb" : "#f0fdf4"}; border: 1px solid ${options.status === "PENDING" ? "#fde68a" : "#bbf7d0"}; border-radius: 10px; padding: 12px 16px; text-align: center;">
+            <span style="color: ${options.status === "PENDING" ? "#92400e" : "#15803d"}; font-size: 13px; font-weight: 600;">
+              Order Status: ${options.status.replace("_", " ")}
+            </span>
+          </div>
+        </div>
+        ` : ""}
+
+        <!-- CTA -->
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${dashboardUrl}" style="background: #059669; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">
+            Track Your Order
+          </a>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+          <p style="color: #94a3b8; font-size: 12px; margin: 0 0 4px 0;">
+            Questions? Contact us at <a href="mailto:support@jumaraldpharmacy.com" style="color: #059669;">support@jumaraldpharmacy.com</a>
+          </p>
+          <p style="color: #94a3b8; font-size: 11px; margin: 0;">
+            Jumarald Pharmacy — Your Trusted Online Pharmacy in Ghana
+          </p>
+        </div>
       </div>
     `,
   };
@@ -151,6 +264,85 @@ export function buildPrescriptionVerifiedEmail(status: string, pharmacistNote?: 
             Please log in to your account to review pharmacist feedback or re-upload a clear prescription.
           </p>
         `}
+      </div>
+    `,
+  };
+}
+
+export function buildPaymentConfirmationEmail(
+  orderNumber: string,
+  amount: number,
+  reference: string,
+  method?: string
+): { subject: string; html: string } {
+  const methodLabel = method === "momo" ? "Mobile Money" : method === "card" ? "Bank Card" : "Paystack";
+  return {
+    subject: `Payment Received — ${orderNumber}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #059669;">
+          <h1 style="color: #059669; font-size: 24px; margin: 0;">Jumarald Pharmacy</h1>
+          <p style="color: #94a3b8; font-size: 11px; margin: 4px 0 0 0;">FDA Ghana & Pharmacy Council Certified</p>
+        </div>
+
+        <!-- Payment Success Banner -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+          <div style="font-size: 42px; margin-bottom: 10px;">💰</div>
+          <h2 style="color: #15803d; font-size: 20px; margin: 0 0 6px 0;">Payment Confirmed!</h2>
+          <p style="color: #166534; font-size: 13px; margin: 0;">Your payment has been successfully processed</p>
+        </div>
+
+        <!-- Amount -->
+        <div style="text-align: center; margin-bottom: 24px;">
+          <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Amount Paid</p>
+          <p style="color: #059669; font-size: 32px; font-weight: bold; margin: 0;">GHS ${amount.toFixed(2)}</p>
+        </div>
+
+        <!-- Details -->
+        <div style="background: #f8fafc; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; border: 1px solid #e2e8f0;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span style="color: #64748b; font-size: 13px;">Order Number</span>
+            <span style="color: #1e293b; font-size: 13px; font-weight: 600;">${orderNumber}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span style="color: #64748b; font-size: 13px;">Payment Method</span>
+            <span style="color: #1e293b; font-size: 13px; font-weight: 600;">${methodLabel}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span style="color: #64748b; font-size: 13px;">Transaction Reference</span>
+            <span style="color: #1e293b; font-size: 12px; font-family: monospace;">${reference}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #64748b; font-size: 13px;">Date</span>
+            <span style="color: #1e293b; font-size: 13px;">${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</span>
+          </div>
+        </div>
+
+        <!-- What's Next -->
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px 16px; margin-bottom: 24px;">
+          <p style="color: #1e40af; font-size: 13px; font-weight: 600; margin: 0 0 6px 0;">What happens next?</p>
+          <p style="color: #334155; font-size: 12px; margin: 0; line-height: 1.6;">
+            Our pharmacy team is now preparing your order. You'll receive a notification when your order is dispatched for delivery.
+          </p>
+        </div>
+
+        <!-- CTA -->
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${env.FRONTEND_URL || "https://jumaraldpharmacy.com"}/orders" style="background: #059669; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">
+            Track Your Order
+          </a>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+          <p style="color: #94a3b8; font-size: 12px; margin: 0 0 4px 0;">
+            Questions? Contact us at <a href="mailto:support@jumaraldpharmacy.com" style="color: #059669;">support@jumaraldpharmacy.com</a>
+          </p>
+          <p style="color: #94a3b8; font-size: 11px; margin: 0;">
+            Jumarald Pharmacy — Your Trusted Online Pharmacy in Ghana
+          </p>
+        </div>
       </div>
     `,
   };
