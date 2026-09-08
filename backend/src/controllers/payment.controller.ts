@@ -31,7 +31,8 @@ export async function initializePayment(req: AuthenticatedRequest, res: Response
       include: { orderItems: { include: { product: { include: { category: true } } } } },
     });
     if (!order) return res.status(404).json({ message: "Order not found" });
-    if (req.user && order.userId !== req.user.id) return res.status(403).json({ message: "Unauthorized" });
+    if (!req.user) return res.status(401).json({ message: "Authentication required" });
+    if (order.userId !== req.user.id) return res.status(403).json({ message: "Unauthorized" });
 
     // Strict Prescription Gating: Block payment if prescription is required but not attached
     const hasRx = order.orderItems.some((item) => {
@@ -92,7 +93,7 @@ export async function initializePayment(req: AuthenticatedRequest, res: Response
       currency: "GHS",
       reference,
       callback_url: redirectUrl,
-      metadata: { orderId, userId: req.user!.id, method, phone, network },
+      metadata: { orderId, userId: req.user.id, method, phone, network },
       channels: method === "momo" ? ["mobile_money"] : ["card", "mobile_money"],
     };
 
