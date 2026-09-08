@@ -100,6 +100,7 @@ export default function CheckoutPage() {
   // Address state
   const [address, setAddress] = useState({
     fullName: "",
+    email: "",
     phone: "",
     street: "",
     city: "",
@@ -114,6 +115,7 @@ export default function CheckoutPage() {
         setAddress((prev) => ({
           ...prev,
           fullName: u.name || prev.fullName,
+          email: u.email || prev.email,
           phone: u.phone || prev.phone,
         }));
         if (u.phone) setMomoNumber(u.phone);
@@ -268,6 +270,10 @@ export default function CheckoutPage() {
       toast.error("Please enter your full name");
       return false;
     }
+    if (!address.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address.email.trim())) {
+      toast.error("Please enter a valid email address for order notifications");
+      return false;
+    }
     if (!address.phone.trim()) {
       toast.error("Please enter your phone number");
       return false;
@@ -323,7 +329,7 @@ export default function CheckoutPage() {
       const user = JSON.parse(localStorage.getItem("jumarald_user") || "{}");
 
       const payload = {
-        email: user.email || (address.phone ? address.phone.replace(/[^0-9]/g, "") + "@jumaraldpharmacy.com" : ""),
+        email: address.email.trim(),
         items: items.map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
@@ -565,6 +571,17 @@ export default function CheckoutPage() {
                       onChange={(e) => setAddress({ ...address, fullName: e.target.value })}
                       className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
                     />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 mb-1 block">Email Address</label>
+                    <input
+                      type="email"
+                      value={address.email}
+                      onChange={(e) => setAddress({ ...address, email: e.target.value })}
+                      placeholder="you@example.com"
+                      className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">Order confirmation and delivery updates will be sent here</p>
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-slate-500 mb-1 block">Phone Number (Ghana)</label>
