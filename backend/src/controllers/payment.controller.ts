@@ -51,6 +51,13 @@ export async function initializePayment(req: AuthenticatedRequest, res: Response
       });
     }
 
+    const existingPending = await prisma.payment.findFirst({
+      where: { orderId, status: "PENDING" },
+    });
+    if (existingPending) {
+      return res.status(409).json({ message: "A payment is already in progress for this order" });
+    }
+
     const reference = `JUM-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
 
     if (!env.PAYSTACK_SECRET_KEY) {
@@ -129,7 +136,8 @@ export async function initializePayment(req: AuthenticatedRequest, res: Response
       reference,
     });
   } catch (error: any) {
-    return res.status(500).json({ message: "Payment initialization failed: " + (error.message || "") });
+    console.error("[Payment] Initialization error:", error);
+    return res.status(500).json({ message: "Payment initialization failed. Please try again." });
   }
 }
 
@@ -206,28 +214,50 @@ export async function verifyPayment(req: AuthenticatedRequest, res: Response) {
 
 export async function handlePaystackWebhook(req: any, res: Response) {
   try {
+    if (!env.PAYSTACK_SECRET_KEY) {
+      return res.status(503).json({ message: "Payment service not configured" });
+    }
+
     const signature = req.headers["x-paystack-signature"];
-    if (env.PAYSTACK_SECRET_KEY && signature) {
-      const hash = crypto
-        .createHmac("sha512", env.PAYSTACK_SECRET_KEY)
-        .update(JSON.stringify(req.body))
-        .digest("hex");
-      if (hash !== signature) {
-        return res.status(401).json({ message: "Invalid signature" });
-      }
+    if (!signature) {
+      return res.status(401).json({ message: "Missing webhook signature" });
+    }
+
+    const rawBody = req.rawBody;
+    if (!rawBody) {
+      return res.status(400).json({ message: "Missing request body" });
+    }
+
+    const expectedHash = crypto
+      .createHmac("sha512", env.PAYSTACK_SECRET_KEY)
+      .update(rawBody)
+      .digest("hex");
+
+    const sigBuffer = Buffer.from(signature, "hex");
+    const hashBuffer = Buffer.from(expectedHash, "hex");
+
+    if (sigBuffer.length !== hashBuffer.length || !crypto.timingSafeEqual(sigBuffer, hashBuffer)) {
+      return res.status(401).json({ message: "Invalid signature" });
     }
 
     const body = req.body;
     const event = body.event;
 
     if (event === "charge.success") {
-      const { reference } = body.data;
+      const { reference, amount: chargedAmount } = body.data;
       const payment = await prisma.payment.findFirst({ where: { reference } });
       if (payment && payment.status === "PENDING") {
+        const expectedAmount = Math.round(payment.amount * 100);
+        if (chargedAmount !== expectedAmount) {
+          console.error(`[Webhook] Amount mismatch for ${reference}: expected ${expectedAmount}, got ${chargedAmount}`);
+          return res.status(400).json({ message: "Amount mismatch" });
+        }
+
         await prisma.payment.update({ where: { id: payment.id }, data: { status: "COMPLETED" } });
         await prisma.order.update({ where: { id: payment.orderId }, data: { status: "PROCESSING" } });
         emitToOrder(payment.orderId, "payment:completed", { orderId: payment.orderId, reference, amount: payment.amount });
         emitToAdmins("order:payment", { orderId: payment.orderId, reference, amount: payment.amount });
+        createAuditLog("system", "PAYMENT_WEBHOOK", "payment", payment.id, { reference, amount: payment.amount });
       }
     }
 

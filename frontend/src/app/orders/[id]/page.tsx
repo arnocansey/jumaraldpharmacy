@@ -78,6 +78,7 @@ interface Order {
   updatedAt: string;
   orderItems: OrderItem[];
   shippingAddress?: ShippingAddress;
+  payments?: { paymentMethod?: string; reference?: string; status?: string }[];
   deliveryTracking?: {
     id: string;
     trackingNumber: string;
@@ -616,7 +617,7 @@ export default function OrderTrackingPage() {
               <div className="flex justify-between">
                 <span className="text-slate-500">Payment</span>
                 <span className="font-semibold text-slate-700 dark:text-slate-300">
-                  Paystack Mobile Money
+                  {order.payments?.[0]?.paymentMethod === "momo" ? "Paystack Mobile Money" : order.payments?.[0]?.paymentMethod === "card" ? "Paystack Card" : "Paystack"}
                 </span>
               </div>
               <div className="flex justify-between">

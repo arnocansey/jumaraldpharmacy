@@ -375,7 +375,6 @@ export default function CheckoutPage() {
               method: paymentMethod,
               phone: momoNumber,
               network: momoNetwork,
-              callback_url: `${window.location.origin}/checkout?reference={reference}&orderId=${orderId}`,
             }),
           });
 

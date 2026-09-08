@@ -15,6 +15,7 @@ import consultationRoutes from "./routes/consultation.routes";
 import analyticsRoutes from "./routes/analytics.routes";
 import uploadRoutes from "./routes/upload.routes";
 import paymentRoutes from "./routes/payment.routes";
+import { handlePaystackWebhook } from "./controllers/payment.controller";
 import passwordResetRoutes from "./routes/passwordReset.routes";
 import blogRoutes from "./routes/blog.routes";
 import branchRoutes from "./routes/branch.routes";
@@ -66,6 +67,15 @@ app.use(
 
 import path from "path";
 
+app.use("/api/v1/payments/webhook", express.raw({ type: "application/json", limit: "1mb" }));
+app.use((req: any, _res, next) => {
+  if (req.path === "/api/v1/payments/webhook" && Buffer.isBuffer(req.body)) {
+    req.rawBody = req.body.toString("utf8");
+    try { req.body = JSON.parse(req.rawBody); } catch { /* keep as buffer */ }
+    return next();
+  }
+  next();
+});
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
@@ -124,6 +134,7 @@ app.use("/api/v1/orders", apiLimiter, orderRoutes);
 app.use("/api/v1/consultations", consultationRoutes);
 app.use("/api/v1/analytics", analyticsRoutes);
 app.use("/api/v1/upload", uploadRoutes);
+app.use("/api/v1/payments/webhook", handlePaystackWebhook);
 app.use("/api/v1/payments", apiLimiter, paymentRoutes);
 app.use("/api/v1", passwordResetRoutes);
 app.use("/api/v1/blog", blogRoutes);

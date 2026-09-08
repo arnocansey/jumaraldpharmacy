@@ -184,7 +184,7 @@ export async function getMyOrders(req: AuthenticatedRequest, res: Response) {
   try {
     const orders = await prisma.order.findMany({
       where: { userId: req.user!.id },
-      include: { orderItems: { include: { product: true } }, shippingAddress: true },
+      include: { orderItems: { include: { product: true } }, shippingAddress: true, payments: true },
       orderBy: { createdAt: "desc" },
     });
     return res.json(orders);
@@ -196,7 +196,7 @@ export async function getMyOrders(req: AuthenticatedRequest, res: Response) {
 export async function getAllOrders(req: any, res: Response) {
   try {
     const orders = await prisma.order.findMany({
-      include: { user: { select: { name: true, email: true } }, orderItems: true, shippingAddress: true },
+      include: { user: { select: { name: true, email: true } }, orderItems: true, shippingAddress: true, payments: true },
       orderBy: { createdAt: "desc" },
     });
     return res.json(orders);
