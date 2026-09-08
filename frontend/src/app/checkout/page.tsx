@@ -323,6 +323,7 @@ export default function CheckoutPage() {
       const user = JSON.parse(localStorage.getItem("jumarald_user") || "{}");
 
       const payload = {
+        email: user.email || (address.phone ? address.phone.replace(/[^0-9]/g, "") + "@jumaraldpharmacy.com" : ""),
         items: items.map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
