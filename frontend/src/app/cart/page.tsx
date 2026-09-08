@@ -11,7 +11,12 @@ import { useCartStore } from "@/store/useCartStore";
 import { formatCurrency } from "@/lib/utils";
 
 export default function CartPage() {
-  const { items, removeFromCart, updateQuantity, subtotalAmount, requiresPrescription, clearCart } = useCartStore();
+  const items = useCartStore((s) => s.items);
+  const removeFromCart = useCartStore((s) => s.removeFromCart);
+  const updateQuantity = useCartStore((s) => s.updateQuantity);
+  const subtotalAmount = useCartStore((s) => s.subtotalAmount());
+  const requiresPrescription = useCartStore((s) => s.requiresPrescription());
+  const clearCart = useCartStore((s) => s.clearCart);
 
   if (items.length === 0) {
     return (

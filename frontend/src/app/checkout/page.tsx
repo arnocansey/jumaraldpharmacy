@@ -48,7 +48,10 @@ interface CouponData {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotalAmount, clearCart, requiresPrescription } = useCartStore();
+  const items = useCartStore((s) => s.items);
+  const subtotalAmount = useCartStore((s) => s.subtotalAmount());
+  const clearCart = useCartStore((s) => s.clearCart);
+  const requiresPrescription = useCartStore((s) => s.requiresPrescription());
   const [step, setStep] = useState<"address" | "payment" | "confirmed">("address");
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"momo" | "card">("momo");

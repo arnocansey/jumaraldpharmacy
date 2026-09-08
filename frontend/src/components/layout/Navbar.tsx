@@ -13,7 +13,8 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { totalItemCount } = useCartStore();
+  const totalItemCount = useCartStore((s) => s.totalItemCount());
+  const initialize = useCartStore((s) => s.initialize);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<{ name: string; email: string; role?: string } | null>(null);
@@ -32,10 +33,11 @@ export function Navbar() {
   };
 
   useEffect(() => {
+    initialize();
     loadUser();
     window.addEventListener("jumarald_auth_change", loadUser);
     return () => window.removeEventListener("jumarald_auth_change", loadUser);
-  }, []);
+  }, [initialize]);
 
   const handleLogout = () => {
     localStorage.removeItem("jumarald_token");

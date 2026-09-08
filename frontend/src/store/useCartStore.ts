@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { create } from "zustand";
 
 export interface CartProduct {
   id: string;
@@ -27,13 +27,11 @@ export function isProductPrescriptionRequired(product: any): boolean {
   if (product.isPrescription === true || String(product.isPrescription).toLowerCase() === "true") return true;
   if (product.prescriptionRequired === true || String(product.prescriptionRequired).toLowerCase() === "true") return true;
   if (product.prescription === true || String(product.prescription).toLowerCase() === "true") return true;
-  
-  // Category checks
+
   const catSlug = typeof product.category === "string" ? product.category.toLowerCase() : product.category?.slug?.toLowerCase() || "";
   const catName = typeof product.category === "string" ? product.category.toLowerCase() : product.category?.name?.toLowerCase() || "";
   if (catSlug.includes("prescription") || catName.includes("prescription")) return true;
 
-  // Tags checks
   if (Array.isArray(product.tags) && product.tags.some((t: any) => String(t).toLowerCase().includes("prescription") || String(t).toLowerCase() === "rx")) {
     return true;
   }
@@ -43,78 +41,94 @@ export function isProductPrescriptionRequired(product: any): boolean {
 
 const CART_STORAGE_KEY = "jumarald_cart_items_v1";
 
-export function useCartStore() {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(CART_STORAGE_KEY);
-      if (saved) {
-        const rawItems: CartItem[] = JSON.parse(saved);
-        // Normalize loaded cart items
-        const normalized = rawItems.map((item) => ({
-          ...item,
-          product: {
-            ...item.product,
-            requiresPrescription: isProductPrescriptionRequired(item.product),
-          },
-        }));
-        setItems(normalized);
-      }
-    } catch (e) {
-      console.error("Failed to load cart from storage", e);
+function loadCartFromStorage(): CartItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = localStorage.getItem(CART_STORAGE_KEY);
+    if (saved) {
+      const rawItems: CartItem[] = JSON.parse(saved);
+      return rawItems.map((item) => ({
+        ...item,
+        product: {
+          ...item.product,
+          requiresPrescription: isProductPrescriptionRequired(item.product),
+        },
+      }));
     }
-    setIsInitialized(true);
-  }, []);
+  } catch (e) {
+    console.error("Failed to load cart from storage", e);
+  }
+  return [];
+}
 
-  useEffect(() => {
-    if (isInitialized) {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-    }
-  }, [items, isInitialized]);
+function saveCartToStorage(items: CartItem[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+}
 
-  const addToCart = (product: CartProduct, quantity = 1) => {
+interface CartStore {
+  items: CartItem[];
+  isInitialized: boolean;
+  initialize: () => void;
+  addToCart: (product: CartProduct, quantity?: number) => void;
+  removeFromCart: (productId: string) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
+  clearCart: () => void;
+  totalItemCount: () => number;
+  subtotalAmount: () => number;
+  requiresPrescription: () => boolean;
+}
+
+export const useCartStore = create<CartStore>((set, get) => ({
+  items: [],
+  isInitialized: false,
+
+  initialize: () => {
+    if (get().isInitialized) return;
+    const items = loadCartFromStorage();
+    set({ items, isInitialized: true });
+  },
+
+  addToCart: (product, quantity = 1) => {
     const isRx = isProductPrescriptionRequired(product);
     const normalizedProduct: CartProduct = { ...product, requiresPrescription: isRx };
-    setItems((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
-      if (existing) {
-        return prev.map((i) => (i.product.id === product.id ? { ...i, product: normalizedProduct, quantity: i.quantity + quantity } : i));
-      }
-      return [...prev, { product: normalizedProduct, quantity }];
+
+    set((state) => {
+      const existing = state.items.find((i) => i.product.id === product.id);
+      const newItems = existing
+        ? state.items.map((i) => (i.product.id === product.id ? { ...i, product: normalizedProduct, quantity: i.quantity + quantity } : i))
+        : [...state.items, { product: normalizedProduct, quantity }];
+      saveCartToStorage(newItems);
+      return { items: newItems };
     });
-  };
+  },
 
-  const removeFromCart = (productId: string) => {
-    setItems((prev) => prev.filter((i) => i.product.id !== productId));
-  };
+  removeFromCart: (productId) => {
+    set((state) => {
+      const newItems = state.items.filter((i) => i.product.id !== productId);
+      saveCartToStorage(newItems);
+      return { items: newItems };
+    });
+  },
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  updateQuantity: (productId, quantity) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      get().removeFromCart(productId);
       return;
     }
-    setItems((prev) => prev.map((i) => (i.product.id === productId ? { ...i, quantity } : i)));
-  };
+    set((state) => {
+      const newItems = state.items.map((i) => (i.product.id === productId ? { ...i, quantity } : i));
+      saveCartToStorage(newItems);
+      return { items: newItems };
+    });
+  },
 
-  const clearCart = () => {
-    setItems([]);
-  };
+  clearCart: () => {
+    set({ items: [] });
+    saveCartToStorage([]);
+  },
 
-  const totalItemCount = items.reduce((acc, item) => acc + item.quantity, 0);
-  const subtotalAmount = items.reduce((acc, item) => acc + (Number(item.product?.price) || 0) * item.quantity, 0);
-  const requiresPrescription = items.some((item) => isProductPrescriptionRequired(item.product));
-
-  return {
-    items,
-    addToCart,
-    removeFromCart,
-    updateQuantity,
-    clearCart,
-    totalItemCount,
-    subtotalAmount,
-    requiresPrescription,
-    isInitialized,
-  };
-}
+  totalItemCount: () => get().items.reduce((acc, item) => acc + item.quantity, 0),
+  subtotalAmount: () => get().items.reduce((acc, item) => acc + (Number(item.product?.price) || 0) * item.quantity, 0),
+  requiresPrescription: () => get().items.some((item) => isProductPrescriptionRequired(item.product)),
+}));
