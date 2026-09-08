@@ -24,6 +24,7 @@ import {
   Eye,
   Check,
   MapPin,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -61,6 +62,14 @@ export default function CheckoutPage() {
   const [confirmedOrderNumber, setConfirmedOrderNumber] = useState<string>("");
 
   const [isVerifying, setIsVerifying] = useState(false);
+
+  // Auth modal state
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [authName, setAuthName] = useState("");
 
   // Prescription states
   const [prescriptionUrl, setPrescriptionUrl] = useState("");
@@ -321,6 +330,14 @@ export default function CheckoutPage() {
       return;
     }
 
+    const token = localStorage.getItem("jumarald_token");
+    if (!token) {
+      setAuthEmail(address.email.trim());
+      setShowAuthModal(true);
+      setIsProcessing(false);
+      return;
+    }
+
     setIsProcessing(true);
     toast.info("Initializing Paystack transaction...");
 
@@ -411,6 +428,40 @@ export default function CheckoutPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setIsProcessing(false);
+    }
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    try {
+      const url = authMode === "login" ? `${API_URL}/auth/login` : `${API_URL}/auth/register`;
+      const body = authMode === "login"
+        ? { email: authEmail, password: authPassword }
+        : { email: authEmail, password: authPassword, name: authName };
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || `${authMode === "login" ? "Login" : "Registration"} failed`);
+
+      localStorage.setItem("jumarald_token", data.token);
+      localStorage.setItem("jumarald_user", JSON.stringify(data.user));
+      window.dispatchEvent(new Event("jumarald_auth_change"));
+
+      toast.success(authMode === "login" ? `Welcome back, ${data.user?.name || authEmail.split("@")[0]}!` : "Account created! Proceeding with payment...");
+      setShowAuthModal(false);
+      setAuthPassword("");
+      setAuthName("");
+
+      setTimeout(() => handleCompleteOrder(), 300);
+    } catch (err: any) {
+      toast.error(err.message || "Authentication failed. Please try again.");
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -1158,6 +1209,96 @@ export default function CheckoutPage() {
           </Card>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAuthModal(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full space-y-5 border border-slate-200 dark:border-slate-800 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center space-y-2">
+              <div className="h-12 w-12 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 rounded-2xl flex items-center justify-center mx-auto">
+                <Lock className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">
+                {authMode === "login" ? "Sign In to Continue" : "Create Account"}
+              </h3>
+              <p className="text-sm text-slate-500">
+                {authMode === "login"
+                  ? "You need an account to complete your purchase and receive order updates."
+                  : "Create a free account to track orders and get delivery notifications."}
+              </p>
+            </div>
+
+            <form onSubmit={handleAuthSubmit} className="space-y-3">
+              {authMode === "register" && (
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 mb-1 block">Full Name</label>
+                  <input
+                    type="text"
+                    value={authName}
+                    onChange={(e) => setAuthName(e.target.value)}
+                    required
+                    className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium text-sm"
+                    placeholder="John Doe"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-semibold text-slate-500 mb-1 block">Email</label>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  required
+                  className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium text-sm"
+                  placeholder="you@example.com"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 mb-1 block">Password</label>
+                <input
+                  type="password"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium text-sm"
+                  placeholder="••••••••"
+                />
+              </div>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold"
+                isLoading={authLoading}
+              >
+                {authMode === "login" ? "Sign In & Pay" : "Create Account & Pay"}
+              </Button>
+            </form>
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode(authMode === "login" ? "register" : "login");
+                  setAuthPassword("");
+                }}
+                className="text-sm text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+              >
+                {authMode === "login" ? "Don't have an account? Create one" : "Already have an account? Sign in"}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAuthModal(false)}
+              className="w-full text-center text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            >
+              Continue as guest (can't complete payment)
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
